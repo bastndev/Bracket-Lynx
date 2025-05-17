@@ -1,2 +1,3 @@
 src/extension.ts
 package.json
+tsconfig.json

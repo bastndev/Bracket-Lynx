@@ -1,0 +1,39 @@
+{
+  "bracketLynx.toggleMute.title": "🔇 Toggle Mute",
+  "bracketLynx.toggleMuteAll.title": "🔇 Toggle Mute All",
+  "bracketLynx.updateBrackets.title": "🔄 Update Brackets",
+  "bracketLynx.reportProfile.title": "📊 Generate Profile Report",
+
+  "bracketLynx.mode.description": "🔧 BracketLynx operating mode",
+  "bracketLynx.mode.none.description": "⚠️ Disabled - No bracket highlighting",
+  "bracketLynx.mode.manual.description": "👆 Manual - Update brackets with command",
+  "bracketLynx.mode.on-save.description": "💾 Auto (on save) - Update when saving file",
+  "bracketLynx.mode.auto.description": "⚡ Auto (on change) - Update while typing",
+
+  "bracketLynx.debug.description": "🐛 Enable debug mode",
+  "bracketLynx.color.description": "🎨 Bracket header color",
+  "bracketLynx.prefix.description": "✏️ Bracket header prefix",
+  "bracketLynx.unmatchBracketsPrefix.description": "⚠️ Prefix for unmatched brackets",
+
+  "bracketLynx.line.description": "📏 Line number display options",
+  "bracketLynx.line.none.description": "❌ No line numbers",
+  "bracketLynx.line.start-line-number.description": "⬆️ Show start line only",
+  "bracketLynx.line.end-line-number.description": "⬇️ Show end line only",
+  "bracketLynx.line.both-line-numbers.description": "↕️ Show both line numbers",
+
+  "bracketLynx.maxBracketHeaderLength.description": "📏 Maximum bracket header length (truncates longer headers)",
+  "bracketLynx.minBracketScopeLines.description": "📐 Minimum lines required to show bracket header",
+  "bracketLynx.languageConfiguration.description": "🧩 Language parsing settings",
+
+  "🚫 You have already started the profile.": "🚫 Profiling already active",
+  "⏱ Start Profile!": "⏱ Start Profiling",
+  "🏁 Stop Profile!": "🏁 Stop Profiling",
+  "📊 Profile Report": "📊 Profile Report",
+  "⚖ Overview": "⚖️ Overview",
+  "🔬 Busy Details": "🔬 Detailed Analysis",
+  "🚫 Profile has not been started.": "🚫 Profiling not started",
+
+  "%1 is too large! Background Phi Colors has been disabled. But you can over the limit!": "⚠️ %1 is too large! Background colors disabled. Override with 'Over the limit'",
+  "Close": "✖️ Close",
+  "Over the limit": "⚡ Force Enable"
+}
