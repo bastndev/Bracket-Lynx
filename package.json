@@ -10,10 +10,14 @@
     "Other"
   ],
   "activationEvents": [
-    "onLanguage:javascript",
-    "onLanguage:typescript",
-    "onLanguage:javascriptreact",
-    "onLanguage:typescriptreact"
+  "onLanguage:javascript",
+  "onLanguage:typescript",
+  "onLanguage:javascriptreact",
+  "onLanguage:typescriptreact",
+  "onLanguage:dart",
+  "onLanguage:python",
+  "onLanguage:go",
+  "onLanguage:rust"
   ],
   "main": "./dist/extension.js",
   "contributes": {
