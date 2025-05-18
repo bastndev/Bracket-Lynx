@@ -34,18 +34,16 @@ function findBrackets(text: string): BracketPair[] {
 
   for (let i = 0; i < text.length; i++) {
     const code = text.charCodeAt(i);
-
-    const openingPair = bracketPairs.find((p) => p.open === code);
-    if (openingPair) {
+    const opening = bracketPairs.find((p) => p.open === code);
+    if (opening) {
       stack.push({ char: code, pos: i });
       continue;
     }
-
-    const closingPair = bracketPairs.find((p) => p.close === code);
-    if (closingPair) {
+    const closing = bracketPairs.find((p) => p.close === code);
+    if (closing) {
       for (let j = stack.length - 1; j >= 0; j--) {
-        const matchingPair = bracketPairs.find((p) => p.open === stack[j].char);
-        if (matchingPair && matchingPair.close === code) {
+        const candidate = bracketPairs.find((p) => p.open === stack[j].char);
+        if (candidate && candidate.close === code) {
           results.push({ open: stack[j].pos, close: i });
           stack.splice(j, 1);
           break;
@@ -62,7 +60,9 @@ function formatLineRange(startLine: number, endLine: number): string {
 }
 
 function updateDecorations(editor: vscode.TextEditor): void {
-  if (!decorationType) return;
+  if (!decorationType) {
+    return;
+  }
 
   const doc = editor.document;
   const text = doc.getText();
@@ -71,21 +71,22 @@ function updateDecorations(editor: vscode.TextEditor): void {
 
   const usedLines = new Set<number>();
 
-  for (const bracket of brackets) {
-    const startLine = doc.positionAt(bracket.open).line + 1;
-    const endLine = doc.positionAt(bracket.close).line + 1;
-    const position = doc.positionAt(bracket.close + 1);
-
-    if (usedLines.has(endLine)) continue; // evita duplicado por línea
-
+  for (const { open, close } of brackets) {
+    const startLine = doc.positionAt(open).line + 1;
+    const endLine = doc.positionAt(close).line + 1;
+    if (startLine === endLine) {
+      continue;
+    }
+    if (usedLines.has(endLine)) {
+      continue;
+    }
     usedLines.add(endLine);
+    const pos = doc.positionAt(close + 1);
 
     decorations.push({
-      range: new vscode.Range(position, position),
+      range: new vscode.Range(pos, pos),
       renderOptions: {
-        after: {
-          contentText: formatLineRange(startLine, endLine),
-        },
+        after: { contentText: formatLineRange(startLine, endLine) },
       },
     });
   }
@@ -114,20 +115,21 @@ function registerEventHandlers(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand('bracketLynx.refresh', () => {
       const editor = vscode.window.activeTextEditor;
-      if (editor) updateDecorations(editor);
+      if (editor) {
+        updateDecorations(editor);
+      }
     }),
-
     vscode.window.onDidChangeActiveTextEditor((editor) => {
-      if (editor) updateDecorations(editor);
+      if (editor) {
+        updateDecorations(editor);
+      }
     }),
-
     vscode.workspace.onDidSaveTextDocument((doc) => {
       const editor = vscode.window.activeTextEditor;
       if (editor && editor.document === doc) {
         updateDecorations(editor);
       }
     }),
-
     vscode.workspace.onDidChangeTextDocument((event) => {
       const editor = vscode.window.activeTextEditor;
       if (editor && editor.document === event.document) {
@@ -140,9 +142,10 @@ function registerEventHandlers(context: vscode.ExtensionContext): void {
 export function activate(context: vscode.ExtensionContext): void {
   decorationType = createDecorationStyle();
   registerEventHandlers(context);
-
   const editor = vscode.window.activeTextEditor;
-  if (editor) updateDecorations(editor);
+  if (editor) {
+    updateDecorations(editor);
+  }
 }
 
 export function deactivate(): void {
