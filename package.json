@@ -1,14 +1,64 @@
 {
   "name": "bracket-lynx",
   "displayName": "Bracket Lynx",
-  "description": "Now avaible for: Vscode, Cursor-AI, Windsurf, etc",
+  "description": "Available now: VSCode, Cursor-AI, Windsurf, Trae-AI & (Firebase Studio) - (+AI).",
   "version": "0.0.1",
+  "publisher": "bastndev",
+  "license": "MIT",
   "engines": {
-    "vscode": "^1.100.0"
+    "vscode": "^1.43.0"
   },
-  "categories": [
+    "categories": [
+    "AI",
+    "Data Science",
+    "Programming Languages",
+    "Snippets",
     "Other"
   ],
+  "keywords": [
+    "bracket",
+    "bracket-lynx",
+    "highlight",
+    "range",
+    "AI",
+    "VSCode",
+    "Cursor",
+    "Trae",
+    "Windsurf",
+    "Firebase Studio",
+    "keybinding",
+    "shortcuts",
+    "productivity",
+    "developer tools",
+    "code editor",
+    "open source",
+    "2025",
+    "cross-platform",
+    "windows",
+    "linux",
+    "macos",
+    "trending",
+    "must-have",
+    "top extension"
+  ],
+    "icon": "assets/icon.png",
+  "galleryBanner": {
+    "color": "#0a0a0a",
+    "theme": "dark"
+  },
+  "homepage": "https://github.com/bastndev/Bracket-Lynx#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bastndev/Bracket-Lynx"
+  },
+  "bugs": {
+    "url": "https://github.com/bastndev/Bracket-Lynx/issues"
+  },
+  "author": {
+    "name": "Gohit Bastian",
+    "email": "gobasdev@gmail.com",
+    "url": "https://www.bastndev.com"
+  },
   "activationEvents": [
   "onLanguage:javascript",
   "onLanguage:typescript",
