@@ -1,3 +1,5 @@
-src/extension.ts
+# ignore json files
 package.json
 tsconfig.json
+
+# src/extension.ts

@@ -1,7 +1,7 @@
 {
   "name": "bracket-lynx",
   "displayName": "Bracket Lynx",
-  "description": "Now avaible for: Vscode, Cursor-AI, Windsurf, etc",
+  "description": "Añade comentarios con el rango de líneas al final de cada bloque de código",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.100.0"
@@ -9,41 +9,44 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onCommand:bracketLynx.refresh",
+    "onLanguage:javascript",
+    "onLanguage:typescript",
+    "onLanguage:javascriptreact",
+    "onLanguage:typescriptreact"
+  ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "bracket-lynx.helloWorld",
-        "title": "Hello World"
+        "command": "bracketLynx.refresh",
+        "title": "Bracket Lynx: Refresh Ranges"
+      }
+    ],
+    "keybindings": [
+      {
+        "key": "ctrl+alt+b",
+        "command": "bracketLynx.refresh",
+        "when": "editorTextFocus"
       }
     ]
   },
   "scripts": {
-    "vscode:prepublish": "npm run package",
     "compile": "npm run check-types && npm run lint && node esbuild.js",
     "watch": "npm-run-all -p watch:*",
     "watch:esbuild": "node esbuild.js --watch",
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
-    "package": "npm run check-types && npm run lint && node esbuild.js --production",
-    "compile-tests": "tsc -p . --outDir out",
-    "watch-tests": "tsc -p . -w --outDir out",
-    "pretest": "npm run compile-tests && npm run compile && npm run lint",
     "check-types": "tsc --noEmit",
-    "lint": "eslint src",
-    "test": "vscode-test"
+    "lint": "eslint src"
   },
   "devDependencies": {
     "@types/vscode": "^1.100.0",
-    "@types/mocha": "^10.0.10",
     "@types/node": "20.x",
-    "@typescript-eslint/eslint-plugin": "^8.25.0",
-    "@typescript-eslint/parser": "^8.25.0",
     "eslint": "^9.21.0",
     "esbuild": "^0.25.0",
     "npm-run-all": "^4.1.5",
-    "typescript": "^5.7.3",
-    "@vscode/test-cli": "^0.0.10",
-    "@vscode/test-electron": "^2.4.1"
+    "typescript": "^5.7.3"
   }
 }
+
