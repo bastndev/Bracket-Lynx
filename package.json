@@ -1,7 +1,7 @@
 {
   "name": "bracket-lynx",
   "displayName": "Bracket Lynx",
-  "description": "Añade comentarios con el rango de líneas al final de cada bloque de código",
+  "description": "Now avaible for: Vscode, Cursor-AI, Windsurf, etc",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.100.0"
@@ -10,7 +10,6 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:bracketLynx.refresh",
     "onLanguage:javascript",
     "onLanguage:typescript",
     "onLanguage:javascriptreact",
@@ -26,9 +25,9 @@
     ],
     "keybindings": [
       {
-        "key": "ctrl+alt+b",
-        "command": "bracketLynx.refresh",
-        "when": "editorTextFocus"
+        "key": "alt+z",
+        "mac": "cmd+z",
+        "command": "bracketLynx.refresh"
       }
     ]
   },
