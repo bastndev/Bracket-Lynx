@@ -81,7 +81,13 @@ function updateDecorations(editor: vscode.TextEditor): void {
       continue;
     }
     usedLines.add(endLine);
-    const pos = doc.positionAt(close + 1);
+
+    let offset = close + 1;
+    const nextChar = text[offset];
+    if (nextChar === ',' || nextChar === ';') {
+      offset += 1;
+    }
+    const pos = doc.positionAt(offset);
 
     decorations.push({
       range: new vscode.Range(pos, pos),
