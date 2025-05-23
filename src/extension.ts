@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 const DEBOUNCE_DELAY = 300;
-const HASH_PREFIX = '<~ #';
+const HASH_PREFIX = '<~ •';
 
 const MIN_TOTAL_LINES_FOR_CURLY_DECORATION = 3; // {} blocks: 4+ lines shown
 const MIN_TOTAL_LINES_FOR_OPENING_TAG_DECORATION = 7; // <...>: 8+ lines shown
@@ -61,8 +61,42 @@ function findBrackets(text: string): BracketPair[] {
   return results;
 }
 
-function formatLineRange(startLine: number, endLine: number): string {
-  return `${HASH_PREFIX}${startLine}-${endLine}`;
+function getFirstWordFromContent(
+  text: string,
+  openPos: number,
+  closePos: number
+): string {
+  // Extract content between brackets
+  const content = text.substring(openPos + 1, closePos).trim();
+
+  if (!content) {
+    return '';
+  }
+
+  // Match first typical identifier
+  const wordMatch = content.match(/^[a-zA-Z_$][a-zA-Z0-9_$]*/);
+  if (wordMatch) {
+    return wordMatch[0];
+  }
+
+  // Match common symbol patterns
+  const symbolMatch = content.match(/^[<>/=!+\-*%&|^~?:.]+/);
+  if (symbolMatch) {
+    return symbolMatch[0];
+  }
+
+  // Fallback: take first non-space characters
+  const firstChars = content.substring(0, 10).split(/\s/)[0];
+  return firstChars || '';
+}
+
+function formatLineRange(
+  startLine: number,
+  endLine: number,
+  firstWord: string = ''
+): string {
+  const baseRange = `${HASH_PREFIX}${startLine}-${endLine}`;
+  return firstWord ? `${baseRange} #${firstWord}` : baseRange;
 }
 
 function updateDecorations(editor: vscode.TextEditor): void {
@@ -133,6 +167,9 @@ function updateDecorations(editor: vscode.TextEditor): void {
 
     usedLines.add(endLine);
 
+    // Extraer la primera palabra del contenido
+    const firstWord = getFirstWordFromContent(text, open, close);
+
     let offset = close + 1;
     // If the character after the closing bracket is a comma or semicolon,
     // place the decoration after it for better visual alignment.
@@ -148,7 +185,7 @@ function updateDecorations(editor: vscode.TextEditor): void {
       range: new vscode.Range(pos, pos),
       renderOptions: {
         after: {
-          contentText: formatLineRange(startLine, endLine),
+          contentText: formatLineRange(startLine, endLine, firstWord),
           // The image shows the comment slightly offset and less prominent
           // You might want to adjust margin and font weight/opacity
           // margin: "0 0 0 0.5ch",
