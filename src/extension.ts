@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 
 const DEBOUNCE_DELAY = 300;
-const HASH_PREFIX = '<~ •';
+const HASH_PREFIX = '<~ #';
+const HASH_PREFIX_SYMBOL = '•';
 
 const MIN_TOTAL_LINES_FOR_CURLY_DECORATION = 3; // {} blocks: 4+ lines shown
 const MIN_TOTAL_LINES_FOR_OPENING_TAG_DECORATION = 7; // <...>: 8+ lines shown
@@ -96,7 +97,9 @@ function formatLineRange(
   firstWord: string = ''
 ): string {
   const baseRange = `${HASH_PREFIX}${startLine}-${endLine}`;
-  return firstWord ? `${baseRange} #${firstWord}` : baseRange;
+  return firstWord
+    ? `${baseRange} ${HASH_PREFIX_SYMBOL}${firstWord}`
+    : baseRange;
 }
 
 function updateDecorations(editor: vscode.TextEditor): void {
@@ -167,7 +170,6 @@ function updateDecorations(editor: vscode.TextEditor): void {
 
     usedLines.add(endLine);
 
-    // Extraer la primera palabra del contenido
     const firstWord = getFirstWordFromContent(text, open, close);
 
     let offset = close + 1;
