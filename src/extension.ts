@@ -131,7 +131,7 @@ function getContextBeforeOpening(
     /export\s+const\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*\([^)]*\)\s*=>/
   );
   if (exportConstArrowMatch) {
-    return `export ${exportConstArrowMatch[1]} =>`;
+    return `export ${exportConstArrowMatch[1]} ()=>`;
   }
 
   // Handle patterns like: const functionName = () => {
@@ -139,7 +139,7 @@ function getContextBeforeOpening(
     /const\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*\([^)]*\)\s*=>/
   );
   if (constArrowMatch) {
-    return `${constArrowMatch[1]} =>`;
+    return `${constArrowMatch[1]} ()=>`;
   }
 
   // Handle patterns like: export function functionName() {
@@ -180,7 +180,7 @@ function getContextBeforeOpening(
 
     // Only add arrow function indicator if it's in the same line
     if (hasArrowInLine) {
-      result += ' =>';
+      result += ' ()=>';
     }
 
     return result;
@@ -210,7 +210,7 @@ function getContextBeforeOpening(
 
       // Only add arrow function indicator if it's in the same line
       if (hasArrowInLine && !result.includes('=>')) {
-        result += ' =>';
+        result += ' ()=>';
       }
 
       return result;
@@ -219,7 +219,7 @@ function getContextBeforeOpening(
 
   // Fallback: only show arrow function if it's in the current line
   if (hasArrowInLine) {
-    return '=>';
+    return '()=>';
   }
 
   return '';
