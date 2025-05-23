@@ -62,14 +62,170 @@ function findBrackets(text: string): BracketPair[] {
   return results;
 }
 
-function getFirstWordFromContent(
+function getContextualInfo(
   text: string,
   openPos: number,
-  closePos: number
+  closePos: number,
+  doc: vscode.TextDocument
 ): string {
+  const openChar = text.charCodeAt(openPos);
+  const openPosition = doc.positionAt(openPos);
+  const closePosition = doc.positionAt(closePos);
+
+  // Get the line where the opening bracket is
+  const openLine = doc.lineAt(openPosition.line);
+  const openLineText = openLine.text;
+
   // Extract content between brackets
   const content = text.substring(openPos + 1, closePos).trim();
 
+  // Handle different bracket types with context awareness
+  if (openChar === '{'.charCodeAt(0)) {
+    // For curly braces, look for function names, class names, etc. before the opening brace
+    return getContextBeforeOpening(
+      openLineText,
+      openPosition.character,
+      text,
+      openPos
+    );
+  } else if (openChar === '['.charCodeAt(0)) {
+    // For square brackets, look for array names, property access, etc.
+    return getContextBeforeOpening(
+      openLineText,
+      openPosition.character,
+      text,
+      openPos
+    );
+  } else if (openChar === '('.charCodeAt(0)) {
+    // For parentheses, look for function names before the opening parenthesis
+    return getContextBeforeOpening(
+      openLineText,
+      openPosition.character,
+      text,
+      openPos
+    );
+  } else if (openChar === '<'.charCodeAt(0)) {
+    // For angle brackets, handle HTML/XML tags
+    return getFirstWordFromContent(content);
+  }
+
+  return '';
+}
+
+function getContextBeforeOpening(
+  lineText: string,
+  openCharIndex: number,
+  text: string,
+  openPos: number
+): string {
+  // Get text before the opening bracket on the same line
+  const textBefore = lineText.substring(0, openCharIndex).trim();
+
+  if (!textBefore) {
+    return '';
+  }
+
+  // Enhanced pattern matching for complex declarations
+  // Handle patterns like: export const functionName = () => {
+  const exportConstArrowMatch = textBefore.match(
+    /export\s+const\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*\([^)]*\)\s*=>/
+  );
+  if (exportConstArrowMatch) {
+    return `export ${exportConstArrowMatch[1]} =>`;
+  }
+
+  // Handle patterns like: const functionName = () => {
+  const constArrowMatch = textBefore.match(
+    /const\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*\([^)]*\)\s*=>/
+  );
+  if (constArrowMatch) {
+    return `${constArrowMatch[1]} =>`;
+  }
+
+  // Handle patterns like: export function functionName() {
+  const exportFunctionMatch = textBefore.match(
+    /export\s+function\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/
+  );
+  if (exportFunctionMatch) {
+    return `export ${exportFunctionMatch[1]}`;
+  }
+
+  // Handle patterns like: function functionName() {
+  const functionMatch = textBefore.match(
+    /function\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/
+  );
+  if (functionMatch) {
+    return functionMatch[1];
+  }
+
+  // Handle patterns like: export default
+  if (textBefore.includes('export default')) {
+    const defaultMatch = textBefore.match(
+      /export\s+default\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/
+    );
+    if (defaultMatch) {
+      return `export default ${defaultMatch[1]}`;
+    }
+    return 'export default';
+  }
+
+  // Check for arrow function pattern in current line only
+  const hasArrowInLine = textBefore.includes('=>');
+
+  // Match patterns like: functionName(, className{, variableName[
+  // Look for the last identifier before whitespace and the bracket
+  const contextMatch = textBefore.match(/([a-zA-Z_$][a-zA-Z0-9_$]*)\s*$/);
+  if (contextMatch) {
+    let result = contextMatch[1];
+
+    // Only add arrow function indicator if it's in the same line
+    if (hasArrowInLine) {
+      result += ' =>';
+    }
+
+    return result;
+  }
+
+  // If no specific pattern found, try to get the last meaningful word
+  const words = textBefore.split(/\s+/).filter((word) => word.length > 0);
+  if (words.length > 0) {
+    const lastWord = words[words.length - 1];
+
+    // Skip common keywords but keep important ones like 'return'
+    const skipKeywords = [
+      'const',
+      'let',
+      'var',
+      'if',
+      'for',
+      'while',
+      'import',
+      'from',
+    ];
+    if (
+      !skipKeywords.includes(lastWord) &&
+      /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(lastWord)
+    ) {
+      let result = lastWord;
+
+      // Only add arrow function indicator if it's in the same line
+      if (hasArrowInLine && !result.includes('=>')) {
+        result += ' =>';
+      }
+
+      return result;
+    }
+  }
+
+  // Fallback: only show arrow function if it's in the current line
+  if (hasArrowInLine) {
+    return '=>';
+  }
+
+  return '';
+}
+
+function getFirstWordFromContent(content: string): string {
   if (!content) {
     return '';
   }
@@ -94,11 +250,11 @@ function getFirstWordFromContent(
 function formatLineRange(
   startLine: number,
   endLine: number,
-  firstWord: string = ''
+  contextInfo: string = ''
 ): string {
   const baseRange = `${HASH_PREFIX}${startLine}-${endLine}`;
-  return firstWord
-    ? `${baseRange} ${HASH_PREFIX_SYMBOL}${firstWord}`
+  return contextInfo
+    ? `${baseRange} ${HASH_PREFIX_SYMBOL}${contextInfo}`
     : baseRange;
 }
 
@@ -170,7 +326,7 @@ function updateDecorations(editor: vscode.TextEditor): void {
 
     usedLines.add(endLine);
 
-    const firstWord = getFirstWordFromContent(text, open, close);
+    const contextInfo = getContextualInfo(text, open, close, doc);
 
     let offset = close + 1;
     // If the character after the closing bracket is a comma or semicolon,
@@ -187,7 +343,7 @@ function updateDecorations(editor: vscode.TextEditor): void {
       range: new vscode.Range(pos, pos),
       renderOptions: {
         after: {
-          contentText: formatLineRange(startLine, endLine, firstWord),
+          contentText: formatLineRange(startLine, endLine, contextInfo),
           // The image shows the comment slightly offset and less prominent
           // You might want to adjust margin and font weight/opacity
           // margin: "0 0 0 0.5ch",
