@@ -2,7 +2,7 @@
   "name": "bracket-lynx",
   "displayName": "Bracket Lynx",
   "description": "Available now: VSCode, Cursor-AI, Windsurf, Trae-AI & (Firebase Studio) - (+AI) [>_ ].",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "publisher": "bastndev",
   "license": "MIT",
   "engines": {
