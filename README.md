@@ -1,4 +1,6 @@
-# Bracket Lynx
+/assets/images/screenshot.jpg# Bracket Lynx
+
+![Screenshot](/assets/images/screenshot.jpg)
 
 <p align="center">
     <a href="https://marketplace.visualstudio.com/items?itemName=bastndev.bracket-lynx">
