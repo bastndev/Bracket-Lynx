@@ -95,7 +95,15 @@ function getContextualInfo(
       openPos
     );
   } else if (openChar === '<'.charCodeAt(0)) {
-    return getFirstWordFromContent(content);
+    let componentContent = content;
+    const isClosingTag = componentContent.startsWith('/');
+
+    if (isClosingTag) {
+      componentContent = componentContent.substring(1).trim();
+    }
+
+    const jsxComponentMatch = componentContent.match(/^[a-zA-Z_$][\w$.]*/);
+    return jsxComponentMatch ? jsxComponentMatch[0] : '';
   }
 
   return '';
@@ -192,25 +200,6 @@ function getContextBeforeOpening(
   }
 
   return '';
-}
-
-function getFirstWordFromContent(content: string): string {
-  if (!content) {
-    return '';
-  }
-
-  const wordMatch = content.match(/^[a-zA-Z_$][a-zA-Z0-9_$]*/);
-  if (wordMatch) {
-    return wordMatch[0];
-  }
-
-  const symbolMatch = content.match(/^[<>/=!+\-*%&|^~?:.]+/);
-  if (symbolMatch) {
-    return symbolMatch[0];
-  }
-
-  const firstChars = content.substring(0, 10).split(/\s/)[0];
-  return firstChars || '';
 }
 
 function formatLineRange(
