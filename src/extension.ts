@@ -310,6 +310,7 @@ function createDecorationStyle(): vscode.TextEditorDecorationType {
     after: {
       color: '#6A737D',
       margin: '0 0 0 1ch',
+      fontStyle: 'italic',
     },
   });
 }
