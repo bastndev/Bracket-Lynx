@@ -1,6 +1,4 @@
-/assets/images/screenshot.jpg# Bracket Lynx
-
-![Screenshot](/assets/images/screenshot.jpg)
+![Screenshot](https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/screenshot.jpg)
 
 <p align="center">
     <a href="https://marketplace.visualstudio.com/items?itemName=bastndev.bracket-lynx">
