@@ -2,14 +2,15 @@
 
 <p align="center">
     <a href="https://marketplace.visualstudio.com/items?itemName=bastndev.bracket-lynx">
-        <img src="https://vsmarketplacebadges.dev/version-short/bastndev.bracket-lynx.jpg?style=for-the-badge&colorA=1A002B&colorB=EEEEEE&color=9B2FAE&label=VERSION" alt="Version">
+        <img src="https://vsmarketplacebadges.dev/version-short/bastndev.bracket-lynx.jpg?style=for-the-badge&colorA=FFFFFF&colorB=FFFFFF&color=000000&labelColor=FFFFFF&label=VERSION" alt="Version">
     </a>&nbsp;
     <a href="https://marketplace.visualstudio.com/items?itemName=bastndev.bracket-lynx">
-        <img src="https://vsmarketplacebadges.dev/rating-short/bastndev.bracket-lynx.jpg?style=for-the-badge&colorA=1A002B&colorB=EEEEEE&color=9B2FAE&label=Rating" alt="Rating">
+        <img src="https://vsmarketplacebadges.dev/rating-short/bastndev.bracket-lynx.jpg?style=for-the-badge&colorA=FFFFFF&colorB=FFFFFF&color=000000&labelColor=FFFFFF&label=Rating" alt="Rating">
     </a>&nbsp;
     <a href="https://marketplace.visualstudio.com/items?itemName=bastndev.bracket-lynx">
-        <img src="https://vsmarketplacebadges.dev/installs-short/bastndev.bracket-lynx.jpg?style=for-the-badge&colorA=1A002B&colorB=EEEEEE&color=9B2FAE&label=Installs" alt="Installs">
-        </a>
+        <img src="https://vsmarketplacebadges.dev/installs-short/bastndev.bracket-lynx.jpg?style=for-the-badge&colorA=FFFFFF&colorB=FFFFFF&color=000000&labelColor=FFFFFF&label=Installs" alt="Installs">
+    </a>
+</p>
 
 </br>
 
