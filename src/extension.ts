@@ -308,7 +308,7 @@ function scheduleUpdate(editor: vscode.TextEditor): void {
 function createDecorationStyle(): vscode.TextEditorDecorationType {
   return vscode.window.createTextEditorDecorationType({
     after: {
-      color: '#515151',
+      color: '#69727e',
       margin: '0 0 0 1ch',
       fontStyle: 'italic',
       // fontWeight: 'bold',
