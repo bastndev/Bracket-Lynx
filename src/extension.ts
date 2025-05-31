@@ -16,7 +16,7 @@ interface BracketCharPair {
   open: number;
   close: number;
 }
-
+// create a new function here
 interface StackItem {
   char: number;
   pos: number;
@@ -308,9 +308,10 @@ function scheduleUpdate(editor: vscode.TextEditor): void {
 function createDecorationStyle(): vscode.TextEditorDecorationType {
   return vscode.window.createTextEditorDecorationType({
     after: {
-      color: '#6A737D',
+      color: '#515151',
       margin: '0 0 0 1ch',
       fontStyle: 'italic',
+      // fontWeight: 'bold',
     },
   });
 }
