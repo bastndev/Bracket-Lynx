@@ -33,7 +33,7 @@ ext install bastndev.bracket-lynx
 
 ## Contributors
 
-Here is the project link if you want to collaborate: [[>\_ ] code](https://github.com/bastndev/Lynx-keymap).
+Here is the project link if you want to collaborate: [[>\_ ] code](https://github.com/bastndev/Bracket-Lynx).
 
 | [![bastndev](https://github.com/bastndev.png?size=100)](http://bastndev.com) |
 | :--------------------------------------------------------------------------: |
