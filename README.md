@@ -10,7 +10,7 @@
     <a href="https://marketplace.visualstudio.com/items?itemName=bastndev.bracket-lynx">
         <img src="https://vsmarketplacebadges.dev/installs-short/bastndev.bracket-lynx.jpg?style=for-the-badge&colorA=FFFFFF&colorB=FFFFFF&color=000000&labelColor=FFFFFF&label=Installs" alt="Installs">
     </a>&nbsp;
-    <a href="https://github.com/sponsors/bastndev"><img src="https://raw.githubusercontent.com/bastndev/bracket-lynx/main/assets/images/sponsor.png" width="30px" alt="Sponsor Github"></a>
+    <a href="https://github.com/sponsors/bastndev"><img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/sponsor.png" width="30px" alt="Sponsor Github"></a>
 </p>
 
 </br>
