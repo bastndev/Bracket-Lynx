@@ -3,14 +3,16 @@
 <p align="center">
     <a href="https://marketplace.visualstudio.com/items?itemName=bastndev.bracket-lynx">
         <img src="https://vsmarketplacebadges.dev/version-short/bastndev.bracket-lynx.jpg?style=for-the-badge&colorA=FFFFFF&colorB=FFFFFF&color=000000&labelColor=FFFFFF&label=VERSION" alt="Version">
-    </a>&nbsp;
+    </a>
     <a href="https://marketplace.visualstudio.com/items?itemName=bastndev.bracket-lynx">
-        <img src="https://vsmarketplacebadges.dev/rating-short/bastndev.bracket-lynx.jpg?style=for-the-badge&colorA=FFFFFF&colorB=FFFFFF&color=000000&labelColor=FFFFFF&label=Rating" alt="Rating">
-    </a>&nbsp;
+        <img src="https://vsmarketplacebadges.dev/rating-short/bastndev.bracket-lynx.jpg?style=for-the-badge&colorA=FFFFFF&colorB=FFFFFF&color=000000&labelColor=FFFFFF&label=RATING" alt="Rating">
+    </a>
     <a href="https://marketplace.visualstudio.com/items?itemName=bastndev.bracket-lynx">
-        <img src="https://vsmarketplacebadges.dev/installs-short/bastndev.bracket-lynx.jpg?style=for-the-badge&colorA=FFFFFF&colorB=FFFFFF&color=000000&labelColor=FFFFFF&label=Installs" alt="Installs">
-    </a>&nbsp;
-    <a href="https://github.com/sponsors/bastndev"><img src="https://raw.githubusercontent.com/bastndev/bracket-lynx/main/assets/images/sponsor.png" width="30px" alt="Sponsor Github"></a>
+        <img src="https://vsmarketplacebadges.dev/installs-short/bastndev.bracket-lynx.jpg?style=for-the-badge&colorA=FFFFFF&colorB=FFFFFF&color=000000&labelColor=FFFFFF&label=INSTALLS" alt="Installs">
+    </a>
+    <a href="https://github.com/sponsors/bastndev">
+        <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/sponsor.png" width="30px" alt="Sponsor Github">
+    </a>
 </p>
 
 </br>
