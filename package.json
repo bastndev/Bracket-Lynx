@@ -2,7 +2,7 @@
   "name": "bracket-lynx",
   "displayName": "Bracket Lynx",
   "description": "Available now: VSCode, Cursor-AI, Windsurf, Trae-AI & (Firebase Studio) - (+AI) [>_ ].",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "publisher": "bastndev",
   "license": "MIT",
   "engines": {
@@ -39,7 +39,9 @@
     "macos",
     "trending",
     "must-have",
-    "top extension"
+    "top extension",
+    "lynx",
+    "lynx"
   ],
   "icon": "assets/icon.png",
   "galleryBanner": {
