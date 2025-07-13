@@ -318,12 +318,6 @@ function createDecorationStyle(): vscode.TextEditorDecorationType {
 
 function registerEventHandlers(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
-    vscode.commands.registerCommand('bracketLynx.refresh', () => {
-      const editor = vscode.window.activeTextEditor;
-      if (editor) {
-        updateDecorations(editor);
-      }
-    }),
     vscode.window.onDidChangeActiveTextEditor((editor) => {
       if (editor) {
         updateDecorations(editor);
