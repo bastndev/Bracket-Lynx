@@ -1,18 +1,10 @@
 ![Screenshot](https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/screenshot.jpg)
 
 <p align="center">
-    <a href="https://marketplace.visualstudio.com/items?itemName=bastndev.bracket-lynx">
-        <img src="https://vsmarketplacebadges.dev/version-short/bastndev.bracket-lynx.jpg?style=for-the-badge&colorA=FFFFFF&colorB=FFFFFF&color=000000&labelColor=FFFFFF&label=VERSION" alt="Version">
-    </a>
-    <a href="https://marketplace.visualstudio.com/items?itemName=bastndev.bracket-lynx">
-        <img src="https://vsmarketplacebadges.dev/rating-short/bastndev.bracket-lynx.jpg?style=for-the-badge&colorA=FFFFFF&colorB=FFFFFF&color=000000&labelColor=FFFFFF&label=RATING" alt="Rating">
-    </a>
-    <a href="https://marketplace.visualstudio.com/items?itemName=bastndev.bracket-lynx">
-        <img src="https://vsmarketplacebadges.dev/installs-short/bastndev.bracket-lynx.jpg?style=for-the-badge&colorA=FFFFFF&colorB=FFFFFF&color=000000&labelColor=FFFFFF&label=INSTALLS" alt="Installs">
-    </a>
-    <a href="https://github.com/sponsors/bastndev">
-        <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/sponsor.png" width="30px" alt="Sponsor Github">
-    </a>
+    <img src="https://vsmarketplacebadges.dev/version-short/bastndev.bracket-lynx.jpg?style=for-the-badge&colorA=FFFFFF&colorB=000000&label=VERSION" alt="Version">&nbsp;
+    <img src="https://vsmarketplacebadges.dev/rating-short/bastndev.bracket-lynx.jpg?style=for-the-badge&colorA=FFFFFF&colorB=000000&label=RATING" alt="Rating">&nbsp;
+    <img src="https://vsmarketplacebadges.dev/downloads-short/bastndev.bracket-lynx.jpg?style=for-the-badge&colorA=FFFFFF&colorB=000000&label=DOWNLOADS" alt="Downloads">&nbsp;
+    <a href="https://github.com/bastndev/Bracket-Lynx"><img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/star.png" width="26.6px" alt="Github Star ⭐️"></a>
 </p>
 
 </br>
@@ -33,7 +25,7 @@ ext install bastndev.bracket-lynx
 
 ## Contributors
 
-Here is the project link if you want to collaborate: [[>\_ ] code](https://github.com/bastndev/Bracket-Lynx).
+If you want to contribute, check the guidelines: [[>_ᅠ]](https://github.com/bastndev/Bracket-Lynx/blob/main/CONTRIBUTING.md).
 
 | [![bastndev](https://github.com/bastndev.png?size=100)](http://bastndev.com) |
 | :--------------------------------------------------------------------------: |
@@ -47,13 +39,10 @@ Here is the project link if you want to collaborate: [[>\_ ] code](https://githu
 
 </br>
 
-### [My Other Extensions](https://github.com/bastndev?tab=repositories)
+| Icon                                                                                                                                                                                                                                                      | Name                                                                 | Description                                                                                                                                                                                 |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [![Lynx Theme Pro](https://bastndev.gallerycdn.vsassets.io/extensions/bastndev/lynx-theme/0.1.2/1744898058774/Microsoft.VisualStudio.Services.Icons.Default)](https://marketplace.visualstudio.com/items?itemName=bastndev.lynx-theme)                    | [Lynx Theme Pro](https://github.com/bastndev/lynx-theme)             | A professional extension with six available themes: Dark, Light, Night, Ghibli, Coffee, and Kiro—with integrated icons. Each theme is optimized to offer a more pleasant visual experience. |
+| [![Lynx-js Snippets .tsx](https://bastndev.gallerycdn.vsassets.io/extensions/bastndev/lynx-js-snippets/0.2.0/1745166683713/Microsoft.VisualStudio.Services.Icons.Default)](https://marketplace.visualstudio.com/items?itemName=bastndev.lynx-js-snippets) | [Lynxjs Snippets .tsx](https://github.com/bastndev/lynx-js-snippets) | A collection of optimized code snippets designed to accelerate web and mobile development in LynxJS projects. It automates the writing of common code structures.                           |
+| [![F1-Quick Switch](https://bastndev.gallerycdn.vsassets.io/extensions/bastndev/f1/0.2.1/1752544035624/Microsoft.VisualStudio.Services.Icons.Default)](https://marketplace.visualstudio.com/items?itemName=bastndev.f1)                                   | [F1-Quick Switch](https://github.com/bastndev/F1)                    | Allows you to control editor functions and manage extensions directly from the keyboard, streamlining your workflow with configurable shortcuts.                                            |
 
-| Icon                                                                                                                                                                                                                                                      | Name                                                                  | Description                                                                                                                                     |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| [![Lynx-js Snippets .tsx](https://bastndev.gallerycdn.vsassets.io/extensions/bastndev/lynx-js-snippets/0.2.0/1745166683713/Microsoft.VisualStudio.Services.Icons.Default)](https://marketplace.visualstudio.com/items?itemName=bastndev.lynx-js-snippets) | [Lynxjs Snippets .tsx](https://github.com/bastndev/lynx-js-snippets) | A powerful collection of Lynx.js snippets (for TypeScript & React) that speeds up common coding patterns.                                       |
-| [![Lynx Theme](https://bastndev.gallerycdn.vsassets.io/extensions/bastndev/lynx-theme/0.1.2/1744898058774/Microsoft.VisualStudio.Services.Icons.Default)](https://marketplace.visualstudio.com/items?itemName=bastndev.lynx-theme)                        | [Lynx Theme](https://github.com/bastndev/lynx-theme)                  | A sleek, customizable theme for VS Code with built‑in support for Cursor‑AI, Windsurf & Trae‑AI integrations.                                   |
-| [![LynxJS Pack](https://bastndev.gallerycdn.vsassets.io/extensions/bastndev/lynxjs-pack/0.1.8/1745206864969/Microsoft.VisualStudio.Services.Icons.Default)](https://marketplace.visualstudio.com/items?itemName=bastndev.lynxjs-pack)                     | [LynxJS Pack](https://github.com/bastndev/LynxJs-Packge)              | An all‑in‑one toolkit for LynxJS mobile/web development—bundles keymap, snippets & AI tools like Cursor AI, Windsurf, Trae AI, Firebase Studio. |
-
-**Enjoy 🎉 your new keybindings! Suggestions or feedback? [Open an issue](https://github.com/bastndev/Bracket-Lynx/issues) or contribute.**  
-[MORE](https://marketplace.visualstudio.com/publishers/bastndev)
+**Enjoy 🎉 Bracket Lynx is now active. If you find any bugs or have feedback, you can [open an issue](https://github.com/bastndev/Bracket-Lynx/issues).**
