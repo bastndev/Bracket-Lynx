@@ -25,7 +25,7 @@ ext install bastndev.bracket-lynx
 
 ## Contributors
 
-Here is the project link if you want to collaborate: [[>\_ ] code](https://github.com/bastndev/Bracket-Lynx).
+If you want to contribute, check the guidelines: [[>_ᅠ]](https://github.com/bastndev/Bracket-Lynx/blob/main/CONTRIBUTING.md).
 
 | [![bastndev](https://github.com/bastndev.png?size=100)](http://bastndev.com) |
 | :--------------------------------------------------------------------------: |
@@ -38,8 +38,6 @@ Here is the project link if you want to collaborate: [[>\_ ] code](https://githu
 - 💼 [Linkedin](https://www.linkedin.com/in/bastndev) - Professional networking and career updates.
 
 </br>
-
-### [My Other Extensions](https://github.com/bastndev?tab=repositories)
 
 | Icon                                                                                                                                                                                                                                                      | Name                                                                 | Description                                                                                                                                     |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
