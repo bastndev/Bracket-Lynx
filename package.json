@@ -1,47 +1,21 @@
 {
   "name": "bracket-lynx",
   "displayName": "Bracket Lynx",
-  "description": "Available now: VSCode, Cursor-AI, Windsurf, Trae-AI & (Firebase Studio) - (+AI) [>_ ].",
-  "version": "0.3.6",
+  "description": "Available now: VSCode • Cursor • Windsurf • Trae.ai • Kiro & (Firebase Studio)... 雨",  "version": "0.4.0",
   "publisher": "bastndev",
   "license": "MIT",
   "engines": {
-    "vscode": "^1.43.0"
+    "vscode": "^1.74.0"
   },
-  "categories": [
-    "AI",
-    "Data Science",
-    "Programming Languages",
-    "Snippets",
-    "Other"
-  ],
+  "categories": ["Other"],
   "keywords": [
     "bracket",
-    "bracket-lynx",
     "highlight",
-    "range",
-    "AI",
-    "VSCode",
-    "Cursor",
-    "Trae",
-    "Windsurf",
-    "Firebase Studio",
-    "keybinding",
-    "shortcuts",
     "productivity",
     "developer tools",
-    "code editor",
-    "open source",
-    "2025",
-    "cross-platform",
-    "windows",
-    "linux",
-    "macos",
-    "trending",
-    "must-have",
-    "top extension",
-    "lynx",
-    "lynx"
+    "lens",
+    "code",
+    "2025"
   ],
   "icon": "assets/icon.png",
   "galleryBanner": {
@@ -61,6 +35,10 @@
     "email": "gobasdev@gmail.com",
     "url": "https://www.bastndev.com"
   },
+  "sponsor": {
+    "url": "https://github.com/sponsors/bastndev"
+  },
+
   "activationEvents": [
     "onLanguage:javascript",
     "onLanguage:typescript",
