@@ -320,6 +320,14 @@ function updateDecorations(editor: vscode.TextEditor): void {
     return;
   }
 
+  // Check if extension is enabled before processing
+  const { isExtensionEnabled } = require('../actions/toggle');
+  if (!isExtensionEnabled()) {
+    // If disabled, clear decorations and return
+    editor.setDecorations(decorationType, []);
+    return;
+  }
+
   const doc = editor.document;
   const text = doc.getText();
   const brackets = findBrackets(text);
@@ -458,6 +466,24 @@ export class BracketLensProvider {
         }
       })
     );
+  }
+
+  // ===== PUBLIC METHODS FOR TOGGLE FUNCTIONALITY =====
+
+  /**
+   * Force update decorations for a specific editor
+   */
+  public forceUpdate(editor: vscode.TextEditor): void {
+    updateDecorations(editor);
+  }
+
+  /**
+   * Clear all decorations from a specific editor
+   */
+  public clearDecorations(editor: vscode.TextEditor): void {
+    if (decorationType) {
+      editor.setDecorations(decorationType, []);
+    }
   }
 
   public dispose(): void {
