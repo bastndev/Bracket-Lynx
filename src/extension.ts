@@ -60,6 +60,54 @@ function findBrackets(text: string): BracketPair[] {
   return results;
 }
 
+function getCSSContextInfo(lineText: string, openCharIndex: number): string {
+  const textBefore = lineText.substring(0, openCharIndex).trim();
+  
+  if (!textBefore) {
+    return '';
+  }
+
+  // Remove comments and clean up the text
+  const cleanText = textBefore.replace(/\/\*.*?\*\//g, '').trim();
+  
+  // Extract CSS selectors - handle multiple selectors separated by commas
+  const selectors = cleanText.split(',').map(s => s.trim()).filter(s => s.length > 0);
+  
+  if (selectors.length === 0) {
+    return '';
+  }
+
+  // Process the last selector (the one closest to the opening brace)
+  const lastSelector = selectors[selectors.length - 1];
+  
+  // Split by spaces to get individual selector parts in order
+  const selectorParts = lastSelector.trim().split(/\s+/).filter(part => part.length > 0);
+  
+  if (selectorParts.length === 0) {
+    return '';
+  }
+
+  // Clean each selector part (remove . # : symbols)
+  const cleanedParts = selectorParts.map(part => {
+    // Remove CSS selector symbols but keep the name
+    return part.replace(/^[.#:]+/, '').replace(/:[a-zA-Z-]*$/, '');
+  }).filter(part => part.length > 0 && /^[a-zA-Z][a-zA-Z0-9_-]*$/.test(part));
+
+  if (cleanedParts.length === 0) {
+    return '';
+  }
+
+  // If we have multiple parts, show only first and last
+  if (cleanedParts.length > 2) {
+    const firstPart = cleanedParts[0];
+    const lastPart = cleanedParts[cleanedParts.length - 1];
+    return `${HASH_PREFIX_SYMBOL}${firstPart} ${HASH_PREFIX_SYMBOL}${lastPart}`;
+  } else {
+    // If we have 1 or 2 parts, show them all
+    return cleanedParts.map(part => `${HASH_PREFIX_SYMBOL}${part}`).join(' ');
+  }
+}
+
 function getContextualInfo(
   text: string,
   openPos: number,
@@ -74,6 +122,11 @@ function getContextualInfo(
   const content = text.substring(openPos + 1, closePos).trim();
 
   if (openChar === '{'.charCodeAt(0)) {
+    // Check if this is a CSS file
+    if (doc.languageId === 'css' || doc.languageId === 'scss' || doc.languageId === 'sass' || doc.languageId === 'less') {
+      return getCSSContextInfo(openLineText, openPosition.character);
+    }
+    
     return getContextBeforeOpening(
       openLineText,
       openPosition.character,
@@ -208,9 +261,15 @@ function formatLineRange(
   contextInfo: string = ''
 ): string {
   const baseRange = `${HASH_PREFIX}${startLine}-${endLine}`;
-  return contextInfo
-    ? `${baseRange} ${HASH_PREFIX_SYMBOL}${contextInfo}`
-    : baseRange;
+  if (contextInfo) {
+    // Check if contextInfo already starts with the bullet symbol (for CSS)
+    if (contextInfo.startsWith(HASH_PREFIX_SYMBOL)) {
+      return `${baseRange} ${contextInfo}`;
+    } else {
+      return `${baseRange} ${HASH_PREFIX_SYMBOL}${contextInfo}`;
+    }
+  }
+  return baseRange;
 }
 
 function updateDecorations(editor: vscode.TextEditor): void {
