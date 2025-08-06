@@ -182,6 +182,14 @@ function getContextBeforeOpening(
     return `${objectPropertyArrowMatch[1]} ()=>`;
   }
 
+  // Match export const ObjectName = {
+  const exportConstObjectMatch = textBefore.match(
+    /export\s+const\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*$/
+  );
+  if (exportConstObjectMatch) {
+    return `export ${exportConstObjectMatch[1]}`;
+  }
+
   // Match export const ComponentName = ({ ...props }) => (
   const exportConstArrowMatch = textBefore.match(
     /export\s+const\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*\([^)]*\)\s*=>/
@@ -196,6 +204,14 @@ function getContextBeforeOpening(
   );
   if (constArrowMatch) {
     return `${constArrowMatch[1]} ()=>`;
+  }
+
+  // Match const ObjectName = {
+  const constObjectMatch = textBefore.match(
+    /const\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*$/
+  );
+  if (constObjectMatch) {
+    return constObjectMatch[1];
   }
 
   const exportFunctionMatch = textBefore.match(
