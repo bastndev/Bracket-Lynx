@@ -70,7 +70,7 @@
     "commands": [
       {
         "command": "bracketLens.menu",
-        "title": "Bracket Lynx: Active / Disable / Refresh 🛠️"
+        "title": "Bracket Lynx: Toggle & Refresh 🛠️"
       }
     ]
   },
