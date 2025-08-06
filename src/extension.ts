@@ -60,6 +60,57 @@ function findBrackets(text: string): BracketPair[] {
   return results;
 }
 
+/**
+ * Check if the current position is inside a <style> block
+ */
+function isInsideStyleBlock(text: string, currentPos: number, languageId: string): boolean {
+  // Only check for supported languages that can contain CSS in <style> tags
+  const supportedLanguages = [
+    'html', 'htm', 'astro', 'vue', 'svelte', 'xml', 
+    'php', 'jsp', 'erb', 'ejs', 'handlebars', 'mustache'
+  ];
+  
+  if (!supportedLanguages.includes(languageId)) {
+    return false;
+  }
+
+  // Get text before current position
+  const textBefore = text.substring(0, currentPos);
+  const textAfter = text.substring(currentPos);
+
+  // Find the last opening <style> tag before current position
+  const styleOpenRegex = /<style[^>]*>/gi;
+  let lastStyleOpen = -1;
+  let match;
+  
+  while ((match = styleOpenRegex.exec(textBefore)) !== null) {
+    lastStyleOpen = match.index + match[0].length;
+  }
+
+  // If no <style> tag found before current position, we're not in a style block
+  if (lastStyleOpen === -1) {
+    return false;
+  }
+
+  // Check if there's a closing </style> tag between the last opening and current position
+  const textBetween = text.substring(lastStyleOpen, currentPos);
+  const hasClosingStyle = /<\/style>/i.test(textBetween);
+
+  // If there's a closing tag between, we're not in a style block
+  if (hasClosingStyle) {
+    return false;
+  }
+
+  // Check if there's a closing </style> tag after current position
+  const hasClosingStyleAfter = /<\/style>/i.test(textAfter);
+
+  // We're inside a style block if:
+  // 1. There's an opening <style> before us
+  // 2. No closing </style> between opening and current position  
+  // 3. There's a closing </style> after current position
+  return hasClosingStyleAfter;
+}
+
 function getCSSContextInfo(lineText: string, openCharIndex: number): string {
   const textBefore = lineText.substring(0, openCharIndex).trim();
   
@@ -124,6 +175,11 @@ function getContextualInfo(
   if (openChar === '{'.charCodeAt(0)) {
     // Check if this is a CSS file
     if (doc.languageId === 'css' || doc.languageId === 'scss' || doc.languageId === 'sass' || doc.languageId === 'less') {
+      return getCSSContextInfo(openLineText, openPosition.character);
+    }
+    
+    // Check if we're inside a <style> block in HTML/Astro/Vue/Svelte files
+    if (isInsideStyleBlock(text, openPos, doc.languageId)) {
       return getCSSContextInfo(openLineText, openPosition.character);
     }
     
