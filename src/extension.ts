@@ -1,25 +1,26 @@
 import * as vscode from 'vscode';
 import { BracketLensProvider } from './lens/lens';
-import { toggleBracketLens, setBracketLensProvider } from './actions/toggle';
+import { showBracketLensMenu, setBracketLensProvider } from './actions/toggle';
 
 // ===== EXTENSION ENTRY POINT =====
 
 let bracketLensProvider: BracketLensProvider | undefined;
 
 export function activate(context: vscode.ExtensionContext): void {
-  // Initialize [lens]
+  // Initialize the bracket lens provider
   bracketLensProvider = new BracketLensProvider();
   
-  // Initialize [toggle] functionality
+  // Set provider reference for toggle functionality
   setBracketLensProvider(bracketLensProvider);
   
-  // Register commands
-  const toggleCommand = vscode.commands.registerCommand(
-    'bracketLens.toggle',
-    toggleBracketLens
+  // Register main menu command
+  const mainMenuCommand = vscode.commands.registerCommand(
+    'bracketLens.menu',
+    showBracketLensMenu
   );
-
-  context.subscriptions.push(toggleCommand);
+  
+  // Add to subscriptions for proper cleanup
+  context.subscriptions.push(mainMenuCommand);
 }
 
 export function deactivate(): void {

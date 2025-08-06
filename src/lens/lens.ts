@@ -320,9 +320,9 @@ function updateDecorations(editor: vscode.TextEditor): void {
     return;
   }
 
-  // Check if extension is enabled before processing
-  const { isExtensionEnabled } = require('../actions/toggle');
-  if (!isExtensionEnabled()) {
+  // Check if extension is enabled for this editor before processing
+  const { isEditorEnabled } = require('../actions/toggle');
+  if (!isEditorEnabled(editor)) {
     // If disabled, clear decorations and return
     editor.setDecorations(decorationType, []);
     return;

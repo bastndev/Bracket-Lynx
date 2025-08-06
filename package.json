@@ -69,8 +69,8 @@
   "contributes": {
     "commands": [
       {
-        "command": "bracketLens.toggle",
-        "title": "Bracket Lens: Toggle - ⏻"
+        "command": "bracketLens.menu",
+        "title": "Bracket Lynx: Active / Disable / Refresh 🛠️"
       }
     ]
   },
