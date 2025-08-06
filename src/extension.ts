@@ -174,13 +174,23 @@ function getContextBeforeOpening(
     return '';
   }
 
+  // Match ComponentName: ({ ...props }) => ( | .tsx
+  const objectPropertyArrowMatch = textBefore.match(
+    /([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:\s*\([^)]*\)\s*=>/
+  );
+  if (objectPropertyArrowMatch) {
+    return `${objectPropertyArrowMatch[1]} ()=>`;
+  }
+
+  // Match export const ComponentName = ({ ...props }) => (
   const exportConstArrowMatch = textBefore.match(
     /export\s+const\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*\([^)]*\)\s*=>/
   );
   if (exportConstArrowMatch) {
-    return `export ${exportConstArrowMatch[1]} ()=>`;
+    return `${exportConstArrowMatch[1]} ()=>`;
   }
 
+  // Match const ComponentName = ({ ...props }) => (
   const constArrowMatch = textBefore.match(
     /const\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*\([^)]*\)\s*=>/
   );
@@ -192,7 +202,7 @@ function getContextBeforeOpening(
     /export\s+function\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/
   );
   if (exportFunctionMatch) {
-    return `export ${exportFunctionMatch[1]}`;
+    return `${exportFunctionMatch[1]}`;
   }
 
   const functionMatch = textBefore.match(
@@ -207,7 +217,7 @@ function getContextBeforeOpening(
       /export\s+default\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/
     );
     if (defaultMatch) {
-      return `export default ${defaultMatch[1]}`;
+      return `${defaultMatch[1]}`;
     }
     return 'export default';
   }
