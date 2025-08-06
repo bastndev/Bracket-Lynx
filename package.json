@@ -44,10 +44,21 @@
     "onLanguage:typescript",
     "onLanguage:javascriptreact",
     "onLanguage:typescriptreact",
+    "onLanguage:css",
+    "onLanguage:scss",
+    "onLanguage:sass",
+    "onLanguage:less",
+    "onLanguage:html",
+    "onLanguage:json",
+    "onLanguage:jsonc",
     "onLanguage:dart",
     "onLanguage:python",
     "onLanguage:go",
-    "onLanguage:rust"
+    "onLanguage:rust",
+    "onLanguage:java",
+    "onLanguage:c",
+    "onLanguage:cpp",
+    "onLanguage:csharp"
   ],
   "main": "./dist/extension.js",
   "scripts": {
