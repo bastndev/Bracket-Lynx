@@ -4,7 +4,7 @@ const DEBOUNCE_DELAY = 300;
 const HASH_PREFIX = '<~ #';
 const HASH_PREFIX_SYMBOL = '•';
 
-const MIN_TOTAL_LINES_FOR_CURLY_DECORATION = 3;
+const MIN_TOTAL_LINES_FOR_CURLY_DECORATION = 5;
 const MIN_TOTAL_LINES_FOR_OPENING_TAG_DECORATION = 7;
 
 interface BracketPair {
@@ -60,6 +60,105 @@ function findBrackets(text: string): BracketPair[] {
   return results;
 }
 
+/**
+ * Check if the current position is inside a <style> block
+ */
+function isInsideStyleBlock(text: string, currentPos: number, languageId: string): boolean {
+  // Only check for supported languages that can contain CSS in <style> tags
+  const supportedLanguages = [
+    'html', 'htm', 'astro', 'vue', 'svelte', 'xml', 
+    'php', 'jsp', 'erb', 'ejs', 'handlebars', 'mustache'
+  ];
+  
+  if (!supportedLanguages.includes(languageId)) {
+    return false;
+  }
+
+  // Get text before current position
+  const textBefore = text.substring(0, currentPos);
+  const textAfter = text.substring(currentPos);
+
+  // Find the last opening <style> tag before current position
+  const styleOpenRegex = /<style[^>]*>/gi;
+  let lastStyleOpen = -1;
+  let match;
+  
+  while ((match = styleOpenRegex.exec(textBefore)) !== null) {
+    lastStyleOpen = match.index + match[0].length;
+  }
+
+  // If no <style> tag found before current position, we're not in a style block
+  if (lastStyleOpen === -1) {
+    return false;
+  }
+
+  // Check if there's a closing </style> tag between the last opening and current position
+  const textBetween = text.substring(lastStyleOpen, currentPos);
+  const hasClosingStyle = /<\/style>/i.test(textBetween);
+
+  // If there's a closing tag between, we're not in a style block
+  if (hasClosingStyle) {
+    return false;
+  }
+
+  // Check if there's a closing </style> tag after current position
+  const hasClosingStyleAfter = /<\/style>/i.test(textAfter);
+
+  // We're inside a style block if:
+  // 1. There's an opening <style> before us
+  // 2. No closing </style> between opening and current position  
+  // 3. There's a closing </style> after current position
+  return hasClosingStyleAfter;
+}
+
+function getCSSContextInfo(lineText: string, openCharIndex: number): string {
+  const textBefore = lineText.substring(0, openCharIndex).trim();
+  
+  if (!textBefore) {
+    return '';
+  }
+
+  // Remove comments and clean up the text
+  const cleanText = textBefore.replace(/\/\*.*?\*\//g, '').trim();
+  
+  // Extract CSS selectors - handle multiple selectors separated by commas
+  const selectors = cleanText.split(',').map(s => s.trim()).filter(s => s.length > 0);
+  
+  if (selectors.length === 0) {
+    return '';
+  }
+
+  // Process the last selector (the one closest to the opening brace)
+  const lastSelector = selectors[selectors.length - 1];
+  
+  // Split by spaces to get individual selector parts in order
+  const selectorParts = lastSelector.trim().split(/\s+/).filter(part => part.length > 0);
+  
+  if (selectorParts.length === 0) {
+    return '';
+  }
+
+  // Clean each selector part (remove . # : symbols)
+  const cleanedParts = selectorParts.map(part => {
+    // Remove CSS selector symbols but keep the name
+    return part.replace(/^[.#:]+/, '').replace(/:[a-zA-Z-]*$/, '');
+  }).filter(part => part.length > 0 && /^[a-zA-Z][a-zA-Z0-9_-]*$/.test(part));
+
+  if (cleanedParts.length === 0) {
+    return '';
+  }
+
+  // If we have multiple parts, show only first and last
+  if (cleanedParts.length > 2) {
+    const firstPart = cleanedParts[0];
+    const lastPart = cleanedParts[cleanedParts.length - 1];
+    return `${HASH_PREFIX_SYMBOL}${firstPart} ${HASH_PREFIX_SYMBOL}${lastPart}`;
+  } else {
+    // If we have 1 or 2 parts, show them all
+    return cleanedParts.map(part => `${HASH_PREFIX_SYMBOL}${part}`).join(' ');
+  }
+}
+
 function getContextualInfo(
   text: string,
   openPos: number,
@@ -74,6 +173,16 @@ function getContextualInfo(
   const content = text.substring(openPos + 1, closePos).trim();
 
   if (openChar === '{'.charCodeAt(0)) {
+    // Check if this is a CSS file
+    if (doc.languageId === 'css' || doc.languageId === 'scss' || doc.languageId === 'sass' || doc.languageId === 'less') {
+      return getCSSContextInfo(openLineText, openPosition.character);
+    }
+    
+    // Check if we're inside a <style> block in HTML/Astro/Vue/Svelte files
+    if (isInsideStyleBlock(text, openPos, doc.languageId)) {
+      return getCSSContextInfo(openLineText, openPosition.character);
+    }
+    
     return getContextBeforeOpening(
       openLineText,
       openPosition.character,
@@ -121,13 +230,31 @@ function getContextBeforeOpening(
     return '';
   }
 
+  // Match ComponentName: ({ ...props }) => ( | .tsx
+  const objectPropertyArrowMatch = textBefore.match(
+    /([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:\s*\([^)]*\)\s*=>/
+  );
+  if (objectPropertyArrowMatch) {
+    return `${objectPropertyArrowMatch[1]} ()=>`;
+  }
+
+  // Match export const ObjectName = {
+  const exportConstObjectMatch = textBefore.match(
+    /export\s+const\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*$/
+  );
+  if (exportConstObjectMatch) {
+    return `export ${exportConstObjectMatch[1]}`;
+  }
+
+  // Match export const ComponentName = ({ ...props }) => (
   const exportConstArrowMatch = textBefore.match(
     /export\s+const\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*\([^)]*\)\s*=>/
   );
   if (exportConstArrowMatch) {
-    return `export ${exportConstArrowMatch[1]} ()=>`;
+    return `${exportConstArrowMatch[1]} ()=>`;
   }
 
+  // Match const ComponentName = ({ ...props }) => (
   const constArrowMatch = textBefore.match(
     /const\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*\([^)]*\)\s*=>/
   );
@@ -135,11 +262,19 @@ function getContextBeforeOpening(
     return `${constArrowMatch[1]} ()=>`;
   }
 
+  // Match const ObjectName = {
+  const constObjectMatch = textBefore.match(
+    /const\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*$/
+  );
+  if (constObjectMatch) {
+    return constObjectMatch[1];
+  }
+
   const exportFunctionMatch = textBefore.match(
     /export\s+function\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/
   );
   if (exportFunctionMatch) {
-    return `export ${exportFunctionMatch[1]}`;
+    return `${exportFunctionMatch[1]}`;
   }
 
   const functionMatch = textBefore.match(
@@ -154,7 +289,7 @@ function getContextBeforeOpening(
       /export\s+default\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/
     );
     if (defaultMatch) {
-      return `export default ${defaultMatch[1]}`;
+      return `${defaultMatch[1]}`;
     }
     return 'export default';
   }
@@ -208,9 +343,15 @@ function formatLineRange(
   contextInfo: string = ''
 ): string {
   const baseRange = `${HASH_PREFIX}${startLine}-${endLine}`;
-  return contextInfo
-    ? `${baseRange} ${HASH_PREFIX_SYMBOL}${contextInfo}`
-    : baseRange;
+  if (contextInfo) {
+    // Check if contextInfo already starts with the bullet symbol (for CSS)
+    if (contextInfo.startsWith(HASH_PREFIX_SYMBOL)) {
+      return `${baseRange} ${contextInfo}`;
+    } else {
+      return `${baseRange} ${HASH_PREFIX_SYMBOL}${contextInfo}`;
+    }
+  }
+  return baseRange;
 }
 
 function updateDecorations(editor: vscode.TextEditor): void {
