@@ -8,6 +8,10 @@ const HASH_PREFIX_SYMBOL = '•';
 const MIN_TOTAL_LINES_FOR_CURLY_DECORATION = 5;
 const MIN_TOTAL_LINES_FOR_OPENING_TAG_DECORATION = 7;
 
+// File size limits for performance
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+const MAX_FILE_LINES = 10000; // 10,000 lines
+
 // ===== INTERFACES & TYPES =====
 interface BracketPair {
   open: number;
@@ -35,6 +39,9 @@ const bracketPairs: BracketCharPair[] = [
 
 let decorationType: vscode.TextEditorDecorationType | undefined;
 let throttleTimer: NodeJS.Timeout | undefined;
+
+// Track files that have been warned about size limits
+const warnedLargeFiles = new Set<string>();
 
 function findBrackets(text: string): BracketPair[] {
   const stack: StackItem[] = [];
@@ -499,6 +506,57 @@ function getContextBeforeOpening(
   return hasArrow ? '()=>' : '';
 }
 
+// ===== FILE SIZE LIMITS =====
+
+/**
+ * Check if a file is too large to process efficiently
+ */
+function isFileTooLarge(editor: vscode.TextEditor): boolean {
+  const document = editor.document;
+  const text = document.getText();
+  const fileUri = document.uri.toString();
+  
+  // Check file size in bytes
+  const fileSizeBytes = Buffer.byteLength(text, 'utf8');
+  if (fileSizeBytes > MAX_FILE_SIZE_BYTES) {
+    showLargeFileWarning(document.fileName, 'size', fileSizeBytes);
+    return true;
+  }
+  
+  // Check number of lines
+  const lineCount = document.lineCount;
+  if (lineCount > MAX_FILE_LINES) {
+    showLargeFileWarning(document.fileName, 'lines', lineCount);
+    return true;
+  }
+  
+  return false;
+}
+
+/**
+ * Show a warning message for large files (only once per file)
+ */
+function showLargeFileWarning(fileName: string, limitType: 'size' | 'lines', value: number): void {
+  const fileKey = `${fileName}:${limitType}`;
+  
+  // Only show warning once per file
+  if (warnedLargeFiles.has(fileKey)) {
+    return;
+  }
+  
+  warnedLargeFiles.add(fileKey);
+  
+  let message: string;
+  if (limitType === 'size') {
+    const sizeMB = (value / (1024 * 1024)).toFixed(1);
+    message = `Bracket Lynx: Disabled for large file (${sizeMB}MB). File too large for optimal performance.`;
+  } else {
+    message = `Bracket Lynx: Disabled for large file (${value.toLocaleString()} lines). File too large for optimal performance.`;
+  }
+  
+  vscode.window.showInformationMessage(message);
+}
+
 // ===== DECORATION LOGIC =====
 
 function formatLineRange(
@@ -527,6 +585,13 @@ function updateDecorations(editor: vscode.TextEditor): void {
   const { isEditorEnabled } = require('../actions/toggle');
   if (!isEditorEnabled(editor)) {
     // If disabled, clear decorations and return
+    editor.setDecorations(decorationType, []);
+    return;
+  }
+
+  // Check file size limits to prevent performance issues
+  if (isFileTooLarge(editor)) {
+    // Clear any existing decorations and skip processing
     editor.setDecorations(decorationType, []);
     return;
   }
@@ -695,5 +760,7 @@ export class BracketLensProvider {
     if (throttleTimer) {
       clearTimeout(throttleTimer);
     }
+    // Clear warned files set
+    warnedLargeFiles.clear();
   }
 }
