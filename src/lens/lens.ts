@@ -91,36 +91,47 @@ let decorationType: vscode.TextEditorDecorationType | undefined;
 let throttleTimer: NodeJS.Timeout | undefined;
 
 function findBrackets(text: string, fileUri?: string): BracketPair[] {
-  const stack: StackItem[] = [];
-  const results: BracketPair[] = [];
+  try {
+    const stack: StackItem[] = [];
+    const results: BracketPair[] = [];
 
-  for (let i = 0; i < text.length; i++) {
-    // Skip brackets inside comments or strings - now optimized!
-    if (isInsideComment(text, i, fileUri) || isInsideString(text, i, fileUri)) {
-      continue;
+    // Safety check for extremely large files
+    if (text.length > 10 * 1024 * 1024) { // 10MB
+      console.warn('Bracket Lens: File too large for bracket parsing');
+      return [];
     }
 
-    const code = text.charCodeAt(i);
-    const opening = bracketPairs.find((p) => p.open === code);
-    if (opening) {
-      stack.push({ char: code, pos: i });
-      continue;
-    }
-    const closing = bracketPairs.find((p) => p.close === code);
-    if (closing) {
-      for (let j = stack.length - 1; j >= 0; j--) {
-        const candidatePair = bracketPairs.find(
-          (p) => p.open === stack[j].char
-        );
-        if (candidatePair && candidatePair.close === code) {
-          results.push({ open: stack[j].pos, close: i });
-          stack.splice(j, 1);
-          break;
+    for (let i = 0; i < text.length; i++) {
+      // Skip brackets inside comments or strings - now optimized!
+      if (isInsideComment(text, i, fileUri) || isInsideString(text, i, fileUri)) {
+        continue;
+      }
+
+      const code = text.charCodeAt(i);
+      const opening = bracketPairs.find((p) => p.open === code);
+      if (opening) {
+        stack.push({ char: code, pos: i });
+        continue;
+      }
+      const closing = bracketPairs.find((p) => p.close === code);
+      if (closing) {
+        for (let j = stack.length - 1; j >= 0; j--) {
+          const candidatePair = bracketPairs.find(
+            (p) => p.open === stack[j].char
+          );
+          if (candidatePair && candidatePair.close === code) {
+            results.push({ open: stack[j].pos, close: i });
+            stack.splice(j, 1);
+            break;
+          }
         }
       }
     }
+    return results;
+  } catch (error) {
+    console.error('Bracket Lens: Error parsing brackets:', error);
+    return []; // Return empty array to fail gracefully
   }
-  return results;
 }
 
 // ===== OPTIMIZED PARSING STATE FUNCTIONS =====
@@ -725,112 +736,122 @@ function calculateStateFromPosition(
 // ===== COMMENT AND STRING DETECTION =====
 
 function isInsideComment(text: string, position: number, fileUri?: string): boolean {
-  // Safety checks
-  if (position < 0 || position >= text.length) {
-    return false;
-  }
+  try {
+    // Safety checks
+    if (position < 0 || position >= text.length) {
+      return false;
+    }
 
-  // Use optimized parsing if fileUri is provided
-  if (fileUri) {
-    const parseCache = getOrCreateParseCache(text, fileUri);
-    const closestState = findClosestState(parseCache.states, position);
+    // Use optimized parsing if fileUri is provided
+    if (fileUri) {
+      const parseCache = getOrCreateParseCache(text, fileUri);
+      const closestState = findClosestState(parseCache.states, position);
 
-    if (closestState) {
-      if (closestState.position === position) {
-        return closestState.inBlockComment || closestState.inLineComment;
+      if (closestState) {
+        if (closestState.position === position) {
+          return closestState.inBlockComment || closestState.inLineComment;
+        }
+
+        const currentState = calculateStateFromPosition(
+          text,
+          closestState,
+          position
+        );
+        return currentState.inBlockComment || currentState.inLineComment;
       }
-
-      const currentState = calculateStateFromPosition(
-        text,
-        closestState,
-        position
-      );
-      return currentState.inBlockComment || currentState.inLineComment;
-    }
-  }
-
-  // Fallback to original method for backward compatibility
-  // Check for line comments
-  const lineStart = text.lastIndexOf('\n', position - 1) + 1;
-  const lineText = text.substring(lineStart, position);
-  const lineCommentIndex = lineText.indexOf('//');
-
-  if (lineCommentIndex !== -1) {
-    return true;
-  }
-
-  // Check for block comments
-  let searchPos = 0;
-  while (searchPos < position) {
-    const startIndex = text.indexOf('/*', searchPos);
-    if (startIndex === -1 || startIndex >= position) {
-      break;
     }
 
-    const endIndex = text.indexOf('*/', startIndex + 2);
-    if (endIndex === -1) {
-      // Unclosed block comment - everything after is commented
-      return startIndex < position;
-    } else if (endIndex >= position) {
-      // Position is inside this block comment
+    // Fallback to original method for backward compatibility
+    // Check for line comments
+    const lineStart = text.lastIndexOf('\n', position - 1) + 1;
+    const lineText = text.substring(lineStart, position);
+    const lineCommentIndex = lineText.indexOf('//');
+
+    if (lineCommentIndex !== -1) {
       return true;
     }
 
-    searchPos = endIndex + 2;
-  }
+    // Check for block comments
+    let searchPos = 0;
+    while (searchPos < position) {
+      const startIndex = text.indexOf('/*', searchPos);
+      if (startIndex === -1 || startIndex >= position) {
+        break;
+      }
 
-  return false;
+      const endIndex = text.indexOf('*/', startIndex + 2);
+      if (endIndex === -1) {
+        // Unclosed block comment - everything after is commented
+        return startIndex < position;
+      } else if (endIndex >= position) {
+        // Position is inside this block comment
+        return true;
+      }
+
+      searchPos = endIndex + 2;
+    }
+
+    return false;
+  } catch (error) {
+    console.error('Bracket Lens: Error checking comment state:', error);
+    return false; // Assume not in comment if error occurs
+  }
 }
 
 function isInsideString(text: string, position: number, fileUri?: string): boolean {
-  // Safety checks
-  if (position < 0 || position >= text.length) {
-    return false;
-  }
+  try {
+    // Safety checks
+    if (position < 0 || position >= text.length) {
+      return false;
+    }
 
-  // Use optimized parsing if fileUri is provided
-  if (fileUri) {
-    const parseCache = getOrCreateParseCache(text, fileUri);
-    const closestState = findClosestState(parseCache.states, position);
+    // Use optimized parsing if fileUri is provided
+    if (fileUri) {
+      const parseCache = getOrCreateParseCache(text, fileUri);
+      const closestState = findClosestState(parseCache.states, position);
 
-    if (closestState) {
-      if (closestState.position === position) {
-        return closestState.inString;
+      if (closestState) {
+        if (closestState.position === position) {
+          return closestState.inString;
+        }
+
+        const currentState = calculateStateFromPosition(
+          text,
+          closestState,
+          position
+        );
+        return currentState.inString;
+      }
+    }
+
+    // Fallback to original method for backward compatibility
+    let inDoubleQuote = false;
+    let inSingleQuote = false;
+    let inTemplateString = false;
+
+    for (let i = 0; i < position; i++) {
+      const char = text[i];
+      const prevChar = i > 0 ? text[i - 1] : '';
+
+      // Handle escape sequences
+      if (prevChar === '\\') {
+        continue;
       }
 
-      const currentState = calculateStateFromPosition(
-        text,
-        closestState,
-        position
-      );
-      return currentState.inString;
+      if (char === '"' && !inSingleQuote && !inTemplateString) {
+        inDoubleQuote = !inDoubleQuote;
+      } else if (char === "'" && !inDoubleQuote && !inTemplateString) {
+        inSingleQuote = !inSingleQuote;
+      } else if (char === '`' && !inDoubleQuote && !inSingleQuote) {
+        inTemplateString = !inTemplateString;
+      }
     }
+
+    return inDoubleQuote || inSingleQuote || inTemplateString;
+  } catch (error) {
+    console.error('Bracket Lens: Error checking string state:', error);
+    return false; // Assume not in string if error occurs
   }
-
-  // Fallback to original method for backward compatibility
-  let inDoubleQuote = false;
-  let inSingleQuote = false;
-  let inTemplateString = false;
-
-  for (let i = 0; i < position; i++) {
-    const char = text[i];
-    const prevChar = i > 0 ? text[i - 1] : '';
-
-    // Handle escape sequences
-    if (prevChar === '\\') {
-      continue;
-    }
-
-    if (char === '"' && !inSingleQuote && !inTemplateString) {
-      inDoubleQuote = !inDoubleQuote;
-    } else if (char === "'" && !inDoubleQuote && !inTemplateString) {
-      inSingleQuote = !inSingleQuote;
-    } else if (char === '`' && !inDoubleQuote && !inSingleQuote) {
-      inTemplateString = !inTemplateString;
-    }
-  }
-
-  return inDoubleQuote || inSingleQuote || inTemplateString;
 }
 
 // ===== CONTEXT FUNCTIONS =====
@@ -839,14 +860,15 @@ function isInsideString(text: string, position: number, fileUri?: string): boole
  * Get CSS context info (selectors with cleaned symbols)
  */
 function getCSSContext(lineText: string, openCharIndex: number): string {
-  const textBefore = lineText.substring(0, openCharIndex).trim();
+  try {
+    const textBefore = lineText.substring(0, openCharIndex).trim();
 
-  if (!textBefore) {
-    return '';
-  }
+    if (!textBefore) {
+      return '';
+    }
 
-  // Remove comments and clean up the text
-  const cleanText = textBefore.replace(/\/\*.*?\*\//g, '').trim();
+    // Remove comments and clean up the text
+    const cleanText = textBefore.replace(/\/\*.*?\*\//g, '').trim();
 
   // Extract CSS selectors - handle multiple selectors separated by commas
   const selectors = cleanText
@@ -891,6 +913,10 @@ function getCSSContext(lineText: string, openCharIndex: number): string {
   } else {
     // If we have 1 or 2 parts, show them all
     return cleanedParts.map((part) => `${HASH_PREFIX_SYMBOL}${part}`).join(' ');
+  }
+  } catch (error) {
+    console.error('Bracket Lens: Error extracting CSS context:', error);
+    return '';
   }
 }
 
@@ -966,61 +992,73 @@ function getContextualInfo(
   closePos: number,
   doc: vscode.TextDocument
 ): string {
-  const openChar = text.charCodeAt(openPos);
-  const openPosition = doc.positionAt(openPos);
-  const content = text.substring(openPos + 1, closePos).trim();
+  try {
+    // Safety checks
+    if (openPos < 0 || closePos >= text.length || openPos >= closePos) {
+      return '';
+    }
 
-  if (openChar === '{'.charCodeAt(0)) {
-    // Check if this is a CSS file or inside a <style> block
-    const isCSS = ['css', 'scss', 'sass', 'less', 'stylus'].includes(
-      doc.languageId
-    );
-    const insideStyle = isInsideStyleBlock(text, openPos, doc.languageId);
+    const openChar = text.charCodeAt(openPos);
+    const openPosition = doc.positionAt(openPos);
+    const content = text.substring(openPos + 1, closePos).trim();
 
-    if (isCSS || insideStyle) {
+    let contextInfo = '';
+
+    if (openChar === '{'.charCodeAt(0)) {
+      // Check if this is a CSS file or inside a <style> block
+      const isCSS = ['css', 'scss', 'sass', 'less', 'stylus'].includes(
+        doc.languageId
+      );
+      const insideStyle = isInsideStyleBlock(text, openPos, doc.languageId);
+
+      if (isCSS || insideStyle) {
+        const openLine = doc.lineAt(openPosition.line);
+        contextInfo = getCSSContext(openLine.text, openPosition.character);
+      } else {
+        // JavaScript/TypeScript context
+        const openLine = doc.lineAt(openPosition.line);
+        contextInfo = getContextBeforeOpening(
+          openLine.text,
+          openPosition.character,
+          text,
+          openPos
+        );
+      }
+    } else if (openChar === '['.charCodeAt(0)) {
       const openLine = doc.lineAt(openPosition.line);
-      return getCSSContext(openLine.text, openPosition.character);
-    } else {
-      // JavaScript/TypeScript context
-      const openLine = doc.lineAt(openPosition.line);
-      return getContextBeforeOpening(
-        openLine.text,
+      const openLineText = openLine.text;
+      contextInfo = getContextBeforeOpening(
+        openLineText,
         openPosition.character,
         text,
         openPos
       );
-    }
-  } else if (openChar === '['.charCodeAt(0)) {
-    const openLine = doc.lineAt(openPosition.line);
-    const openLineText = openLine.text;
-    return getContextBeforeOpening(
-      openLineText,
-      openPosition.character,
-      text,
-      openPos
-    );
-  } else if (openChar === '('.charCodeAt(0)) {
-    const openLine = doc.lineAt(openPosition.line);
-    const openLineText = openLine.text;
-    return getContextBeforeOpening(
-      openLineText,
-      openPosition.character,
-      text,
-      openPos
-    );
-  } else if (openChar === '<'.charCodeAt(0)) {
-    let componentContent = content;
-    const isClosingTag = componentContent.startsWith('/');
+    } else if (openChar === '('.charCodeAt(0)) {
+      const openLine = doc.lineAt(openPosition.line);
+      const openLineText = openLine.text;
+      contextInfo = getContextBeforeOpening(
+        openLineText,
+        openPosition.character,
+        text,
+        openPos
+      );
+    } else if (openChar === '<'.charCodeAt(0)) {
+      let componentContent = content;
+      const isClosingTag = componentContent.startsWith('/');
 
-    if (isClosingTag) {
-      componentContent = componentContent.substring(1).trim();
+      if (isClosingTag) {
+        componentContent = componentContent.substring(1).trim();
+      }
+
+      const jsxComponentMatch = componentContent.match(/^[a-zA-Z_$][\w$.]*/);
+      contextInfo = jsxComponentMatch ? jsxComponentMatch[0] : '';
     }
 
-    const jsxComponentMatch = componentContent.match(/^[a-zA-Z_$][\w$.]*/);
-    return jsxComponentMatch ? jsxComponentMatch[0] : '';
+    return contextInfo;
+  } catch (error) {
+    console.error('Bracket Lens: Error extracting contextual info:', error);
+    return '';
   }
-
-  return '';
 }
 
 function getContextBeforeOpening(
@@ -1029,7 +1067,13 @@ function getContextBeforeOpening(
   text: string,
   openPos: number
 ): string {
-  const textBefore = lineText.substring(0, openCharIndex).trim();
+  try {
+    // Safety checks
+    if (openCharIndex < 0 || openCharIndex > lineText.length) {
+      return '';
+    }
+
+    const textBefore = lineText.substring(0, openCharIndex).trim();
 
   if (!textBefore) {
     return '';
@@ -1173,6 +1217,13 @@ function getContextBeforeOpening(
   }
 
   return hasArrow ? '()=>' : '';
+  } catch (error) {
+    console.error(
+      'Bracket Lens: Error extracting context before opening:',
+      error
+    );
+    return '';
+  }
 }
 
 // ===== DECORATION LOGIC =====
@@ -1202,38 +1253,46 @@ function updateDecorationsIncremental(
   editor: vscode.TextEditor, 
   changes?: readonly vscode.TextDocumentContentChangeEvent[]
 ): void {
-  if (!decorationType) {
-    return;
-  }
-
-  // Check if extension is enabled for this editor before processing
-  const { isEditorEnabled } = require('../actions/toggle');
-  if (!isEditorEnabled(editor)) {
-    // If disabled, clear decorations and return
-    editor.setDecorations(decorationType, []);
-    return;
-  }
-
-  // Try to get cached decorations first (only if no changes provided)
-  if (!changes) {
-    const cachedDecorations = getCachedDecorations(editor);
-    if (cachedDecorations) {
-      // Use cached decorations - no processing needed!
-      editor.setDecorations(decorationType, cachedDecorations);
+  try {
+    if (!decorationType) {
+      console.warn('Bracket Lens: Decoration type not initialized');
       return;
     }
-  }
 
-  // Use incremental analysis if changes are provided, otherwise full analysis
-  const doc = editor.document;
-  const text = doc.getText();
-  const fileUri = doc.uri.toString();
-  
-  const brackets = changes 
-    ? getOrUpdateIncrementalCache(doc, changes)
-    : findBrackets(text, fileUri);
+    // Check if extension is enabled for this editor before processing
+    const { isEditorEnabled } = require('../actions/toggle');
+    if (!isEditorEnabled(editor)) {
+      // If disabled, clear decorations and return
+      editor.setDecorations(decorationType, []);
+      return;
+    }
+
+    // Try to get cached decorations first (only if no changes provided)
+    if (!changes) {
+      const cachedDecorations = getCachedDecorations(editor);
+      if (cachedDecorations) {
+        // Use cached decorations - no processing needed!
+        editor.setDecorations(decorationType, cachedDecorations);
+        return;
+      }
+    }
+
+    // Safety check for document validity
+    const doc = editor.document;
+    const text = doc.getText();
     
-  const decorations: vscode.DecorationOptions[] = [];
+    if (!text || text.length === 0) {
+      editor.setDecorations(decorationType, []);
+      return;
+    }
+
+    const fileUri = doc.uri.toString();
+    
+    const brackets = changes 
+      ? getOrUpdateIncrementalCache(doc, changes)
+      : findBrackets(text, fileUri);
+      
+    const decorations: vscode.DecorationOptions[] = [];
   const usedLines = new Set<number>();
 
   brackets.sort((a, b) => a.open - b.open);
@@ -1311,23 +1370,57 @@ function updateDecorationsIncremental(
   cacheDecorations(editor, brackets, decorations);
 
   editor.setDecorations(decorationType, decorations);
+  } catch (error) {
+    console.error('Bracket Lens: Critical error in updateDecorations:', error);
+    // Try to clear decorations to prevent visual artifacts
+    try {
+      if (decorationType) {
+        editor.setDecorations(decorationType, []);
+      }
+    } catch (clearError) {
+      console.error(
+        'Bracket Lens: Failed to clear decorations after error:',
+        clearError
+      );
+    }
+  }
 }
 
 function scheduleUpdate(editor: vscode.TextEditor): void {
-  if (throttleTimer) {
-    clearTimeout(throttleTimer);
+  try {
+    if (throttleTimer) {
+      clearTimeout(throttleTimer);
+    }
+    throttleTimer = setTimeout(() => {
+      try {
+        updateDecorations(editor);
+      } catch (error) {
+        console.error('Bracket Lens: Error in scheduled update:', error);
+      }
+    }, DEBOUNCE_DELAY);
+  } catch (error) {
+    console.error('Bracket Lens: Error scheduling update:', error);
   }
-  throttleTimer = setTimeout(() => updateDecorations(editor), DEBOUNCE_DELAY);
 }
 
 function scheduleUpdateIncremental(
   editor: vscode.TextEditor, 
   changes: readonly vscode.TextDocumentContentChangeEvent[]
 ): void {
-  if (throttleTimer) {
-    clearTimeout(throttleTimer);
+  try {
+    if (throttleTimer) {
+      clearTimeout(throttleTimer);
+    }
+    throttleTimer = setTimeout(() => {
+      try {
+        updateDecorationsIncremental(editor, changes);
+      } catch (error) {
+        console.error('Bracket Lens: Error in scheduled incremental update:', error);
+      }
+    }, DEBOUNCE_DELAY);
+  } catch (error) {
+    console.error('Bracket Lens: Error scheduling incremental update:', error);
   }
-  throttleTimer = setTimeout(() => updateDecorationsIncremental(editor, changes), DEBOUNCE_DELAY);
 }
 
 function createDecorationStyle(): vscode.TextEditorDecorationType {
@@ -1351,58 +1444,108 @@ export class BracketLensProvider {
   }
 
   private initialize(): void {
-    decorationType = createDecorationStyle();
-    this.registerEventHandlers();
+    try {
+      decorationType = createDecorationStyle();
+      this.registerEventHandlers();
 
-    // Initialize with current editor if available
-    const editor = vscode.window.activeTextEditor;
-    if (editor) {
-      updateDecorations(editor);
+      // Initialize with current editor if available
+      const editor = vscode.window.activeTextEditor;
+      if (editor) {
+        updateDecorations(editor);
+      }
+    } catch (error) {
+      console.error('Bracket Lens: Error during initialization:', error);
     }
   }
 
   private registerEventHandlers(): void {
-    this.disposables.push(
+    try {
+      this.disposables.push(
       vscode.window.onDidChangeActiveTextEditor((editor) => {
-        if (editor) {
-          updateDecorations(editor);
+        try {
+          if (editor) {
+            updateDecorations(editor);
+          }
+        } catch (error) {
+          console.error(
+            'Bracket Lens: Error in onDidChangeActiveTextEditor:',
+            error
+          );
         }
       }),
       vscode.workspace.onDidSaveTextDocument((doc) => {
-        const editor = vscode.window.activeTextEditor;
-        if (editor && editor.document === doc) {
-          // Clear cache for saved document to ensure fresh processing
-          clearFileCache(doc.uri.toString());
-          updateDecorations(editor);
+        try {
+          const editor = vscode.window.activeTextEditor;
+          if (editor && editor.document === doc) {
+            // Clear cache for saved document to ensure fresh processing
+            clearFileCache(doc.uri.toString());
+            updateDecorations(editor);
+          }
+        } catch (error) {
+          console.error(
+            'Bracket Lens: Error in onDidSaveTextDocument:',
+            error
+          );
         }
       }),
       vscode.workspace.onDidChangeTextDocument((event) => {
-        const editor = vscode.window.activeTextEditor;
-        if (editor && editor.document === event.document) {
-          // Don't clear incremental cache - we'll update it incrementally
-          // Only clear decoration cache since we're about to recalculate
-          decorationCache.delete(event.document.uri.toString());
-          
-          // Use incremental analysis with the changes
-          scheduleUpdateIncremental(editor, event.contentChanges);
+        try {
+          const editor = vscode.window.activeTextEditor;
+          if (editor && editor.document === event.document) {
+            // Don't clear incremental cache - we'll update it incrementally
+            // Only clear decoration cache since we're about to recalculate
+            decorationCache.delete(event.document.uri.toString());
+            
+            // Use incremental analysis with the changes
+            scheduleUpdateIncremental(editor, event.contentChanges);
+          }
+        } catch (error) {
+          console.error(
+            'Bracket Lens: Error in onDidChangeTextDocument:',
+            error
+          );
         }
       }),
       vscode.workspace.onDidCloseTextDocument((doc) => {
-        // Clean up cache when document is closed
-        clearFileCache(doc.uri.toString());
+        try {
+          // Clean up cache when document is closed
+          clearFileCache(doc.uri.toString());
+        } catch (error) {
+          console.error(
+            'Bracket Lens: Error in onDidCloseTextDocument:',
+            error
+          );
+        }
       })
     );
 
     // Set up periodic cache cleanup
     const cacheCleanupInterval = setInterval(() => {
-      cleanupCache();
+      try {
+        cleanupCache();
+      } catch (error) {
+        console.error(
+          'Bracket Lens: Error in cache cleanup interval:',
+          error
+        );
+      }
     }, 60000); // Clean up every minute
 
     this.disposables.push({
       dispose: () => {
-        clearInterval(cacheCleanupInterval);
+        try {
+          clearInterval(cacheCleanupInterval);
+        } catch (error) {
+          console.error(
+            'Bracket Lens: Error disposing cache cleanup interval:',
+            error
+          );
+        }
       },
     });
+    } catch (error) {
+      console.error('Bracket Lens: Error registering event handlers:', error);
+    }
   }
 
   // ===== PUBLIC METHODS FOR TOGGLE FUNCTIONALITY =====
@@ -1411,28 +1554,60 @@ export class BracketLensProvider {
    * Force update decorations for a specific editor
    */
   public forceUpdate(editor: vscode.TextEditor): void {
-    updateDecorations(editor);
+    try {
+      updateDecorations(editor);
+    } catch (error) {
+      console.error('Bracket Lens: Error in forceUpdate:', error);
+    }
   }
 
   /**
    * Clear all decorations from a specific editor
    */
   public clearDecorations(editor: vscode.TextEditor): void {
-    if (decorationType) {
-      editor.setDecorations(decorationType, []);
+    try {
+      if (decorationType) {
+        editor.setDecorations(decorationType, []);
+      }
+    } catch (error) {
+      console.error('Bracket Lens: Error clearing decorations:', error);
     }
   }
 
   public dispose(): void {
-    this.disposables.forEach((d) => d.dispose());
-    decorationType?.dispose();
-    if (throttleTimer) {
-      clearTimeout(throttleTimer);
+    try {
+      this.disposables.forEach((d) => {
+        try {
+          d.dispose();
+        } catch (error) {
+          console.error('Bracket Lens: Error disposing resource:', error);
+        }
+      });
+
+      try {
+        decorationType?.dispose();
+      } catch (error) {
+        console.error('Bracket Lens: Error disposing decoration type:', error);
+      }
+
+      try {
+        if (throttleTimer) {
+          clearTimeout(throttleTimer);
+        }
+      } catch (error) {
+        console.error('Bracket Lens: Error clearing throttle timer:', error);
+      }
+      
+      try {
+        // Clear all caches
+        decorationCache.clear();
+        parseStateCache.clear();
+        incrementalCache.clear();
+      } catch (error) {
+        console.error('Bracket Lens: Error clearing caches:', error);
+      }
+    } catch (error) {
+      console.error('Bracket Lens: Critical error in dispose:', error);
     }
-    
-    // Clear all caches
-    decorationCache.clear();
-    parseStateCache.clear();
-    incrementalCache.clear();
   }
 }
