@@ -331,6 +331,11 @@ function getContextBeforeOpening(
 
   // Define patterns with their return formats
   const patterns = [
+    // return ( or return {
+    {
+      regex: /return\s*$/,
+      format: () => 'return',
+    },
     // ComponentName: ({ ...props }) => (
     {
       regex: /([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:\s*\([^)]*\)\s*=>/,
@@ -381,9 +386,19 @@ function getContextBeforeOpening(
       regex: /constructor\s*\(/,
       format: () => 'constructor',
     },
-    // render() or handleChange = or any method
+    // render() { or methodName() {
     {
-      regex: /([a-zA-Z_$][a-zA-Z0-9_$]*)\s*[=(]/,
+      regex: /([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\(\s*\)\s*\{?\s*$/,
+      format: (m: RegExpMatchArray) => m[1],
+    },
+    // handleChange = (e) => { or methodName = () => {
+    {
+      regex: /([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*\([^)]*\)\s*=>/,
+      format: (m: RegExpMatchArray) => m[1],
+    },
+    // methodName = { or any assignment
+    {
+      regex: /([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=/,
       format: (m: RegExpMatchArray) => m[1],
     },
   ];
@@ -405,6 +420,14 @@ function getContextBeforeOpening(
 
   // Enhanced fallback - try to get meaningful context
 
+  // Special case: Check if this looks like a method definition (render() {)
+  const methodDefMatch = textBefore.match(
+    /^\s*([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\(\s*\)\s*$/
+  );
+  if (methodDefMatch) {
+    return methodDefMatch[1];
+  }
+
   // Look for any identifier before the opening bracket
   const identifierMatch = textBefore.match(/([a-zA-Z_$][a-zA-Z0-9_$]*)\s*$/);
   if (identifierMatch) {
@@ -418,7 +441,6 @@ function getContextBeforeOpening(
       'while',
       'import',
       'from',
-      'return',
     ];
 
     if (!skipKeywords.includes(identifier)) {
@@ -435,12 +457,21 @@ function getContextBeforeOpening(
     }
   }
 
-  // Look for method-like patterns
-  const methodMatch = textBefore.match(
-    /([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\([^)]*\)\s*$/
-  );
-  if (methodMatch) {
-    return methodMatch[1];
+  // Look for method-like patterns (more comprehensive)
+  const methodPatterns = [
+    // render() { or methodName() {
+    /([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\(\s*\)\s*$/,
+    // methodName(params) {
+    /([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\([^)]*\)\s*$/,
+    // methodName = (params) => {
+    /([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*\([^)]*\)\s*=>\s*$/,
+  ];
+
+  for (const pattern of methodPatterns) {
+    const methodMatch = textBefore.match(pattern);
+    if (methodMatch) {
+      return methodMatch[1];
+    }
   }
 
   // Last resort - any word that looks like an identifier
@@ -457,7 +488,6 @@ function getContextBeforeOpening(
         'while',
         'import',
         'from',
-        'return',
         'this',
       ];
       if (!skipKeywords.includes(word)) {
