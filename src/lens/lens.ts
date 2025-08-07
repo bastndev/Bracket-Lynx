@@ -766,6 +766,11 @@ function updateDecorations(editor: vscode.TextEditor): void {
 
     const contextInfo = getContextualInfo(text, open, close, doc);
 
+    // Skip decoration if no useful context information is available
+    if (!contextInfo || contextInfo.trim() === '') {
+      continue;
+    }
+
     let offset = close + 1;
     if (offset < text.length) {
       const nextChar = text[offset];
