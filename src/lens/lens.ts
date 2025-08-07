@@ -604,8 +604,7 @@ function isInMiddleOfCodeStructure(text: string, closePos: number): boolean {
     if (offset >= text.length) {
       return false;
     }
-
-    // Palabras clave que indican "continuación" = estamos en el medio
+    // Keywords that indicate "continuation" = we are in the middle
     const continuationKeywords = [
       'catch', // try-catch
       'finally', // try-finally
