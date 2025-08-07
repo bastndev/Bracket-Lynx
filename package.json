@@ -38,7 +38,8 @@
   "sponsor": {
     "url": "https://github.com/sponsors/bastndev"
   },
-
+  
+  "main": "./dist/extension.js",
   "activationEvents": [
     "onLanguage:javascript",
     "onLanguage:typescript",
@@ -65,7 +66,14 @@
     "onLanguage:cpp",
     "onLanguage:csharp"
   ],
-  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "bracketLens.menu",
+        "title": "Bracket Lynx: Toggle & Refresh 🛠️"
+      }
+    ]
+  },
   "scripts": {
     "compile": "npm run check-types && npm run lint && node esbuild.js",
     "watch": "npm-run-all -p watch:*",
