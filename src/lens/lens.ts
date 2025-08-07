@@ -1,32 +1,8 @@
 import * as vscode from 'vscode';
 
 /**
- * Bracket Lens Provider - Enhanced with critical improvements:
- *
- * ✅ CRITICAL IMPROVEMENTS IMPLEMENTED:
- * 1. Robust error handling - All functions wrapped in try-catch blocks
- * 2. LRU Cache with size limits - Maximum 50 files cached to prevent memory issues
- * 3. Safety checks - Validation of parameters and bounds checking
- * 4. Graceful degradation - Extension continues working even if errors occur
- * 5. Detailed logging - Console errors for debugging without crashing
- * 6. ⚡ OPTIMIZED PARSING - Intelligent state caching for 50x+ performance boost
- * 7. 🎯 SMART POSITIONING - Intelligent decoration placement for try-catch, if-else blocks
- * 8. ⚙️ USER CONFIGURATION - Fully customizable minimum line thresholds per bracket type
- * 9. 🚫 MIDDLE-OF-CODE DETECTION - Prevents decorations from appearing in the middle of code structures
- *
- * 🔧 PERFORMANCE OPTIMIZATIONS:
- * - Cache eviction prevents memory leaks
- * - Early returns on invalid data
- * - File size limits enforced
- * - ⚡ Parse state caching: O(n) → O(1) for string/comment detection
- * - Interval-based state snapshots every 100 characters
- * - Massive performance improvement for large files (2000+ lines)
- *
- * 🛡️ STABILITY FEATURES:
- * - No more crashes on malformed files
- * - Handles edge cases gracefully
- * - Resource cleanup on disposal
- * - Dual cache system (decorations + parsing states)
+ * Bracket Lens Provider - Enhanced bracket matching with intelligent context detection
+ * Features: LRU Cache, Parse state optimization, Smart positioning, User configuration
  */
 
 // ===== CONSTANTS =====
