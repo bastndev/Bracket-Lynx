@@ -43,6 +43,18 @@ let throttleTimer: NodeJS.Timeout | undefined;
 // Track files that have been warned about size limits
 const warnedLargeFiles = new Set<string>();
 
+// ===== CACHE SYSTEM =====
+interface CacheEntry {
+  textHash: string;
+  brackets: BracketPair[];
+  decorations: vscode.DecorationOptions[];
+  timestamp: number;
+}
+
+// Cache for processed files
+const decorationCache = new Map<string, CacheEntry>();
+const CACHE_MAX_AGE = 5 * 60 * 1000; // 5 minutes
+
 function findBrackets(text: string): BracketPair[] {
   const stack: StackItem[] = [];
   const results: BracketPair[] = [];
@@ -506,6 +518,93 @@ function getContextBeforeOpening(
   return hasArrow ? '()=>' : '';
 }
 
+// ===== CACHE FUNCTIONS =====
+
+/**
+ * Generate a simple hash for text content
+ */
+function generateTextHash(text: string): string {
+  let hash = 0;
+  for (let i = 0; i < text.length; i++) {
+    const char = text.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return hash.toString();
+}
+
+/**
+ * Get cached decorations if available and valid
+ */
+function getCachedDecorations(
+  editor: vscode.TextEditor
+): vscode.DecorationOptions[] | null {
+  const document = editor.document;
+  const fileUri = document.uri.toString();
+  const text = document.getText();
+  const textHash = generateTextHash(text);
+
+  const cached = decorationCache.get(fileUri);
+  if (!cached) {
+    return null;
+  }
+
+  // Check if cache is still valid
+  const now = Date.now();
+  if (now - cached.timestamp > CACHE_MAX_AGE) {
+    decorationCache.delete(fileUri);
+    return null;
+  }
+
+  // Check if text content has changed
+  if (cached.textHash !== textHash) {
+    decorationCache.delete(fileUri);
+    return null;
+  }
+
+  return cached.decorations;
+}
+
+/**
+ * Cache decorations for future use
+ */
+function cacheDecorations(
+  editor: vscode.TextEditor,
+  brackets: BracketPair[],
+  decorations: vscode.DecorationOptions[]
+): void {
+  const document = editor.document;
+  const fileUri = document.uri.toString();
+  const text = document.getText();
+  const textHash = generateTextHash(text);
+
+  decorationCache.set(fileUri, {
+    textHash,
+    brackets,
+    decorations,
+    timestamp: Date.now(),
+  });
+}
+
+/**
+ * Clear cache for a specific file
+ */
+function clearFileCache(fileUri: string): void {
+  decorationCache.delete(fileUri);
+}
+
+/**
+ * Clear old cache entries
+ */
+function cleanupCache(): void {
+  const now = Date.now();
+  for (const [fileUri, entry] of decorationCache) {
+    if (now - entry.timestamp > CACHE_MAX_AGE) {
+      decorationCache.delete(fileUri);
+    }
+  }
+}
+
 // ===== FILE SIZE LIMITS =====
 
 /**
@@ -515,37 +614,41 @@ function isFileTooLarge(editor: vscode.TextEditor): boolean {
   const document = editor.document;
   const text = document.getText();
   const fileUri = document.uri.toString();
-  
+
   // Check file size in bytes
   const fileSizeBytes = Buffer.byteLength(text, 'utf8');
   if (fileSizeBytes > MAX_FILE_SIZE_BYTES) {
     showLargeFileWarning(document.fileName, 'size', fileSizeBytes);
     return true;
   }
-  
+
   // Check number of lines
   const lineCount = document.lineCount;
   if (lineCount > MAX_FILE_LINES) {
     showLargeFileWarning(document.fileName, 'lines', lineCount);
     return true;
   }
-  
+
   return false;
 }
 
 /**
  * Show a warning message for large files (only once per file)
  */
-function showLargeFileWarning(fileName: string, limitType: 'size' | 'lines', value: number): void {
+function showLargeFileWarning(
+  fileName: string,
+  limitType: 'size' | 'lines',
+  value: number
+): void {
   const fileKey = `${fileName}:${limitType}`;
-  
+
   // Only show warning once per file
   if (warnedLargeFiles.has(fileKey)) {
     return;
   }
-  
+
   warnedLargeFiles.add(fileKey);
-  
+
   let message: string;
   if (limitType === 'size') {
     const sizeMB = (value / (1024 * 1024)).toFixed(1);
@@ -553,7 +656,7 @@ function showLargeFileWarning(fileName: string, limitType: 'size' | 'lines', val
   } else {
     message = `Bracket Lynx: Disabled for large file (${value.toLocaleString()} lines). File too large for optimal performance.`;
   }
-  
+
   vscode.window.showInformationMessage(message);
 }
 
@@ -596,6 +699,15 @@ function updateDecorations(editor: vscode.TextEditor): void {
     return;
   }
 
+  // Try to get cached decorations first
+  const cachedDecorations = getCachedDecorations(editor);
+  if (cachedDecorations) {
+    // Use cached decorations - no processing needed!
+    editor.setDecorations(decorationType, cachedDecorations);
+    return;
+  }
+
+  // No cache hit - process normally
   const doc = editor.document;
   const text = doc.getText();
   const brackets = findBrackets(text);
@@ -673,6 +785,9 @@ function updateDecorations(editor: vscode.TextEditor): void {
     });
   }
 
+  // Cache the results for future use
+  cacheDecorations(editor, brackets, decorations);
+
   editor.setDecorations(decorationType, decorations);
 }
 
@@ -724,16 +839,33 @@ export class BracketLensProvider {
       vscode.workspace.onDidSaveTextDocument((doc) => {
         const editor = vscode.window.activeTextEditor;
         if (editor && editor.document === doc) {
+          // Clear cache for saved document to ensure fresh processing
+          clearFileCache(doc.uri.toString());
           updateDecorations(editor);
         }
       }),
       vscode.workspace.onDidChangeTextDocument((event) => {
         const editor = vscode.window.activeTextEditor;
         if (editor && editor.document === event.document) {
+          // Clear cache for changed document
+          clearFileCache(event.document.uri.toString());
           scheduleUpdate(editor);
         }
+      }),
+      vscode.workspace.onDidCloseTextDocument((doc) => {
+        // Clean up cache when document is closed
+        clearFileCache(doc.uri.toString());
       })
     );
+
+    // Set up periodic cache cleanup
+    const cacheCleanupInterval = setInterval(() => {
+      cleanupCache();
+    }, 60000); // Clean up every minute
+
+    this.disposables.push({
+      dispose: () => clearInterval(cacheCleanupInterval),
+    });
   }
 
   // ===== PUBLIC METHODS FOR TOGGLE FUNCTIONALITY =====
@@ -762,5 +894,7 @@ export class BracketLensProvider {
     }
     // Clear warned files set
     warnedLargeFiles.clear();
+    // Clear decoration cache
+    decorationCache.clear();
   }
 }
