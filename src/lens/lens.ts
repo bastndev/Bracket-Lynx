@@ -24,6 +24,29 @@ interface StackItem {
   pos: number;
 }
 
+// ===== OPTIMIZED PARSING CACHE =====
+interface ParseState {
+  position: number;
+  inString: boolean;
+  inSingleQuote: boolean;
+  inDoubleQuote: boolean;
+  inTemplateString: boolean;
+  inBlockComment: boolean;
+  inLineComment: boolean;
+}
+
+interface TextParseCache {
+  textHash: string;
+  states: ParseState[];
+  timestamp: number;
+}
+
+// Cache parsing states for performance optimization
+const PARSE_CACHE_INTERVAL = 100; // Cache state every 100 characters
+const PARSE_CACHE_MAX_AGE = 2 * 60 * 1000; // 2 minutes
+const CACHE_MAX_SIZE = 50; // Maximum 50 files in cache
+const parseStateCache = new Map<string, TextParseCache>();
+
 // ===== BRACKET PAIRS =====
 
 const bracketPairs: BracketCharPair[] = [
@@ -36,13 +59,13 @@ const bracketPairs: BracketCharPair[] = [
 let decorationType: vscode.TextEditorDecorationType | undefined;
 let throttleTimer: NodeJS.Timeout | undefined;
 
-function findBrackets(text: string): BracketPair[] {
+function findBrackets(text: string, fileUri?: string): BracketPair[] {
   const stack: StackItem[] = [];
   const results: BracketPair[] = [];
 
   for (let i = 0; i < text.length; i++) {
-    // Skip brackets inside comments or strings
-    if (isInsideComment(text, i) || isInsideString(text, i)) {
+    // Skip brackets inside comments or strings - now optimized!
+    if (isInsideComment(text, i, fileUri) || isInsideString(text, i, fileUri)) {
       continue;
     }
 
@@ -69,9 +92,228 @@ function findBrackets(text: string): BracketPair[] {
   return results;
 }
 
+// ===== OPTIMIZED PARSING STATE FUNCTIONS =====
+
+/**
+ * Generate a simple hash for text content
+ */
+function generateTextHash(text: string): string {
+  let hash = 0;
+  for (let i = 0; i < text.length; i++) {
+    const char = text.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return hash.toString();
+}
+
+/**
+ * Get or create parsing state cache for a text
+ */
+function getOrCreateParseCache(text: string, fileUri: string): TextParseCache {
+  const textHash = generateTextHash(text);
+  const cached = parseStateCache.get(fileUri);
+
+  // Check if cache is valid
+  if (
+    cached &&
+    cached.textHash === textHash &&
+    Date.now() - cached.timestamp < PARSE_CACHE_MAX_AGE
+  ) {
+    return cached;
+  }
+
+  // Create new cache
+  const states: ParseState[] = [];
+  let inString = false;
+  let inSingleQuote = false;
+  let inDoubleQuote = false;
+  let inTemplateString = false;
+  let inBlockComment = false;
+  let inLineComment = false;
+
+  // Parse text and cache states at intervals
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const prevChar = i > 0 ? text[i - 1] : '';
+    const nextChar = i < text.length - 1 ? text[i + 1] : '';
+
+    // Handle line comments
+    if (!inString && !inBlockComment && char === '/' && nextChar === '/') {
+      inLineComment = true;
+    } else if (inLineComment && char === '\n') {
+      inLineComment = false;
+    }
+
+    // Handle block comments
+    if (!inString && !inLineComment && char === '/' && nextChar === '*') {
+      inBlockComment = true;
+    } else if (inBlockComment && char === '*' && nextChar === '/') {
+      inBlockComment = false;
+      i++; // Skip the '/' character
+      continue;
+    }
+
+    // Handle strings (only if not in comments)
+    if (!inBlockComment && !inLineComment) {
+      // Handle escape sequences
+      if (prevChar !== '\\') {
+        if (char === '"' && !inSingleQuote && !inTemplateString) {
+          inDoubleQuote = !inDoubleQuote;
+        } else if (char === "'" && !inDoubleQuote && !inTemplateString) {
+          inSingleQuote = !inSingleQuote;
+        } else if (char === '`' && !inDoubleQuote && !inSingleQuote) {
+          inTemplateString = !inTemplateString;
+        }
+      }
+    }
+
+    inString = inSingleQuote || inDoubleQuote || inTemplateString;
+
+    // Cache state at intervals
+    if (i % PARSE_CACHE_INTERVAL === 0 || i === text.length - 1) {
+      states.push({
+        position: i,
+        inString,
+        inSingleQuote,
+        inDoubleQuote,
+        inTemplateString,
+        inBlockComment,
+        inLineComment,
+      });
+    }
+  }
+
+  const newCache: TextParseCache = {
+    textHash,
+    states,
+    timestamp: Date.now(),
+  };
+
+  // Implement LRU for parse cache
+  if (parseStateCache.size >= CACHE_MAX_SIZE) {
+    const oldestKey = parseStateCache.keys().next().value;
+    if (oldestKey) {
+      parseStateCache.delete(oldestKey);
+    }
+  }
+
+  parseStateCache.set(fileUri, newCache);
+  return newCache;
+}
+
+/**
+ * Find the closest cached state before the given position
+ */
+function findClosestState(
+  states: ParseState[],
+  position: number
+): ParseState | null {
+  let closest: ParseState | null = null;
+
+  for (const state of states) {
+    if (state.position <= position) {
+      closest = state;
+    } else {
+      break; // States are ordered by position
+    }
+  }
+
+  return closest;
+}
+
+/**
+ * Calculate parsing state from a starting point to target position
+ */
+function calculateStateFromPosition(
+  text: string,
+  startState: ParseState,
+  targetPosition: number
+): ParseState {
+  let inString = startState.inString;
+  let inSingleQuote = startState.inSingleQuote;
+  let inDoubleQuote = startState.inDoubleQuote;
+  let inTemplateString = startState.inTemplateString;
+  let inBlockComment = startState.inBlockComment;
+  let inLineComment = startState.inLineComment;
+
+  for (let i = startState.position + 1; i <= targetPosition; i++) {
+    const char = text[i];
+    const prevChar = i > 0 ? text[i - 1] : '';
+    const nextChar = i < text.length - 1 ? text[i + 1] : '';
+
+    // Handle line comments
+    if (!inString && !inBlockComment && char === '/' && nextChar === '/') {
+      inLineComment = true;
+    } else if (inLineComment && char === '\n') {
+      inLineComment = false;
+    }
+
+    // Handle block comments
+    if (!inString && !inLineComment && char === '/' && nextChar === '*') {
+      inBlockComment = true;
+    } else if (inBlockComment && char === '*' && nextChar === '/') {
+      inBlockComment = false;
+      i++; // Skip the '/' character
+      continue;
+    }
+
+    // Handle strings (only if not in comments)
+    if (!inBlockComment && !inLineComment) {
+      // Handle escape sequences
+      if (prevChar !== '\\') {
+        if (char === '"' && !inSingleQuote && !inTemplateString) {
+          inDoubleQuote = !inDoubleQuote;
+        } else if (char === "'" && !inDoubleQuote && !inTemplateString) {
+          inSingleQuote = !inSingleQuote;
+        } else if (char === '`' && !inDoubleQuote && !inSingleQuote) {
+          inTemplateString = !inTemplateString;
+        }
+      }
+    }
+
+    inString = inSingleQuote || inDoubleQuote || inTemplateString;
+  }
+
+  return {
+    position: targetPosition,
+    inString,
+    inSingleQuote,
+    inDoubleQuote,
+    inTemplateString,
+    inBlockComment,
+    inLineComment,
+  };
+}
+
 // ===== COMMENT AND STRING DETECTION =====
 
-function isInsideComment(text: string, position: number): boolean {
+function isInsideComment(text: string, position: number, fileUri?: string): boolean {
+  // Safety checks
+  if (position < 0 || position >= text.length) {
+    return false;
+  }
+
+  // Use optimized parsing if fileUri is provided
+  if (fileUri) {
+    const parseCache = getOrCreateParseCache(text, fileUri);
+    const closestState = findClosestState(parseCache.states, position);
+
+    if (closestState) {
+      if (closestState.position === position) {
+        return closestState.inBlockComment || closestState.inLineComment;
+      }
+
+      const currentState = calculateStateFromPosition(
+        text,
+        closestState,
+        position
+      );
+      return currentState.inBlockComment || currentState.inLineComment;
+    }
+  }
+
+  // Fallback to original method for backward compatibility
   // Check for line comments
   const lineStart = text.lastIndexOf('\n', position - 1) + 1;
   const lineText = text.substring(lineStart, position);
@@ -104,9 +346,35 @@ function isInsideComment(text: string, position: number): boolean {
   return false;
 }
 
-function isInsideString(text: string, position: number): boolean {
+function isInsideString(text: string, position: number, fileUri?: string): boolean {
+  // Safety checks
+  if (position < 0 || position >= text.length) {
+    return false;
+  }
+
+  // Use optimized parsing if fileUri is provided
+  if (fileUri) {
+    const parseCache = getOrCreateParseCache(text, fileUri);
+    const closestState = findClosestState(parseCache.states, position);
+
+    if (closestState) {
+      if (closestState.position === position) {
+        return closestState.inString;
+      }
+
+      const currentState = calculateStateFromPosition(
+        text,
+        closestState,
+        position
+      );
+      return currentState.inString;
+    }
+  }
+
+  // Fallback to original method for backward compatibility
   let inDoubleQuote = false;
   let inSingleQuote = false;
+  let inTemplateString = false;
 
   for (let i = 0; i < position; i++) {
     const char = text[i];
@@ -117,14 +385,16 @@ function isInsideString(text: string, position: number): boolean {
       continue;
     }
 
-    if (char === '"' && !inSingleQuote) {
+    if (char === '"' && !inSingleQuote && !inTemplateString) {
       inDoubleQuote = !inDoubleQuote;
-    } else if (char === "'" && !inDoubleQuote) {
+    } else if (char === "'" && !inDoubleQuote && !inTemplateString) {
       inSingleQuote = !inSingleQuote;
+    } else if (char === '`' && !inDoubleQuote && !inSingleQuote) {
+      inTemplateString = !inTemplateString;
     }
   }
 
-  return inDoubleQuote || inSingleQuote;
+  return inDoubleQuote || inSingleQuote || inTemplateString;
 }
 
 // ===== CONTEXT FUNCTIONS =====
@@ -503,7 +773,8 @@ function updateDecorations(editor: vscode.TextEditor): void {
 
   const doc = editor.document;
   const text = doc.getText();
-  const brackets = findBrackets(text);
+  const fileUri = doc.uri.toString();
+  const brackets = findBrackets(text, fileUri);
   const decorations: vscode.DecorationOptions[] = [];
   const usedLines = new Set<number>();
 
