@@ -85,7 +85,9 @@ function isInsideComment(text: string, position: number): boolean {
   let searchPos = 0;
   while (searchPos < position) {
     const startIndex = text.indexOf('/*', searchPos);
-    if (startIndex === -1 || startIndex >= position) {break;}
+    if (startIndex === -1 || startIndex >= position) {
+      break;
+    }
 
     const endIndex = text.indexOf('*/', startIndex + 2);
     if (endIndex === -1) {
@@ -369,6 +371,21 @@ function getContextBeforeOpening(
       regex: /export\s+default\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/,
       format: (m: RegExpMatchArray) => m[1],
     },
+    // class ClassName
+    {
+      regex: /class\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/,
+      format: (m: RegExpMatchArray) => `class ${m[1]}`,
+    },
+    // constructor(props)
+    {
+      regex: /constructor\s*\(/,
+      format: () => 'constructor',
+    },
+    // render() or handleChange = or any method
+    {
+      regex: /([a-zA-Z_$][a-zA-Z0-9_$]*)\s*[=(]/,
+      format: (m: RegExpMatchArray) => m[1],
+    },
   ];
 
   // Test patterns
@@ -386,16 +403,12 @@ function getContextBeforeOpening(
 
   const hasArrow = textBefore.includes('=>');
 
-  // Final fallback - get last identifier
-  const contextMatch = textBefore.match(/([a-zA-Z_$][a-zA-Z0-9_$]*)\s*$/);
-  if (contextMatch) {
-    return hasArrow ? `${contextMatch[1]} ()=>` : contextMatch[1];
-  }
+  // Enhanced fallback - try to get meaningful context
 
-  // Last word fallback
-  const words = textBefore.split(/\s+/).filter((word) => word.length > 0);
-  if (words.length > 0) {
-    const lastWord = words[words.length - 1];
+  // Look for any identifier before the opening bracket
+  const identifierMatch = textBefore.match(/([a-zA-Z_$][a-zA-Z0-9_$]*)\s*$/);
+  if (identifierMatch) {
+    const identifier = identifierMatch[1];
     const skipKeywords = [
       'const',
       'let',
@@ -405,12 +418,51 @@ function getContextBeforeOpening(
       'while',
       'import',
       'from',
+      'return',
     ];
-    if (
-      !skipKeywords.includes(lastWord) &&
-      /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(lastWord)
-    ) {
-      return hasArrow ? `${lastWord} ()=>` : lastWord;
+
+    if (!skipKeywords.includes(identifier)) {
+      return hasArrow ? `${identifier} ()=>` : identifier;
+    }
+  }
+
+  // Look for patterns like "= {" or "=> {"
+  if (textBefore.includes('=')) {
+    const beforeEquals = textBefore.split('=')[0].trim();
+    const lastWordMatch = beforeEquals.match(/([a-zA-Z_$][a-zA-Z0-9_$]*)\s*$/);
+    if (lastWordMatch) {
+      return lastWordMatch[1];
+    }
+  }
+
+  // Look for method-like patterns
+  const methodMatch = textBefore.match(
+    /([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\([^)]*\)\s*$/
+  );
+  if (methodMatch) {
+    return methodMatch[1];
+  }
+
+  // Last resort - any word that looks like an identifier
+  const words = textBefore.split(/\s+/).filter((word) => word.length > 0);
+  for (let i = words.length - 1; i >= 0; i--) {
+    const word = words[i];
+    if (/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(word)) {
+      const skipKeywords = [
+        'const',
+        'let',
+        'var',
+        'if',
+        'for',
+        'while',
+        'import',
+        'from',
+        'return',
+        'this',
+      ];
+      if (!skipKeywords.includes(word)) {
+        return hasArrow ? `${word} ()=>` : word;
+      }
     }
   }
 
