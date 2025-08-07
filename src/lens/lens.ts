@@ -57,6 +57,33 @@ interface StackItem {
   pos: number;
 }
 
+// ===== CONFIGURATION HELPERS =====
+
+/**
+ * Get minimum lines configuration for different bracket types
+ */
+function getMinLinesForBracket(bracketType: string): number {
+  try {
+    const config = vscode.workspace.getConfiguration('bracketLens');
+    switch (bracketType) {
+      case 'curly':
+        return config.get('minLinesForDecoration.curly', 5);
+      case 'square':
+        return config.get('minLinesForDecoration.square', 5);
+      case 'round':
+        return config.get('minLinesForDecoration.round', 5);
+      case 'angle':
+        return config.get('minLinesForDecoration.angle', 7);
+      default:
+        return 5;
+    }
+  } catch (error) {
+    console.error('Bracket Lens: Error getting configuration:', error);
+    // Fallback to defaults
+    return bracketType === 'angle' ? 7 : 5;
+  }
+}
+
 // ===== BRACKET PAIRS =====
 
 const bracketPairs: BracketCharPair[] = [
@@ -604,6 +631,18 @@ function isInMiddleOfCodeStructure(text: string, closePos: number): boolean {
     if (offset >= text.length) {
       return false;
     }
+
+    // OPTION A: Detect problematic symbols immediately after bracket
+    const nextChar = text[offset];
+    const problematicChars = ['}', ']', ')', '>', ',', ';'];
+
+    if (problematicChars.includes(nextChar)) {
+      console.log(
+        `Bracket Lens: Detected problematic symbol '${nextChar}' at position ${offset} - skipping decoration`
+      );
+      return true; // It's in the middle if next char is a closing symbol
+    }
+
     // Keywords that indicate "continuation" = we are in the middle
     const continuationKeywords = [
       'catch', // try-catch
@@ -618,11 +657,19 @@ function isInMiddleOfCodeStructure(text: string, closePos: number): boolean {
     const remainingText = text.substring(offset);
 
     // Check if any continuation keyword starts at this position
-    return continuationKeywords.some((keyword) => {
+    const hasKeyword = continuationKeywords.some((keyword) => {
       // Check for keyword followed by space, parenthesis, or brace
       const pattern = new RegExp(`^${keyword}\\s*[\\s\\(\\{]`);
       return pattern.test(remainingText);
     });
+
+    if (hasKeyword) {
+      console.log(
+        `Bracket Lens: Detected continuation keyword at position ${offset} - skipping decoration`
+      );
+    }
+
+    return hasKeyword;
   } catch (error) {
     console.error(
       'Bracket Lens: Error checking middle of code structure:',
@@ -1215,11 +1262,53 @@ function updateDecorations(editor: vscode.TextEditor): void {
         const openChar = text.charCodeAt(open);
         let skipDecoration = false;
 
+        // OPTION C: Debug logging for minimum lines validation
+        let bracketType = '';
+        let minLines = 5; // default
+
         if (openChar === '{'.charCodeAt(0)) {
-          if (totalLineSpan <= MIN_TOTAL_LINES_FOR_CURLY_DECORATION) {
+          bracketType = 'curly';
+          minLines = getMinLinesForBracket('curly');
+          console.log(
+            `Bracket Lens Debug: Curly bracket - totalLineSpan=${totalLineSpan}, minLines=${minLines}`
+          );
+          if (totalLineSpan <= minLines) {
+            console.log(
+              `Bracket Lens Debug: Skipping curly bracket decoration (${totalLineSpan} <= ${minLines})`
+            );
+            skipDecoration = true;
+          }
+        } else if (openChar === '['.charCodeAt(0)) {
+          bracketType = 'square';
+          minLines = getMinLinesForBracket('square');
+          console.log(
+            `Bracket Lens Debug: Square bracket - totalLineSpan=${totalLineSpan}, minLines=${minLines}`
+          );
+          if (totalLineSpan <= minLines) {
+            console.log(
+              `Bracket Lens Debug: Skipping square bracket decoration (${totalLineSpan} <= ${minLines})`
+            );
+            skipDecoration = true;
+          }
+        } else if (openChar === '('.charCodeAt(0)) {
+          bracketType = 'round';
+          minLines = getMinLinesForBracket('round');
+          console.log(
+            `Bracket Lens Debug: Round bracket - totalLineSpan=${totalLineSpan}, minLines=${minLines}`
+          );
+          if (totalLineSpan <= minLines) {
+            console.log(
+              `Bracket Lens Debug: Skipping round bracket decoration (${totalLineSpan} <= ${minLines})`
+            );
             skipDecoration = true;
           }
         } else if (openChar === '<'.charCodeAt(0)) {
+          bracketType = 'angle';
+          minLines = getMinLinesForBracket('angle');
+          console.log(
+            `Bracket Lens Debug: Angle bracket - totalLineSpan=${totalLineSpan}, minLines=${minLines}`
+          );
+
           const isSelfClosingTag =
             close > 0 && text.charCodeAt(close - 1) === '/'.charCodeAt(0);
           const isActualClosingTagMarker =
@@ -1227,11 +1316,16 @@ function updateDecorations(editor: vscode.TextEditor): void {
             text.charCodeAt(open + 1) === '/'.charCodeAt(0);
 
           if (isActualClosingTagMarker) {
-            if (totalLineSpan <= MIN_TOTAL_LINES_FOR_OPENING_TAG_DECORATION) {
+            if (totalLineSpan <= minLines) {
+              // Skip for now - closing tags usually don't need decoration
             }
           } else if (isSelfClosingTag) {
+            // Self-closing tags don't need decoration
           } else {
-            if (totalLineSpan <= MIN_TOTAL_LINES_FOR_OPENING_TAG_DECORATION) {
+            if (totalLineSpan <= minLines) {
+              console.log(
+                `Bracket Lens Debug: Skipping angle bracket decoration (${totalLineSpan} <= ${minLines})`
+              );
               skipDecoration = true;
             }
           }
