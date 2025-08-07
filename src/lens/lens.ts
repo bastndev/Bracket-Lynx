@@ -47,6 +47,18 @@ const PARSE_CACHE_MAX_AGE = 2 * 60 * 1000; // 2 minutes
 const CACHE_MAX_SIZE = 50; // Maximum 50 files in cache
 const parseStateCache = new Map<string, TextParseCache>();
 
+// ===== DECORATION CACHE SYSTEM =====
+interface CacheEntry {
+  textHash: string;
+  brackets: BracketPair[];
+  decorations: vscode.DecorationOptions[];
+  timestamp: number;
+}
+
+// Cache for processed files with LRU limit
+const decorationCache = new Map<string, CacheEntry>();
+const DECORATION_CACHE_MAX_AGE = 5 * 60 * 1000; // 5 minutes
+
 // ===== BRACKET PAIRS =====
 
 const bracketPairs: BracketCharPair[] = [
@@ -106,6 +118,158 @@ function generateTextHash(text: string): string {
   }
   return hash.toString();
 }
+
+// ===== DECORATION CACHE FUNCTIONS =====
+
+/**
+ * Get cached decorations if available and valid
+ */
+function getCachedDecorations(
+  editor: vscode.TextEditor
+): vscode.DecorationOptions[] | null {
+  try {
+    const document = editor.document;
+    const fileUri = document.uri.toString();
+    const text = document.getText();
+    const textHash = generateTextHash(text);
+
+    const cached = decorationCache.get(fileUri);
+    if (!cached) {
+      return null;
+    }
+
+    // Check if cache is still valid
+    const now = Date.now();
+    if (now - cached.timestamp > DECORATION_CACHE_MAX_AGE) {
+      decorationCache.delete(fileUri);
+      return null;
+    }
+
+    // Check if text content has changed
+    if (cached.textHash !== textHash) {
+      decorationCache.delete(fileUri);
+      return null;
+    }
+
+    // Move to end for LRU (delete and re-add)
+    decorationCache.delete(fileUri);
+    decorationCache.set(fileUri, cached);
+
+    return cached.decorations;
+  } catch (error) {
+    console.error('Bracket Lens: Error getting cached decorations:', error);
+    return null;
+  }
+}
+
+/**
+ * Cache decorations for future use with LRU eviction
+ */
+function cacheDecorations(
+  editor: vscode.TextEditor,
+  brackets: BracketPair[],
+  decorations: vscode.DecorationOptions[]
+): void {
+  try {
+    const document = editor.document;
+    const fileUri = document.uri.toString();
+    const text = document.getText();
+    const textHash = generateTextHash(text);
+
+    // Implement LRU cache - remove oldest entries if cache is full
+    if (decorationCache.size >= CACHE_MAX_SIZE) {
+      const oldestKey = decorationCache.keys().next().value;
+      if (oldestKey) {
+        decorationCache.delete(oldestKey);
+        console.log(`Bracket Lens: Evicted decoration cache entry for ${oldestKey}`);
+      }
+    }
+
+    decorationCache.set(fileUri, {
+      textHash,
+      brackets,
+      decorations,
+      timestamp: Date.now(),
+    });
+  } catch (error) {
+    console.error('Bracket Lens: Error caching decorations:', error);
+  }
+}
+
+/**
+ * Clear cache for a specific file
+ */
+function clearFileCache(fileUri: string): void {
+  decorationCache.delete(fileUri);
+  parseStateCache.delete(fileUri); // Also clear parsing state cache
+}
+
+/**
+ * Clear old cache entries and enforce size limits
+ */
+function cleanupCache(): void {
+  try {
+    const now = Date.now();
+    const decorationEntriesToDelete: string[] = [];
+    const parseEntriesToDelete: string[] = [];
+
+    // Find expired decoration cache entries
+    for (const [fileUri, entry] of decorationCache) {
+      if (now - entry.timestamp > DECORATION_CACHE_MAX_AGE) {
+        decorationEntriesToDelete.push(fileUri);
+      }
+    }
+
+    // Find expired parse cache entries
+    for (const [fileUri, entry] of parseStateCache) {
+      if (now - entry.timestamp > PARSE_CACHE_MAX_AGE) {
+        parseEntriesToDelete.push(fileUri);
+      }
+    }
+
+    // Delete expired decoration entries
+    decorationEntriesToDelete.forEach((fileUri) => {
+      decorationCache.delete(fileUri);
+    });
+
+    // Delete expired parse entries
+    parseEntriesToDelete.forEach((fileUri) => {
+      parseStateCache.delete(fileUri);
+    });
+
+    // Enforce size limit for decoration cache
+    while (decorationCache.size > CACHE_MAX_SIZE) {
+      const oldestKey = decorationCache.keys().next().value;
+      if (oldestKey) {
+        decorationCache.delete(oldestKey);
+      } else {
+        break; // Safety break
+      }
+    }
+
+    // Enforce size limit for parse cache
+    while (parseStateCache.size > CACHE_MAX_SIZE) {
+      const oldestKey = parseStateCache.keys().next().value;
+      if (oldestKey) {
+        parseStateCache.delete(oldestKey);
+      } else {
+        break; // Safety break
+      }
+    }
+
+    const totalCleaned =
+      decorationEntriesToDelete.length + parseEntriesToDelete.length;
+    if (totalCleaned > 0) {
+      console.log(
+        `Bracket Lens: Cleaned up ${totalCleaned} expired cache entries (${decorationEntriesToDelete.length} decoration, ${parseEntriesToDelete.length} parse)`
+      );
+    }
+  } catch (error) {
+    console.error('Bracket Lens: Error during cache cleanup:', error);
+  }
+}
+
+// ===== PARSING STATE FUNCTIONS =====
 
 /**
  * Get or create parsing state cache for a text
@@ -771,6 +935,15 @@ function updateDecorations(editor: vscode.TextEditor): void {
     return;
   }
 
+  // Try to get cached decorations first
+  const cachedDecorations = getCachedDecorations(editor);
+  if (cachedDecorations) {
+    // Use cached decorations - no processing needed!
+    editor.setDecorations(decorationType, cachedDecorations);
+    return;
+  }
+
+  // No cache hit - process normally
   const doc = editor.document;
   const text = doc.getText();
   const fileUri = doc.uri.toString();
@@ -849,6 +1022,9 @@ function updateDecorations(editor: vscode.TextEditor): void {
     });
   }
 
+  // Cache the results for future use
+  cacheDecorations(editor, brackets, decorations);
+
   editor.setDecorations(decorationType, decorations);
 }
 
@@ -900,16 +1076,35 @@ export class BracketLensProvider {
       vscode.workspace.onDidSaveTextDocument((doc) => {
         const editor = vscode.window.activeTextEditor;
         if (editor && editor.document === doc) {
+          // Clear cache for saved document to ensure fresh processing
+          clearFileCache(doc.uri.toString());
           updateDecorations(editor);
         }
       }),
       vscode.workspace.onDidChangeTextDocument((event) => {
         const editor = vscode.window.activeTextEditor;
         if (editor && editor.document === event.document) {
+          // Clear cache for changed document
+          clearFileCache(event.document.uri.toString());
           scheduleUpdate(editor);
         }
+      }),
+      vscode.workspace.onDidCloseTextDocument((doc) => {
+        // Clean up cache when document is closed
+        clearFileCache(doc.uri.toString());
       })
     );
+
+    // Set up periodic cache cleanup
+    const cacheCleanupInterval = setInterval(() => {
+      cleanupCache();
+    }, 60000); // Clean up every minute
+
+    this.disposables.push({
+      dispose: () => {
+        clearInterval(cacheCleanupInterval);
+      },
+    });
   }
 
   // ===== PUBLIC METHODS FOR TOGGLE FUNCTIONALITY =====
@@ -936,5 +1131,9 @@ export class BracketLensProvider {
     if (throttleTimer) {
       clearTimeout(throttleTimer);
     }
+    
+    // Clear all caches
+    decorationCache.clear();
+    parseStateCache.clear();
   }
 }
