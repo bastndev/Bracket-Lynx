@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { BracketLensProvider } from './lens/lens';
-import { showBracketLensMenu, setBracketLensProvider } from './actions/toggle';
+import { showBracketLensMenu, setBracketLensProvider, cleanupClosedEditor, cleanupAllClosedEditors } from './actions/toggle';
 
 // ===== EXTENSION ENTRY POINT =====
 
@@ -19,8 +19,22 @@ export function activate(context: vscode.ExtensionContext): void {
     showBracketLensMenu
   );
   
+  // Register cleanup event listeners
+  const onDidCloseTextDocument = vscode.workspace.onDidCloseTextDocument((document) => {
+    cleanupClosedEditor(document);
+  });
+  
+  const onDidChangeVisibleTextEditors = vscode.window.onDidChangeVisibleTextEditors(() => {
+    // Clean up stale editor states when visible editors change
+    cleanupAllClosedEditors();
+  });
+  
   // Add to subscriptions for proper cleanup
-  context.subscriptions.push(mainMenuCommand);
+  context.subscriptions.push(
+    mainMenuCommand,
+    onDidCloseTextDocument,
+    onDidChangeVisibleTextEditors
+  );
 }
 
 export function deactivate(): void {
