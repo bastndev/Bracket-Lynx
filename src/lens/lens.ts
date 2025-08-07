@@ -41,6 +41,11 @@ function findBrackets(text: string): BracketPair[] {
   const results: BracketPair[] = [];
 
   for (let i = 0; i < text.length; i++) {
+    // Skip brackets inside comments or strings
+    if (isInsideComment(text, i) || isInsideString(text, i)) {
+      continue;
+    }
+
     const code = text.charCodeAt(i);
     const opening = bracketPairs.find((p) => p.open === code);
     if (opening) {
@@ -64,6 +69,62 @@ function findBrackets(text: string): BracketPair[] {
   return results;
 }
 
+// ===== COMMENT AND STRING DETECTION =====
+
+function isInsideComment(text: string, position: number): boolean {
+  // Check for line comments
+  const lineStart = text.lastIndexOf('\n', position - 1) + 1;
+  const lineText = text.substring(lineStart, position);
+  const lineCommentIndex = lineText.indexOf('//');
+
+  if (lineCommentIndex !== -1) {
+    return true;
+  }
+
+  // Check for block comments
+  let searchPos = 0;
+  while (searchPos < position) {
+    const startIndex = text.indexOf('/*', searchPos);
+    if (startIndex === -1 || startIndex >= position) {break;}
+
+    const endIndex = text.indexOf('*/', startIndex + 2);
+    if (endIndex === -1) {
+      // Unclosed block comment - everything after is commented
+      return startIndex < position;
+    } else if (endIndex >= position) {
+      // Position is inside this block comment
+      return true;
+    }
+
+    searchPos = endIndex + 2;
+  }
+
+  return false;
+}
+
+function isInsideString(text: string, position: number): boolean {
+  let inDoubleQuote = false;
+  let inSingleQuote = false;
+
+  for (let i = 0; i < position; i++) {
+    const char = text[i];
+    const prevChar = i > 0 ? text[i - 1] : '';
+
+    // Handle escape sequences
+    if (prevChar === '\\') {
+      continue;
+    }
+
+    if (char === '"' && !inSingleQuote) {
+      inDoubleQuote = !inDoubleQuote;
+    } else if (char === "'" && !inDoubleQuote) {
+      inSingleQuote = !inSingleQuote;
+    }
+  }
+
+  return inDoubleQuote || inSingleQuote;
+}
+
 // ===== CONTEXT FUNCTIONS =====
 
 /**
@@ -71,36 +132,44 @@ function findBrackets(text: string): BracketPair[] {
  */
 function getCSSContext(lineText: string, openCharIndex: number): string {
   const textBefore = lineText.substring(0, openCharIndex).trim();
-  
+
   if (!textBefore) {
     return '';
   }
 
   // Remove comments and clean up the text
   const cleanText = textBefore.replace(/\/\*.*?\*\//g, '').trim();
-  
+
   // Extract CSS selectors - handle multiple selectors separated by commas
-  const selectors = cleanText.split(',').map(s => s.trim()).filter(s => s.length > 0);
-  
+  const selectors = cleanText
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+
   if (selectors.length === 0) {
     return '';
   }
 
   // Process the last selector (the one closest to the opening brace)
   const lastSelector = selectors[selectors.length - 1];
-  
+
   // Split by spaces to get individual selector parts in order
-  const selectorParts = lastSelector.trim().split(/\s+/).filter(part => part.length > 0);
-  
+  const selectorParts = lastSelector
+    .trim()
+    .split(/\s+/)
+    .filter((part) => part.length > 0);
+
   if (selectorParts.length === 0) {
     return '';
   }
 
   // Clean each selector part (remove . # : symbols)
-  const cleanedParts = selectorParts.map(part => {
-    // Remove CSS selector symbols but keep the name
-    return part.replace(/^[.#:]+/, '').replace(/:[a-zA-Z-]*$/, '');
-  }).filter(part => part.length > 0 && /^[a-zA-Z][a-zA-Z0-9_-]*$/.test(part));
+  const cleanedParts = selectorParts
+    .map((part) => {
+      // Remove CSS selector symbols but keep the name
+      return part.replace(/^[.#:]+/, '').replace(/:[a-zA-Z-]*$/, '');
+    })
+    .filter((part) => part.length > 0 && /^[a-zA-Z][a-zA-Z0-9_-]*$/.test(part));
 
   if (cleanedParts.length === 0) {
     return '';
@@ -113,19 +182,33 @@ function getCSSContext(lineText: string, openCharIndex: number): string {
     return `${HASH_PREFIX_SYMBOL}${firstPart} ${HASH_PREFIX_SYMBOL}${lastPart}`;
   } else {
     // If we have 1 or 2 parts, show them all
-    return cleanedParts.map(part => `${HASH_PREFIX_SYMBOL}${part}`).join(' ');
+    return cleanedParts.map((part) => `${HASH_PREFIX_SYMBOL}${part}`).join(' ');
   }
 }
 
 /**
  * Check if current position is inside a <style> block
  */
-function isInsideStyleBlock(text: string, currentPos: number, languageId: string): boolean {
+function isInsideStyleBlock(
+  text: string,
+  currentPos: number,
+  languageId: string
+): boolean {
   const supportedLanguages = [
-    'html', 'htm', 'astro', 'vue', 'svelte', 'xml', 
-    'php', 'jsp', 'erb', 'ejs', 'handlebars', 'mustache'
+    'html',
+    'htm',
+    'astro',
+    'vue',
+    'svelte',
+    'xml',
+    'php',
+    'jsp',
+    'erb',
+    'ejs',
+    'handlebars',
+    'mustache',
   ];
-  
+
   if (!supportedLanguages.includes(languageId)) {
     return false;
   }
@@ -138,7 +221,7 @@ function isInsideStyleBlock(text: string, currentPos: number, languageId: string
   const styleOpenRegex = /<style[^>]*>/gi;
   let lastStyleOpen = -1;
   let match;
-  
+
   while ((match = styleOpenRegex.exec(textBefore)) !== null) {
     lastStyleOpen = match.index + match[0].length;
   }
@@ -162,7 +245,7 @@ function isInsideStyleBlock(text: string, currentPos: number, languageId: string
 
   // We're inside a style block if:
   // 1. There's an opening <style> before us
-  // 2. No closing </style> between opening and current position  
+  // 2. No closing </style> between opening and current position
   // 3. There's a closing </style> after current position
   return hasClosingStyleAfter;
 }
@@ -181,9 +264,11 @@ function getContextualInfo(
 
   if (openChar === '{'.charCodeAt(0)) {
     // Check if this is a CSS file or inside a <style> block
-    const isCSS = ['css', 'scss', 'sass', 'less', 'stylus'].includes(doc.languageId);
+    const isCSS = ['css', 'scss', 'sass', 'less', 'stylus'].includes(
+      doc.languageId
+    );
     const insideStyle = isInsideStyleBlock(text, openPos, doc.languageId);
-    
+
     if (isCSS || insideStyle) {
       const openLine = doc.lineAt(openPosition.line);
       return getCSSContext(openLine.text, openPosition.character);
@@ -245,21 +330,45 @@ function getContextBeforeOpening(
   // Define patterns with their return formats
   const patterns = [
     // ComponentName: ({ ...props }) => (
-    { regex: /([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:\s*\([^)]*\)\s*=>/, format: (m: RegExpMatchArray) => `${m[1]} ()=>` },
+    {
+      regex: /([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:\s*\([^)]*\)\s*=>/,
+      format: (m: RegExpMatchArray) => `${m[1]} ()=>`,
+    },
     // export const ObjectName = {
-    { regex: /export\s+const\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*$/, format: (m: RegExpMatchArray) => `export ${m[1]}` },
+    {
+      regex: /export\s+const\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*$/,
+      format: (m: RegExpMatchArray) => `export ${m[1]}`,
+    },
     // export const ComponentName = ({ ...props }) => (
-    { regex: /export\s+const\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*\([^)]*\)\s*=>/, format: (m: RegExpMatchArray) => `${m[1]} ()=>` },
+    {
+      regex: /export\s+const\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*\([^)]*\)\s*=>/,
+      format: (m: RegExpMatchArray) => `${m[1]} ()=>`,
+    },
     // const ComponentName = ({ ...props }) => (
-    { regex: /const\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*\([^)]*\)\s*=>/, format: (m: RegExpMatchArray) => `${m[1]} ()=>` },
+    {
+      regex: /const\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*\([^)]*\)\s*=>/,
+      format: (m: RegExpMatchArray) => `${m[1]} ()=>`,
+    },
     // const ObjectName = {
-    { regex: /const\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*$/, format: (m: RegExpMatchArray) => m[1] },
+    {
+      regex: /const\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*$/,
+      format: (m: RegExpMatchArray) => m[1],
+    },
     // export function FunctionName
-    { regex: /export\s+function\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/, format: (m: RegExpMatchArray) => m[1] },
+    {
+      regex: /export\s+function\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/,
+      format: (m: RegExpMatchArray) => m[1],
+    },
     // function FunctionName
-    { regex: /function\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/, format: (m: RegExpMatchArray) => m[1] },
+    {
+      regex: /function\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/,
+      format: (m: RegExpMatchArray) => m[1],
+    },
     // export default
-    { regex: /export\s+default\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/, format: (m: RegExpMatchArray) => m[1] },
+    {
+      regex: /export\s+default\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/,
+      format: (m: RegExpMatchArray) => m[1],
+    },
   ];
 
   // Test patterns
@@ -284,11 +393,23 @@ function getContextBeforeOpening(
   }
 
   // Last word fallback
-  const words = textBefore.split(/\s+/).filter(word => word.length > 0);
+  const words = textBefore.split(/\s+/).filter((word) => word.length > 0);
   if (words.length > 0) {
     const lastWord = words[words.length - 1];
-    const skipKeywords = ['const', 'let', 'var', 'if', 'for', 'while', 'import', 'from'];
-    if (!skipKeywords.includes(lastWord) && /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(lastWord)) {
+    const skipKeywords = [
+      'const',
+      'let',
+      'var',
+      'if',
+      'for',
+      'while',
+      'import',
+      'from',
+    ];
+    if (
+      !skipKeywords.includes(lastWord) &&
+      /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(lastWord)
+    ) {
       return hasArrow ? `${lastWord} ()=>` : lastWord;
     }
   }
@@ -438,7 +559,7 @@ export class BracketLensProvider {
   private initialize(): void {
     decorationType = createDecorationStyle();
     this.registerEventHandlers();
-    
+
     // Initialize with current editor if available
     const editor = vscode.window.activeTextEditor;
     if (editor) {
@@ -487,7 +608,7 @@ export class BracketLensProvider {
   }
 
   public dispose(): void {
-    this.disposables.forEach(d => d.dispose());
+    this.disposables.forEach((d) => d.dispose());
     decorationType?.dispose();
     if (throttleTimer) {
       clearTimeout(throttleTimer);
