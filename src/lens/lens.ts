@@ -55,6 +55,25 @@ interface CacheEntry {
   timestamp: number;
 }
 
+// ===== INCREMENTAL ANALYSIS SYSTEM =====
+interface IncrementalCache {
+  textHash: string;
+  brackets: BracketPair[];
+  lineCount: number;
+  timestamp: number;
+}
+
+interface ChangeRegion {
+  startLine: number;
+  endLine: number;
+  startChar: number;
+  endChar: number;
+}
+
+// Cache for incremental analysis
+const incrementalCache = new Map<string, IncrementalCache>();
+const INCREMENTAL_CACHE_MAX_AGE = 10 * 60 * 1000; // 10 minutes
+
 // Cache for processed files with LRU limit
 const decorationCache = new Map<string, CacheEntry>();
 const DECORATION_CACHE_MAX_AGE = 5 * 60 * 1000; // 5 minutes
@@ -202,6 +221,236 @@ function cacheDecorations(
 function clearFileCache(fileUri: string): void {
   decorationCache.delete(fileUri);
   parseStateCache.delete(fileUri); // Also clear parsing state cache
+  incrementalCache.delete(fileUri); // Also clear incremental cache
+}
+
+// ===== INCREMENTAL ANALYSIS FUNCTIONS =====
+
+/**
+ * Detect what changed in the document
+ */
+function detectChangeRegions(
+  document: vscode.TextDocument,
+  changes: readonly vscode.TextDocumentContentChangeEvent[]
+): ChangeRegion[] {
+  const regions: ChangeRegion[] = [];
+
+  for (const change of changes) {
+    if (!change.range) {
+      // If no range, entire document changed
+      return [{
+        startLine: 0,
+        endLine: document.lineCount - 1,
+        startChar: 0,
+        endChar: document.getText().length
+      }];
+    }
+
+    const startLine = change.range.start.line;
+    const endLine = change.range.end.line;
+    const startChar = document.offsetAt(change.range.start);
+    const endChar = document.offsetAt(change.range.end);
+
+    regions.push({
+      startLine,
+      endLine: Math.max(endLine, startLine + change.text.split('\n').length - 1),
+      startChar,
+      endChar: startChar + change.text.length
+    });
+  }
+
+  return regions;
+}
+
+/**
+ * Expand change region to include potentially affected brackets
+ */
+function expandChangeRegion(
+  region: ChangeRegion,
+  document: vscode.TextDocument,
+  existingBrackets: BracketPair[]
+): ChangeRegion {
+  const text = document.getText();
+  
+  // Find brackets that might be affected by this change
+  let minStart = region.startChar;
+  let maxEnd = region.endChar;
+
+  // Look for brackets that cross the change boundary
+  for (const bracket of existingBrackets) {
+    const openLine = document.positionAt(bracket.open).line;
+    const closeLine = document.positionAt(bracket.close).line;
+
+    // If bracket spans across or near the change region
+    if (
+      (openLine <= region.endLine + 2 && closeLine >= region.startLine - 2) ||
+      (bracket.open >= region.startChar - 200 && bracket.open <= region.endChar + 200) ||
+      (bracket.close >= region.startChar - 200 && bracket.close <= region.endChar + 200)
+    ) {
+      minStart = Math.min(minStart, bracket.open - 100); // Extra buffer
+      maxEnd = Math.max(maxEnd, bracket.close + 100);
+    }
+  }
+
+  // Ensure we don't go out of bounds
+  minStart = Math.max(0, minStart);
+  maxEnd = Math.min(text.length, maxEnd);
+
+  const expandedStartLine = Math.max(0, document.positionAt(minStart).line - 1);
+  const expandedEndLine = Math.min(document.lineCount - 1, document.positionAt(maxEnd).line + 1);
+
+  return {
+    startLine: expandedStartLine,
+    endLine: expandedEndLine,
+    startChar: minStart,
+    endChar: maxEnd
+  };
+}
+
+/**
+ * Find brackets in a specific region of text
+ */
+function findBracketsInRegion(
+  text: string,
+  region: ChangeRegion,
+  fileUri?: string
+): BracketPair[] {
+  const regionText = text.substring(region.startChar, region.endChar);
+  const stack: StackItem[] = [];
+  const results: BracketPair[] = [];
+
+  for (let i = 0; i < regionText.length; i++) {
+    const absolutePos = region.startChar + i;
+    
+    // Skip brackets inside comments or strings
+    if (
+      isInsideComment(text, absolutePos, fileUri) || 
+      isInsideString(text, absolutePos, fileUri)
+    ) {
+      continue;
+    }
+
+    const code = regionText.charCodeAt(i);
+    const opening = bracketPairs.find((p) => p.open === code);
+    if (opening) {
+      stack.push({ char: code, pos: absolutePos });
+      continue;
+    }
+    
+    const closing = bracketPairs.find((p) => p.close === code);
+    if (closing) {
+      // Look for matching opening bracket in stack
+      for (let j = stack.length - 1; j >= 0; j--) {
+        const candidatePair = bracketPairs.find(
+          (p) => p.open === stack[j].char
+        );
+        if (candidatePair && candidatePair.close === code) {
+          results.push({ open: stack[j].pos, close: absolutePos });
+          stack.splice(j, 1);
+          break;
+        }
+      }
+    }
+  }
+
+  // Also look for brackets that might have their pair outside the region
+  // This is a simplified approach - in a full implementation, we'd do more sophisticated matching
+  return results;
+}
+
+/**
+ * Merge new brackets with existing brackets, removing overlaps
+ */
+function mergeBrackets(
+  existingBrackets: BracketPair[],
+  newBrackets: BracketPair[],
+  affectedRegion: ChangeRegion
+): BracketPair[] {
+  // Remove brackets that are in or overlap with the affected region
+  const unaffectedBrackets = existingBrackets.filter(bracket => {
+    return !(
+      (bracket.open >= affectedRegion.startChar && bracket.open <= affectedRegion.endChar) ||
+      (bracket.close >= affectedRegion.startChar && bracket.close <= affectedRegion.endChar) ||
+      (bracket.open < affectedRegion.startChar && bracket.close > affectedRegion.endChar)
+    );
+  });
+
+  // Combine unaffected brackets with new brackets
+  const allBrackets = [...unaffectedBrackets, ...newBrackets];
+  
+  // Sort by opening position
+  allBrackets.sort((a, b) => a.open - b.open);
+  
+  return allBrackets;
+}
+
+/**
+ * Get or update incremental cache
+ */
+function getOrUpdateIncrementalCache(
+  document: vscode.TextDocument,
+  changes?: readonly vscode.TextDocumentContentChangeEvent[]
+): BracketPair[] {
+  const fileUri = document.uri.toString();
+  const text = document.getText();
+  const textHash = generateTextHash(text);
+  const cached = incrementalCache.get(fileUri);
+
+  // If no changes provided or cache is invalid, do full analysis
+  if (!changes || !cached || cached.textHash === textHash || 
+      Date.now() - cached.timestamp > INCREMENTAL_CACHE_MAX_AGE) {
+    
+    // Fallback to full analysis
+    const fullBrackets = findBrackets(text, fileUri);
+    
+    // Update incremental cache
+    if (incrementalCache.size >= CACHE_MAX_SIZE) {
+      const oldestKey = incrementalCache.keys().next().value;
+      if (oldestKey) {
+        incrementalCache.delete(oldestKey);
+      }
+    }
+
+    incrementalCache.set(fileUri, {
+      textHash,
+      brackets: fullBrackets,
+      lineCount: document.lineCount,
+      timestamp: Date.now()
+    });
+
+    return fullBrackets;
+  }
+
+  // Incremental analysis
+  try {
+    const changeRegions = detectChangeRegions(document, changes);
+    let resultBrackets = cached.brackets;
+
+    for (const region of changeRegions) {
+      // Expand region to include potentially affected brackets
+      const expandedRegion = expandChangeRegion(region, document, cached.brackets);
+      
+      // Find brackets in the expanded region
+      const newBrackets = findBracketsInRegion(text, expandedRegion, fileUri);
+      
+      // Merge with existing brackets
+      resultBrackets = mergeBrackets(resultBrackets, newBrackets, expandedRegion);
+    }
+
+    // Update cache with new results
+    incrementalCache.set(fileUri, {
+      textHash,
+      brackets: resultBrackets,
+      lineCount: document.lineCount,
+      timestamp: Date.now()
+    });
+
+    return resultBrackets;
+  } catch (error) {
+    console.error('Bracket Lens: Error in incremental analysis, falling back to full:', error);
+    // Fallback to full analysis on error
+    return findBrackets(text, fileUri);
+  }
 }
 
 /**
@@ -227,6 +476,14 @@ function cleanupCache(): void {
       }
     }
 
+    // Find expired incremental cache entries
+    const incrementalEntriesToDelete: string[] = [];
+    for (const [fileUri, entry] of incrementalCache) {
+      if (now - entry.timestamp > INCREMENTAL_CACHE_MAX_AGE) {
+        incrementalEntriesToDelete.push(fileUri);
+      }
+    }
+
     // Delete expired decoration entries
     decorationEntriesToDelete.forEach((fileUri) => {
       decorationCache.delete(fileUri);
@@ -235,6 +492,11 @@ function cleanupCache(): void {
     // Delete expired parse entries
     parseEntriesToDelete.forEach((fileUri) => {
       parseStateCache.delete(fileUri);
+    });
+
+    // Delete expired incremental entries
+    incrementalEntriesToDelete.forEach((fileUri) => {
+      incrementalCache.delete(fileUri);
     });
 
     // Enforce size limit for decoration cache
@@ -257,11 +519,21 @@ function cleanupCache(): void {
       }
     }
 
+    // Enforce size limit for incremental cache
+    while (incrementalCache.size > CACHE_MAX_SIZE) {
+      const oldestKey = incrementalCache.keys().next().value;
+      if (oldestKey) {
+        incrementalCache.delete(oldestKey);
+      } else {
+        break; // Safety break
+      }
+    }
+
     const totalCleaned =
-      decorationEntriesToDelete.length + parseEntriesToDelete.length;
+      decorationEntriesToDelete.length + parseEntriesToDelete.length + incrementalEntriesToDelete.length;
     if (totalCleaned > 0) {
       console.log(
-        `Bracket Lens: Cleaned up ${totalCleaned} expired cache entries (${decorationEntriesToDelete.length} decoration, ${parseEntriesToDelete.length} parse)`
+        `Bracket Lens: Cleaned up ${totalCleaned} expired cache entries (${decorationEntriesToDelete.length} decoration, ${parseEntriesToDelete.length} parse, ${incrementalEntriesToDelete.length} incremental)`
       );
     }
   } catch (error) {
@@ -923,6 +1195,13 @@ function formatLineRange(
 }
 
 function updateDecorations(editor: vscode.TextEditor): void {
+  updateDecorationsIncremental(editor);
+}
+
+function updateDecorationsIncremental(
+  editor: vscode.TextEditor, 
+  changes?: readonly vscode.TextDocumentContentChangeEvent[]
+): void {
   if (!decorationType) {
     return;
   }
@@ -935,19 +1214,25 @@ function updateDecorations(editor: vscode.TextEditor): void {
     return;
   }
 
-  // Try to get cached decorations first
-  const cachedDecorations = getCachedDecorations(editor);
-  if (cachedDecorations) {
-    // Use cached decorations - no processing needed!
-    editor.setDecorations(decorationType, cachedDecorations);
-    return;
+  // Try to get cached decorations first (only if no changes provided)
+  if (!changes) {
+    const cachedDecorations = getCachedDecorations(editor);
+    if (cachedDecorations) {
+      // Use cached decorations - no processing needed!
+      editor.setDecorations(decorationType, cachedDecorations);
+      return;
+    }
   }
 
-  // No cache hit - process normally
+  // Use incremental analysis if changes are provided, otherwise full analysis
   const doc = editor.document;
   const text = doc.getText();
   const fileUri = doc.uri.toString();
-  const brackets = findBrackets(text, fileUri);
+  
+  const brackets = changes 
+    ? getOrUpdateIncrementalCache(doc, changes)
+    : findBrackets(text, fileUri);
+    
   const decorations: vscode.DecorationOptions[] = [];
   const usedLines = new Set<number>();
 
@@ -1035,6 +1320,16 @@ function scheduleUpdate(editor: vscode.TextEditor): void {
   throttleTimer = setTimeout(() => updateDecorations(editor), DEBOUNCE_DELAY);
 }
 
+function scheduleUpdateIncremental(
+  editor: vscode.TextEditor, 
+  changes: readonly vscode.TextDocumentContentChangeEvent[]
+): void {
+  if (throttleTimer) {
+    clearTimeout(throttleTimer);
+  }
+  throttleTimer = setTimeout(() => updateDecorationsIncremental(editor, changes), DEBOUNCE_DELAY);
+}
+
 function createDecorationStyle(): vscode.TextEditorDecorationType {
   return vscode.window.createTextEditorDecorationType({
     after: {
@@ -1084,9 +1379,12 @@ export class BracketLensProvider {
       vscode.workspace.onDidChangeTextDocument((event) => {
         const editor = vscode.window.activeTextEditor;
         if (editor && editor.document === event.document) {
-          // Clear cache for changed document
-          clearFileCache(event.document.uri.toString());
-          scheduleUpdate(editor);
+          // Don't clear incremental cache - we'll update it incrementally
+          // Only clear decoration cache since we're about to recalculate
+          decorationCache.delete(event.document.uri.toString());
+          
+          // Use incremental analysis with the changes
+          scheduleUpdateIncremental(editor, event.contentChanges);
         }
       }),
       vscode.workspace.onDidCloseTextDocument((doc) => {
@@ -1135,5 +1433,6 @@ export class BracketLensProvider {
     // Clear all caches
     decorationCache.clear();
     parseStateCache.clear();
+    incrementalCache.clear();
   }
 }
