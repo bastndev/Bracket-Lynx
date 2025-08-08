@@ -7,7 +7,7 @@ const HASH_PREFIX = '<~ #';
 const HASH_PREFIX_SYMBOL = '•';
 
 const MIN_TOTAL_LINES_FOR_CURLY_DECORATION = 4; // Minimum number of lines
-const MIN_TOTAL_LINES_FOR_OPENING_TAG_DECORATION = 7; // Minimum number of lines in  tags HTML/XML 
+const MIN_TOTAL_LINES_FOR_OPENING_TAG_DECORATION = 7; // Minimum number of lines in  tags HTML/XML
 
 // Cache configuration
 const PARSE_CACHE_INTERVAL = 100; // Cache state every 100 characters
@@ -118,10 +118,10 @@ function formatLineRange(
   contextInfo: string = ''
 ): string {
   const baseRange = `${HASH_PREFIX}${startLine}-${endLine}`;
-  
+
   // Clean and validate contextInfo
   const cleanContextInfo = contextInfo.trim();
-  
+
   if (cleanContextInfo) {
     // Check if contextInfo already starts with the bullet symbol (for CSS)
     if (cleanContextInfo.startsWith(HASH_PREFIX_SYMBOL)) {
@@ -130,7 +130,7 @@ function formatLineRange(
       return `${baseRange} ${HASH_PREFIX_SYMBOL}${cleanContextInfo}`;
     }
   }
-  
+
   // Return just the range if no context info
   return baseRange;
 }
@@ -197,7 +197,9 @@ function cacheDecorations(
       const oldestKey = decorationCache.keys().next().value;
       if (oldestKey) {
         decorationCache.delete(oldestKey);
-        console.log(`Bracket Lens: Evicted decoration cache entry for ${oldestKey}`);
+        console.log(
+          `Bracket Lens: Evicted decoration cache entry for ${oldestKey}`
+        );
       }
     }
 
@@ -298,7 +300,9 @@ function cleanupCache(): void {
     }
 
     const totalCleaned =
-      decorationEntriesToDelete.length + parseEntriesToDelete.length + incrementalEntriesToDelete.length;
+      decorationEntriesToDelete.length +
+      parseEntriesToDelete.length +
+      incrementalEntriesToDelete.length;
     if (totalCleaned > 0) {
       console.log(
         `Bracket Lens: Cleaned up ${totalCleaned} expired cache entries (${decorationEntriesToDelete.length} decoration, ${parseEntriesToDelete.length} parse, ${incrementalEntriesToDelete.length} incremental)`
@@ -492,7 +496,11 @@ function calculateStateFromPosition(
 
 // ===== COMMENT AND STRING DETECTION =====
 
-function isInsideComment(text: string, position: number, fileUri?: string): boolean {
+function isInsideComment(
+  text: string,
+  position: number,
+  fileUri?: string
+): boolean {
   try {
     // Safety checks
     if (position < 0 || position >= text.length) {
@@ -555,7 +563,11 @@ function isInsideComment(text: string, position: number, fileUri?: string): bool
   }
 }
 
-function isInsideString(text: string, position: number, fileUri?: string): boolean {
+function isInsideString(
+  text: string,
+  position: number,
+  fileUri?: string
+): boolean {
   try {
     // Safety checks
     if (position < 0 || position >= text.length) {
@@ -619,14 +631,18 @@ function findBrackets(text: string, fileUri?: string): BracketPair[] {
     const results: BracketPair[] = [];
 
     // Safety check for extremely large files
-    if (text.length > 10 * 1024 * 1024) { // 10MB
+    if (text.length > 10 * 1024 * 1024) {
+      // 10MB
       console.warn('Bracket Lens: File too large for bracket parsing');
       return [];
     }
 
     for (let i = 0; i < text.length; i++) {
       // Skip brackets inside comments or strings - now optimized!
-      if (isInsideComment(text, i, fileUri) || isInsideString(text, i, fileUri)) {
+      if (
+        isInsideComment(text, i, fileUri) ||
+        isInsideString(text, i, fileUri)
+      ) {
         continue;
       }
 
@@ -671,12 +687,14 @@ function detectChangeRegions(
   for (const change of changes) {
     if (!change.range) {
       // If no range, entire document changed
-      return [{
-        startLine: 0,
-        endLine: document.lineCount - 1,
-        startChar: 0,
-        endChar: document.getText().length
-      }];
+      return [
+        {
+          startLine: 0,
+          endLine: document.lineCount - 1,
+          startChar: 0,
+          endChar: document.getText().length,
+        },
+      ];
     }
 
     const startLine = change.range.start.line;
@@ -686,9 +704,12 @@ function detectChangeRegions(
 
     regions.push({
       startLine,
-      endLine: Math.max(endLine, startLine + change.text.split('\n').length - 1),
+      endLine: Math.max(
+        endLine,
+        startLine + change.text.split('\n').length - 1
+      ),
       startChar,
-      endChar: startChar + change.text.length
+      endChar: startChar + change.text.length,
     });
   }
 
@@ -704,7 +725,7 @@ function expandChangeRegion(
   existingBrackets: BracketPair[]
 ): ChangeRegion {
   const text = document.getText();
-  
+
   // Find brackets that might be affected by this change
   let minStart = region.startChar;
   let maxEnd = region.endChar;
@@ -717,8 +738,10 @@ function expandChangeRegion(
     // If bracket spans across or near the change region
     if (
       (openLine <= region.endLine + 2 && closeLine >= region.startLine - 2) ||
-      (bracket.open >= region.startChar - 200 && bracket.open <= region.endChar + 200) ||
-      (bracket.close >= region.startChar - 200 && bracket.close <= region.endChar + 200)
+      (bracket.open >= region.startChar - 200 &&
+        bracket.open <= region.endChar + 200) ||
+      (bracket.close >= region.startChar - 200 &&
+        bracket.close <= region.endChar + 200)
     ) {
       minStart = Math.min(minStart, bracket.open - 100); // Extra buffer
       maxEnd = Math.max(maxEnd, bracket.close + 100);
@@ -730,13 +753,16 @@ function expandChangeRegion(
   maxEnd = Math.min(text.length, maxEnd);
 
   const expandedStartLine = Math.max(0, document.positionAt(minStart).line - 1);
-  const expandedEndLine = Math.min(document.lineCount - 1, document.positionAt(maxEnd).line + 1);
+  const expandedEndLine = Math.min(
+    document.lineCount - 1,
+    document.positionAt(maxEnd).line + 1
+  );
 
   return {
     startLine: expandedStartLine,
     endLine: expandedEndLine,
     startChar: minStart,
-    endChar: maxEnd
+    endChar: maxEnd,
   };
 }
 
@@ -754,10 +780,10 @@ function findBracketsInRegion(
 
   for (let i = 0; i < regionText.length; i++) {
     const absolutePos = region.startChar + i;
-    
+
     // Skip brackets inside comments or strings
     if (
-      isInsideComment(text, absolutePos, fileUri) || 
+      isInsideComment(text, absolutePos, fileUri) ||
       isInsideString(text, absolutePos, fileUri)
     ) {
       continue;
@@ -769,7 +795,7 @@ function findBracketsInRegion(
       stack.push({ char: code, pos: absolutePos });
       continue;
     }
-    
+
     const closing = bracketPairs.find((p) => p.close === code);
     if (closing) {
       // Look for matching opening bracket in stack
@@ -800,20 +826,23 @@ function mergeBrackets(
   affectedRegion: ChangeRegion
 ): BracketPair[] {
   // Remove brackets that are in or overlap with the affected region
-  const unaffectedBrackets = existingBrackets.filter(bracket => {
+  const unaffectedBrackets = existingBrackets.filter((bracket) => {
     return !(
-      (bracket.open >= affectedRegion.startChar && bracket.open <= affectedRegion.endChar) ||
-      (bracket.close >= affectedRegion.startChar && bracket.close <= affectedRegion.endChar) ||
-      (bracket.open < affectedRegion.startChar && bracket.close > affectedRegion.endChar)
+      (bracket.open >= affectedRegion.startChar &&
+        bracket.open <= affectedRegion.endChar) ||
+      (bracket.close >= affectedRegion.startChar &&
+        bracket.close <= affectedRegion.endChar) ||
+      (bracket.open < affectedRegion.startChar &&
+        bracket.close > affectedRegion.endChar)
     );
   });
 
   // Combine unaffected brackets with new brackets
   const allBrackets = [...unaffectedBrackets, ...newBrackets];
-  
+
   // Sort by opening position
   allBrackets.sort((a, b) => a.open - b.open);
-  
+
   return allBrackets;
 }
 
@@ -830,12 +859,15 @@ function getOrUpdateIncrementalCache(
   const cached = incrementalCache.get(fileUri);
 
   // If no changes provided or cache is invalid, do full analysis
-  if (!changes || !cached || cached.textHash !== textHash || 
-      Date.now() - cached.timestamp > INCREMENTAL_CACHE_MAX_AGE) {
-    
+  if (
+    !changes ||
+    !cached ||
+    cached.textHash !== textHash ||
+    Date.now() - cached.timestamp > INCREMENTAL_CACHE_MAX_AGE
+  ) {
     // Fallback to full analysis
     const fullBrackets = findBrackets(text, fileUri);
-    
+
     // Update incremental cache
     if (incrementalCache.size >= CACHE_MAX_SIZE) {
       const oldestKey = incrementalCache.keys().next().value;
@@ -848,7 +880,7 @@ function getOrUpdateIncrementalCache(
       textHash,
       brackets: fullBrackets,
       lineCount: document.lineCount,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
 
     return fullBrackets;
@@ -861,13 +893,21 @@ function getOrUpdateIncrementalCache(
 
     for (const region of changeRegions) {
       // Expand region to include potentially affected brackets
-      const expandedRegion = expandChangeRegion(region, document, cached.brackets);
-      
+      const expandedRegion = expandChangeRegion(
+        region,
+        document,
+        cached.brackets
+      );
+
       // Find brackets in the expanded region
       const newBrackets = findBracketsInRegion(text, expandedRegion, fileUri);
-      
+
       // Merge with existing brackets
-      resultBrackets = mergeBrackets(resultBrackets, newBrackets, expandedRegion);
+      resultBrackets = mergeBrackets(
+        resultBrackets,
+        newBrackets,
+        expandedRegion
+      );
     }
 
     // Update cache with new results
@@ -875,12 +915,15 @@ function getOrUpdateIncrementalCache(
       textHash,
       brackets: resultBrackets,
       lineCount: document.lineCount,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
 
     return resultBrackets;
   } catch (error) {
-    console.error('Bracket Lens: Error in incremental analysis, falling back to full:', error);
+    console.error(
+      'Bracket Lens: Error in incremental analysis, falling back to full:',
+      error
+    );
     // Fallback to full analysis on error
     return findBrackets(text, fileUri);
   }
@@ -900,7 +943,7 @@ function getContextualInfo(
 
     const openPosition = doc.positionAt(openPos);
     const openLine = doc.lineAt(openPosition.line);
-    
+
     // ============ JSON CUSTOM CONTEXT =============
     if (doc.languageId === 'json') {
       const textBeforeBracket = openLine.text
@@ -914,15 +957,8 @@ function getContextualInfo(
       ) {
         return 'triggers';
       }
-      // Detect in "engines": {
-      else if (
-        textBeforeBracket.includes('"engines"') &&
-        textBeforeBracket.endsWith(':')
-      ) {
-        return 'version VSCode';
-      }
     }
-    
+
     // Use the enhanced extractContextualInfo from language-patterns
     const contextInfo = extractContextualInfo(
       text,
@@ -932,20 +968,30 @@ function getContextualInfo(
       openLine.text,
       openPosition.character
     );
-    
+
     // Debug logging
     if (contextInfo) {
-      console.debug(`Bracket Lens: Found context "${contextInfo}" for bracket at line ${openPosition.line + 1}`);
+      console.debug(
+        `Bracket Lens: Found context "${contextInfo}" for bracket at line ${
+          openPosition.line + 1
+        }`
+      );
     } else {
-      console.debug(`Bracket Lens: No context found for bracket at line ${openPosition.line + 1}, language: ${doc.languageId}`);
-      
+      console.debug(
+        `Bracket Lens: No context found for bracket at line ${
+          openPosition.line + 1
+        }, language: ${doc.languageId}`
+      );
+
       // Additional debugging - show what we're working with
-      const lineText = openLine.text.substring(0, openPosition.character).trim();
+      const lineText = openLine.text
+        .substring(0, openPosition.character)
+        .trim();
       if (lineText) {
         console.debug(`Bracket Lens: Line text before bracket: "${lineText}"`);
       }
     }
-    
+
     return contextInfo;
   } catch (error) {
     console.error('Bracket Lens: Error extracting contextual info:', error);
@@ -973,7 +1019,7 @@ function scheduleUpdate(editor: vscode.TextEditor): void {
 }
 
 function scheduleUpdateIncremental(
-  editor: vscode.TextEditor, 
+  editor: vscode.TextEditor,
   changes: readonly vscode.TextDocumentContentChangeEvent[]
 ): void {
   try {
@@ -984,7 +1030,10 @@ function scheduleUpdateIncremental(
       try {
         updateDecorationsIncremental(editor, changes);
       } catch (error) {
-        console.error('Bracket Lens: Error in scheduled incremental update:', error);
+        console.error(
+          'Bracket Lens: Error in scheduled incremental update:',
+          error
+        );
       }
     }, DEBOUNCE_DELAY);
   } catch (error) {
@@ -997,7 +1046,7 @@ function updateDecorations(editor: vscode.TextEditor): void {
 }
 
 function updateDecorationsIncremental(
-  editor: vscode.TextEditor, 
+  editor: vscode.TextEditor,
   changes?: readonly vscode.TextDocumentContentChangeEvent[]
 ): void {
   try {
@@ -1027,18 +1076,18 @@ function updateDecorationsIncremental(
     // Safety check for document validity
     const doc = editor.document;
     const text = doc.getText();
-    
+
     if (!text || text.length === 0) {
       editor.setDecorations(decorationType, []);
       return;
     }
 
     const fileUri = doc.uri.toString();
-    
-    const brackets = changes 
+
+    const brackets = changes
       ? getOrUpdateIncrementalCache(doc, changes)
       : findBrackets(text, fileUri);
-      
+
     const decorations: vscode.DecorationOptions[] = [];
     const usedLines = new Set<number>();
 
@@ -1103,7 +1152,10 @@ function updateDecorationsIncremental(
         }
 
         // Optional trailing comma/semicolon
-        if (idx < endLineText.length && (endLineText[idx] === ',' || endLineText[idx] === ';')) {
+        if (
+          idx < endLineText.length &&
+          (endLineText[idx] === ',' || endLineText[idx] === ';')
+        ) {
           idx++;
           while (idx < endLineText.length && /\s/.test(endLineText[idx])) {
             idx++;
@@ -1124,7 +1176,10 @@ function updateDecorationsIncremental(
       const contextInfo = getContextualInfo(text, open, close, doc);
 
       // ============ JSON ========== all
-      if (doc.languageId !== 'json' && (!contextInfo || contextInfo.trim() === '')) {
+      if (
+        doc.languageId !== 'json' &&
+        (!contextInfo || contextInfo.trim() === '')
+      ) {
         continue;
       }
 
@@ -1228,7 +1283,7 @@ export class BracketLensProvider {
               // Don't clear incremental cache - we'll update it incrementally
               // Only clear decoration cache since we're about to recalculate
               decorationCache.delete(event.document.uri.toString());
-              
+
               // Use incremental analysis with the changes
               scheduleUpdateIncremental(editor, event.contentChanges);
             }
@@ -1330,7 +1385,7 @@ export class BracketLensProvider {
       } catch (error) {
         console.error('Bracket Lens: Error clearing throttle timer:', error);
       }
-      
+
       try {
         // Clear all caches
         decorationCache.clear();
