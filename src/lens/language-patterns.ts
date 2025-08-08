@@ -290,7 +290,7 @@ function extractFromCurrentLine(textBefore: string): string {
     /function\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\([^)]*\)\s*$/
   );
   if (match) {
-    return `function ${match[1]}()`;
+    return `function ${match[1]} {}`;
   }
 
   // Arrow functions: const name = () => {
@@ -330,7 +330,7 @@ function extractFromCurrentLine(textBefore: string): string {
   // Object method: methodName() {
   match = textBefore.match(/([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\([^)]*\)\s*$/);
   if (match) {
-    return `${match[1]}()`;
+    return `${match[1]} {}`;
   }
 
   // Object property: propertyName: {
@@ -392,7 +392,7 @@ function extractFromPreviousLines(
       /function\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\([^)]*\)\s*$/
     );
     if (match) {
-      return `function ${match[1]}()`;
+      return `function ${match[1]} {}`;
     }
 
     // Arrow function assignments
