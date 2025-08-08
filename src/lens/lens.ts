@@ -118,14 +118,20 @@ function formatLineRange(
   contextInfo: string = ''
 ): string {
   const baseRange = `${HASH_PREFIX}${startLine}-${endLine}`;
-  if (contextInfo) {
+  
+  // Clean and validate contextInfo
+  const cleanContextInfo = contextInfo.trim();
+  
+  if (cleanContextInfo) {
     // Check if contextInfo already starts with the bullet symbol (for CSS)
-    if (contextInfo.startsWith(HASH_PREFIX_SYMBOL)) {
-      return `${baseRange} ${contextInfo}`;
+    if (cleanContextInfo.startsWith(HASH_PREFIX_SYMBOL)) {
+      return `${baseRange} ${cleanContextInfo}`;
     } else {
-      return `${baseRange} ${HASH_PREFIX_SYMBOL}${contextInfo}`;
+      return `${baseRange} ${HASH_PREFIX_SYMBOL}${cleanContextInfo}`;
     }
   }
+  
+  // Return just the range if no context info
   return baseRange;
 }
 
@@ -895,8 +901,8 @@ function getContextualInfo(
     const openPosition = doc.positionAt(openPos);
     const openLine = doc.lineAt(openPosition.line);
     
-    // Use the new extractContextualInfo from language-patterns
-    return extractContextualInfo(
+    // Use the enhanced extractContextualInfo from language-patterns
+    const contextInfo = extractContextualInfo(
       text,
       openPos,
       closePos,
@@ -904,6 +910,21 @@ function getContextualInfo(
       openLine.text,
       openPosition.character
     );
+    
+    // Debug logging
+    if (contextInfo) {
+      console.debug(`Bracket Lens: Found context "${contextInfo}" for bracket at line ${openPosition.line + 1}`);
+    } else {
+      console.debug(`Bracket Lens: No context found for bracket at line ${openPosition.line + 1}, language: ${doc.languageId}`);
+      
+      // Additional debugging - show what we're working with
+      const lineText = openLine.text.substring(0, openPosition.character).trim();
+      if (lineText) {
+        console.debug(`Bracket Lens: Line text before bracket: "${lineText}"`);
+      }
+    }
+    
+    return contextInfo;
   } catch (error) {
     console.error('Bracket Lens: Error extracting contextual info:', error);
     return '';

@@ -200,6 +200,7 @@ export function getJavaScriptPatterns(): PatternDefinition[] {
 
 /**
  * Extract context before opening bracket for JavaScript/TypeScript
+ * Enhanced version that looks at multiple lines and context patterns
  */
 export function getJavaScriptContext(
   lineText: string,
@@ -213,13 +214,27 @@ export function getJavaScriptContext(
       return '';
     }
 
-    const textBefore = lineText.substring(0, openCharIndex).trim();
-
-    if (!textBefore) {
-      return '';
+    // Get document position for multi-line context
+    const lines = text.substring(0, openPos).split('\n');
+    const currentLineIndex = lines.length - 1;
+    const currentLine = lines[currentLineIndex];
+    
+    // Get text before the bracket on current line
+    const textBefore = currentLine.substring(0, openCharIndex).trim();
+    
+    // Try extracting context from current line first
+    let context = extractFromCurrentLine(textBefore);
+    if (context) {
+      return context;
     }
 
-    // Get patterns and test them
+    // If current line doesn't have context, look at previous lines
+    context = extractFromPreviousLines(lines, currentLineIndex, textBefore);
+    if (context) {
+      return context;
+    }
+
+    // Try getting patterns
     const patterns = getJavaScriptPatterns();
     for (const { regex, format } of patterns) {
       const match = textBefore.match(regex);
@@ -228,84 +243,181 @@ export function getJavaScriptContext(
       }
     }
 
-    // Handle export default without identifier
-    if (textBefore.includes('export default')) {
-      return 'export default';
-    }
-
-    const hasArrow = textBefore.includes('=>');
-
-    // Enhanced fallback - try to get meaningful context
-
-    // Look for any identifier before the opening bracket
-    const identifierMatch = textBefore.match(/([a-zA-Z_$][a-zA-Z0-9_$]*)\s*$/);
-    if (identifierMatch) {
-      const identifier = identifierMatch[1];
-      const skipKeywords = [
-        'const',
-        'let',
-        'var',
-        'if',
-        'for',
-        'while',
-        'import',
-        'from',
-        'return',
-      ];
-
-      if (!skipKeywords.includes(identifier)) {
-        return hasArrow ? `${identifier} ()=>` : identifier;
-      }
-    }
-
-    // Look for patterns like "= {" or "=> {"
-    if (textBefore.includes('=')) {
-      const beforeEquals = textBefore.split('=')[0].trim();
-      const lastWordMatch = beforeEquals.match(/([a-zA-Z_$][a-zA-Z0-9_$]*)\s*$/);
-      if (lastWordMatch) {
-        return lastWordMatch[1];
-      }
-    }
-
-    // Look for method-like patterns
-    const methodMatch = textBefore.match(
-      /([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\([^)]*\)\s*$/
-    );
-    if (methodMatch) {
-      return methodMatch[1];
-    }
-
-    // Last resort - any word that looks like an identifier
-    const words = textBefore.split(/\s+/).filter((word) => word.length > 0);
-    for (let i = words.length - 1; i >= 0; i--) {
-      const word = words[i];
-      if (/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(word)) {
-        const skipKeywords = [
-          'const',
-          'let',
-          'var',
-          'if',
-          'for',
-          'while',
-          'import',
-          'from',
-          'return',
-          'this',
-        ];
-        if (!skipKeywords.includes(word)) {
-          return hasArrow ? `${word} ()=>` : word;
-        }
-      }
-    }
-
-    return hasArrow ? '()=>' : '';
+    // Fallback to basic extraction
+    return extractBasicContext(textBefore);
+    
   } catch (error) {
-    console.error(
-      'Bracket Lens: Error extracting JavaScript context:',
-      error
-    );
+    console.error('Bracket Lens: Error extracting JavaScript context:', error);
     return '';
   }
+}
+
+/**
+ * Extract context from current line
+ */
+function extractFromCurrentLine(textBefore: string): string {
+  if (!textBefore) {
+    return '';
+  }
+
+  // Handle specific patterns
+  
+  // Function declarations: function name() {
+  let match = textBefore.match(/function\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\([^)]*\)\s*$/);
+  if (match) {
+    return `function ${match[1]}()`;
+  }
+
+  // Arrow functions: const name = () => {
+  match = textBefore.match(/(?:const|let|var)\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*(?:\([^)]*\)\s*)?=>\s*$/);
+  if (match) {
+    return `${match[1]} ()=>`;
+  }
+
+  // Object method: methodName() {
+  match = textBefore.match(/([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\([^)]*\)\s*$/);
+  if (match) {
+    return `${match[1]}()`;
+  }
+
+  // Object property: propertyName: {
+  match = textBefore.match(/([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:\s*$/);
+  if (match) {
+    return match[1];
+  }
+
+  // Object assignment: name = {
+  match = textBefore.match(/([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*$/);
+  if (match) {
+    return match[1];
+  }
+
+  // React component prop: <Component prop={
+  match = textBefore.match(/([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*$/);
+  if (match) {
+    return match[1];
+  }
+
+  // Class declaration: class ClassName {
+  match = textBefore.match(/class\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*(?:extends\s+[a-zA-Z_$][a-zA-Z0-9_$]*)?\s*$/);
+  if (match) {
+    return `class ${match[1]}`;
+  }
+
+  // If/else/for/while statements
+  match = textBefore.match(/(if|else\s+if|for|while|switch|try|catch)\s*\([^)]*\)\s*$/);
+  if (match) {
+    return match[1];
+  }
+
+  match = textBefore.match(/(else|finally)\s*$/);
+  if (match) {
+    return match[1];
+  }
+
+  // Export statements
+  if (textBefore.includes('export default')) {
+    match = textBefore.match(/export\s+default\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*$/);
+    if (match) {
+      return `export default ${match[1]}`;
+    }
+    return 'export default';
+  }
+
+  match = textBefore.match(/export\s+(?:const|let|var|function|class)\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/);
+  if (match) {
+    return `export ${match[1]}`;
+  }
+
+  return '';
+}
+
+/**
+ * Look at previous lines for context
+ */
+function extractFromPreviousLines(lines: string[], currentLineIndex: number, currentTextBefore: string): string {
+  // Look at up to 3 previous lines
+  for (let i = 1; i <= 3 && currentLineIndex - i >= 0; i++) {
+    const prevLine = lines[currentLineIndex - i].trim();
+    
+    if (!prevLine || prevLine.startsWith('//') || prevLine.startsWith('/*') || prevLine.endsWith('*/')) {
+      continue; // Skip empty lines and comments
+    }
+
+    // Function declarations
+    let match = prevLine.match(/function\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\([^)]*\)\s*$/);
+    if (match) {
+      return `function ${match[1]}()`;
+    }
+
+    // Arrow function assignments
+    match = prevLine.match(/(?:const|let|var)\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*(?:\([^)]*\)\s*)?=>/);
+    if (match) {
+      return `${match[1]} ()=>`;
+    }
+
+    // Class declarations
+    match = prevLine.match(/class\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/);
+    if (match) {
+      return `class ${match[1]}`;
+    }
+
+    // Object property/method on previous line
+    match = prevLine.match(/([a-zA-Z_$][a-zA-Z0-9_$]*)\s*[:=]/);
+    if (match) {
+      return match[1];
+    }
+
+    // React component definitions
+    match = prevLine.match(/(?:const|let|var)\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*\([^)]*\)\s*=>/);
+    if (match) {
+      return `${match[1]} component`;
+    }
+
+    // If this previous line ends with a valid identifier, use it
+    match = prevLine.match(/([a-zA-Z_$][a-zA-Z0-9_$]*)\s*$/);
+    if (match && !isKeyword(match[1])) {
+      return match[1];
+    }
+  }
+
+  return '';
+}
+
+/**
+ * Basic context extraction as fallback
+ */
+function extractBasicContext(textBefore: string): string {
+  // Last resort - find any meaningful identifier
+  const words = textBefore.split(/\s+/).filter(word => word.length > 0);
+  
+  for (let i = words.length - 1; i >= 0; i--) {
+    const word = words[i];
+    
+    // Clean the word of punctuation
+    const cleanWord = word.replace(/[^\w$]/g, '');
+    
+    if (/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(cleanWord) && !isKeyword(cleanWord)) {
+      return cleanWord;
+    }
+  }
+
+  return '';
+}
+
+/**
+ * Check if a word is a JavaScript keyword
+ */
+function isKeyword(word: string): boolean {
+  const keywords = [
+    'const', 'let', 'var', 'if', 'else', 'for', 'while', 'do', 'switch', 'case',
+    'default', 'break', 'continue', 'return', 'function', 'class', 'import', 'export',
+    'from', 'as', 'async', 'await', 'try', 'catch', 'finally', 'throw', 'new',
+    'this', 'super', 'extends', 'implements', 'interface', 'type', 'enum',
+    'public', 'private', 'protected', 'static', 'readonly', 'abstract'
+  ];
+  
+  return keywords.includes(word.toLowerCase());
 }
 
 // ===== FUTURE LANGUAGE EXTENSIONS =====
@@ -360,10 +472,29 @@ export function extractContextualInfo(
         contextInfo = getJavaScriptContext(lineText, openCharIndex, text, openPos);
       }
     } else if (openChar === '['.charCodeAt(0)) {
+      // For arrays and object property access
       contextInfo = getJavaScriptContext(lineText, openCharIndex, text, openPos);
+      if (!contextInfo) {
+        // Try to identify array context
+        const beforeBracket = lineText.substring(0, openCharIndex).trim();
+        const arrayMatch = beforeBracket.match(/([a-zA-Z_$][a-zA-Z0-9_$]*)\s*$/);
+        if (arrayMatch) {
+          contextInfo = `${arrayMatch[1]}[]`;
+        }
+      }
     } else if (openChar === '('.charCodeAt(0)) {
+      // For function calls and parameter lists
       contextInfo = getJavaScriptContext(lineText, openCharIndex, text, openPos);
+      if (!contextInfo) {
+        // Try to identify function context
+        const beforeParen = lineText.substring(0, openCharIndex).trim();
+        const funcMatch = beforeParen.match(/([a-zA-Z_$][a-zA-Z0-9_$]*)\s*$/);
+        if (funcMatch) {
+          contextInfo = `${funcMatch[1]}()`;
+        }
+      }
     } else if (openChar === '<'.charCodeAt(0)) {
+      // For HTML/XML/JSX tags
       let componentContent = content;
       const isClosingTag = componentContent.startsWith('/');
 
@@ -371,8 +502,28 @@ export function extractContextualInfo(
         componentContent = componentContent.substring(1).trim();
       }
 
-      const jsxComponentMatch = componentContent.match(/^[a-zA-Z_$][\w$.]*/);
-      contextInfo = jsxComponentMatch ? jsxComponentMatch[0] : '';
+      // Extract tag name or component name
+      const tagMatch = componentContent.match(/^([a-zA-Z_$][\w$.-]*)/);
+      if (tagMatch) {
+        contextInfo = tagMatch[1];
+      } else {
+        // Fallback for malformed tags
+        const simpleMatch = componentContent.match(/^[a-zA-Z][a-zA-Z0-9]*/);
+        contextInfo = simpleMatch ? simpleMatch[0] : '';
+      }
+    }
+
+    // Additional language-specific handling
+    if (!contextInfo && languageId) {
+      contextInfo = getLanguageSpecificContext(languageId, lineText, openCharIndex, text, openPos);
+    }
+
+    // Final cleanup
+    contextInfo = contextInfo.trim();
+    
+    // Ensure we don't return overly long context
+    if (contextInfo.length > 50) {
+      contextInfo = contextInfo.substring(0, 47) + '...';
     }
 
     return contextInfo;
@@ -380,4 +531,65 @@ export function extractContextualInfo(
     console.error('Bracket Lens: Error extracting contextual info:', error);
     return '';
   }
+}
+
+/**
+ * Get language-specific context for languages not yet handled
+ */
+function getLanguageSpecificContext(
+  languageId: string,
+  lineText: string,
+  openCharIndex: number,
+  text: string,
+  openPos: number
+): string {
+  const textBefore = lineText.substring(0, openCharIndex).trim();
+  
+  switch (languageId) {
+    case 'json':
+    case 'jsonc':
+      // For JSON, try to get the property name
+      const jsonMatch = textBefore.match(/"([^"]+)"\s*:\s*$/);
+      if (jsonMatch) {
+        return jsonMatch[1];
+      }
+      break;
+      
+    case 'python':
+      // For Python, look for function/class definitions
+      const pythonFuncMatch = textBefore.match(/def\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\([^)]*\)\s*:\s*$/);
+      if (pythonFuncMatch) {
+        return `def ${pythonFuncMatch[1]}()`;
+      }
+      const pythonClassMatch = textBefore.match(/class\s+([a-zA-Z_][a-zA-Z0-9_]*)/);
+      if (pythonClassMatch) {
+        return `class ${pythonClassMatch[1]}`;
+      }
+      break;
+      
+    case 'php':
+      // For PHP, look for function/class definitions
+      const phpFuncMatch = textBefore.match(/function\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\([^)]*\)\s*$/);
+      if (phpFuncMatch) {
+        return `function ${phpFuncMatch[1]}()`;
+      }
+      break;
+      
+    case 'java':
+    case 'csharp':
+      // For Java/C#, look for method/class definitions
+      const javaMethodMatch = textBefore.match(/(?:public|private|protected|static)?\s*(?:\w+\s+)*([a-zA-Z_][a-zA-Z0-9_]*)\s*\([^)]*\)\s*$/);
+      if (javaMethodMatch) {
+        return `${javaMethodMatch[1]}()`;
+      }
+      break;
+  }
+  
+  // Generic fallback - try to find any identifier
+  const genericMatch = textBefore.match(/([a-zA-Z_$][a-zA-Z0-9_$]*)\s*$/);
+  if (genericMatch && !isKeyword(genericMatch[1])) {
+    return genericMatch[1];
+  }
+  
+  return '';
 }
