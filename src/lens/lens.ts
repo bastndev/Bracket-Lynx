@@ -901,6 +901,28 @@ function getContextualInfo(
     const openPosition = doc.positionAt(openPos);
     const openLine = doc.lineAt(openPosition.line);
     
+    // ============ JSON CUSTOM CONTEXT =============
+    if (doc.languageId === 'json') {
+      const textBeforeBracket = openLine.text
+        .substring(0, openPosition.character)
+        .trim();
+
+      // Detect in "activationEvents": [
+      if (
+        textBeforeBracket.includes('"activationEvents"') &&
+        textBeforeBracket.endsWith(':')
+      ) {
+        return 'triggers';
+      }
+      // Detect in "engines": {
+      else if (
+        textBeforeBracket.includes('"engines"') &&
+        textBeforeBracket.endsWith(':')
+      ) {
+        return 'version VSCode';
+      }
+    }
+    
     // Use the enhanced extractContextualInfo from language-patterns
     const contextInfo = extractContextualInfo(
       text,
