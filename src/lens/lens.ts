@@ -5,8 +5,8 @@ const DEBOUNCE_DELAY = 300;
 const HASH_PREFIX = '<~ #';
 const HASH_PREFIX_SYMBOL = '•';
 
-const MIN_TOTAL_LINES_FOR_CURLY_DECORATION = 5;
-const MIN_TOTAL_LINES_FOR_OPENING_TAG_DECORATION = 7;
+const MIN_TOTAL_LINES_FOR_CURLY_DECORATION = 5; // Minimum number of lines
+const MIN_TOTAL_LINES_FOR_OPENING_TAG_DECORATION = 7; // Minimum number of lines in  tags HTML/XML 
 
 // Cache configuration
 const PARSE_CACHE_INTERVAL = 100; // Cache state every 100 characters
