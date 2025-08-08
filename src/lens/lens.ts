@@ -1601,7 +1601,7 @@ export class BracketLensProvider {
       } catch (error) {
         console.error('Bracket Lens: Error clearing caches:', error);
       }
-    }catch (error) {
+    } catch (error) {
       console.error('Bracket Lens: Critical error in dispose:', error);
     }
   }
