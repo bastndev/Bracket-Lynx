@@ -289,6 +289,12 @@ function extractFromCurrentLine(textBefore: string): string {
     return `${match[1]} ()=>`;
   }
 
+  // Object property as arrow function: prop: () => {
+  match = textBefore.match(/([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:\s*(?:\([^)]*\)\s*)?=>\s*$/);
+  if (match) {
+    return `${match[1]} ()=>`;
+  }
+
   // Export statements (prioritize before plain assignments)
   if (textBefore.includes('export default')) {
     match = textBefore.match(/export\s+default\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*$/);
