@@ -29,36 +29,54 @@ export function getCSSContext(lineText: string, openCharIndex: number): string {
       return '';
     }
 
-    // Process the last selector
-    const lastSelector = selectors[selectors.length - 1];
-    const selectorParts = lastSelector
-      .trim()
-      .split(/\s+/)
-      .filter((part) => part.length > 0);
+    // Process all selectors and extract meaningful names
+    const allCleanedParts: string[] = [];
 
-    if (selectorParts.length === 0) {
+    for (const selector of selectors) {
+      const selectorParts = selector
+        .trim()
+        .split(/\s+/)
+        .filter((part) => part.length > 0);
+
+      // Clean selector parts (remove . # : symbols but keep track of what they were)
+      const cleanedParts = selectorParts
+        .map((part) => {
+          // Extract the actual name without prefixes and suffixes
+          const cleaned = part
+            .replace(/^[.#:]+/, '')
+            .replace(/:[a-zA-Z-]*$/, '');
+          return cleaned;
+        })
+        .filter(
+          (part) => part.length > 0 && /^[a-zA-Z][a-zA-Z0-9_-]*$/.test(part)
+        );
+
+      // Add the most relevant part from this selector
+      if (cleanedParts.length > 0) {
+        // Prefer the last part (most specific) from each selector
+        const mostRelevant = cleanedParts[cleanedParts.length - 1];
+        if (!allCleanedParts.includes(mostRelevant)) {
+          allCleanedParts.push(mostRelevant);
+        }
+      }
+    }
+
+    if (allCleanedParts.length === 0) {
       return '';
     }
 
-    // Clean selector parts (remove . # : symbols)
-    const cleanedParts = selectorParts
-      .map((part) => {
-        return part.replace(/^[.#:]+/, '').replace(/:[a-zA-Z-]*$/, '');
-      })
-      .filter((part) => part.length > 0 && /^[a-zA-Z][a-zA-Z0-9_-]*$/.test(part));
-
-    if (cleanedParts.length === 0) {
-      return '';
+    // Format the output based on how many unique parts we found
+    if (allCleanedParts.length === 1) {
+      return `${HASH_PREFIX_SYMBOL}${allCleanedParts[0]}`;
+    } else if (allCleanedParts.length === 2) {
+      // Show both parts - this handles the case like ".Banner, #banner" -> "Banner banner"
+      return `${HASH_PREFIX_SYMBOL}${allCleanedParts[0]} ${HASH_PREFIX_SYMBOL}${allCleanedParts[1]}`;
+    } else {
+      // For more than 2, show first and last with indication of more
+      const first = allCleanedParts[0];
+      const last = allCleanedParts[allCleanedParts.length - 1];
+      return `${HASH_PREFIX_SYMBOL}${first} ${HASH_PREFIX_SYMBOL}${last}`;
     }
-
-    // Show first and last if multiple parts
-    if (cleanedParts.length > 2) {
-      const firstPart = cleanedParts[0];
-      const lastPart = cleanedParts[cleanedParts.length - 1];
-      return `${HASH_PREFIX_SYMBOL}${firstPart} ${HASH_PREFIX_SYMBOL}${lastPart}`;
-    }
-    
-    return cleanedParts.map((part) => `${HASH_PREFIX_SYMBOL}${part}`).join(' ');
   } catch (error) {
     console.error('Bracket Lens: Error extracting CSS context:', error);
     return '';
@@ -72,8 +90,18 @@ export function isInsideStyleBlock(
   languageId: string
 ): boolean {
   const supportedLanguages = [
-    'html', 'htm', 'astro', 'vue', 'svelte', 'xml', 'php', 'jsp',
-    'erb', 'ejs', 'handlebars', 'mustache',
+    'html',
+    'htm',
+    'astro',
+    'vue',
+    'svelte',
+    'xml',
+    'php',
+    'jsp',
+    'erb',
+    'ejs',
+    'handlebars',
+    'mustache',
   ];
 
   if (!supportedLanguages.includes(languageId)) {
@@ -186,13 +214,17 @@ export function getJavaScriptContext(
     const lines = text.substring(0, openPos).split('\n');
     const currentLineIndex = lines.length - 1;
     const currentLine = lines[currentLineIndex];
-    
+
     const textBefore = currentLine.substring(0, openCharIndex).trim();
-    
+
     // Try current line first
     let context = extractFromCurrentLine(textBefore);
     if (context) {
-      if (text[openPos] === '(' && isArrowFunctionAfterParen(text, openPos) && !/\(\)\s*=>\s*$/.test(context)) {
+      if (
+        text[openPos] === '(' &&
+        isArrowFunctionAfterParen(text, openPos) &&
+        !/\(\)\s*=>\s*$/.test(context)
+      ) {
         context = `${context} ()=>`;
       }
       return context;
@@ -201,7 +233,11 @@ export function getJavaScriptContext(
     // Try previous lines
     context = extractFromPreviousLines(lines, currentLineIndex, textBefore);
     if (context) {
-      if (text[openPos] === '(' && isArrowFunctionAfterParen(text, openPos) && !/\(\)\s*=>\s*$/.test(context)) {
+      if (
+        text[openPos] === '(' &&
+        isArrowFunctionAfterParen(text, openPos) &&
+        !/\(\)\s*=>\s*$/.test(context)
+      ) {
         context = `${context} ()=>`;
       }
       return context;
@@ -213,7 +249,11 @@ export function getJavaScriptContext(
       const match = textBefore.match(regex);
       if (match) {
         let ctx = format(match);
-        if (text[openPos] === '(' && isArrowFunctionAfterParen(text, openPos) && !/\(\)\s*=>\s*$/.test(ctx)) {
+        if (
+          text[openPos] === '(' &&
+          isArrowFunctionAfterParen(text, openPos) &&
+          !/\(\)\s*=>\s*$/.test(ctx)
+        ) {
           ctx = `${ctx} ()=>`;
         }
         return ctx;
@@ -222,11 +262,15 @@ export function getJavaScriptContext(
 
     // Fallback
     let basic = extractBasicContext(textBefore);
-    if (basic && text[openPos] === '(' && isArrowFunctionAfterParen(text, openPos) && !/\(\)\s*=>\s*$/.test(basic)) {
+    if (
+      basic &&
+      text[openPos] === '(' &&
+      isArrowFunctionAfterParen(text, openPos) &&
+      !/\(\)\s*=>\s*$/.test(basic)
+    ) {
       basic = `${basic} ()=>`;
     }
     return basic;
-    
   } catch (error) {
     console.error('Bracket Lens: Error extracting JavaScript context:', error);
     return '';
@@ -242,33 +286,43 @@ function extractFromCurrentLine(textBefore: string): string {
   }
 
   // Function declarations: function name() {
-  let match = textBefore.match(/function\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\([^)]*\)\s*$/);
+  let match = textBefore.match(
+    /function\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\([^)]*\)\s*$/
+  );
   if (match) {
     return `function ${match[1]}()`;
   }
 
   // Arrow functions: const name = () => {
-  match = textBefore.match(/(?:const|let|var)\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*(?:\([^)]*\)\s*)?=>\s*$/);
+  match = textBefore.match(
+    /(?:const|let|var)\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*(?:\([^)]*\)\s*)?=>\s*$/
+  );
   if (match) {
     return `${match[1]} ()=>`;
   }
 
   // Object property as arrow function: prop: () => {
-  match = textBefore.match(/([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:\s*(?:\([^)]*\)\s*)?=>\s*$/);
+  match = textBefore.match(
+    /([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:\s*(?:\([^)]*\)\s*)?=>\s*$/
+  );
   if (match) {
     return `${match[1]} ()=>`;
   }
 
   // Export statements
   if (textBefore.includes('export default')) {
-    match = textBefore.match(/export\s+default\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*$/);
+    match = textBefore.match(
+      /export\s+default\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*$/
+    );
     if (match) {
       return `export default ${match[1]}`;
     }
     return 'export default';
   }
 
-  match = textBefore.match(/export\s+(?:const|let|var|function|class)\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/);
+  match = textBefore.match(
+    /export\s+(?:const|let|var|function|class)\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/
+  );
   if (match) {
     return `export ${match[1]}`;
   }
@@ -292,13 +346,17 @@ function extractFromCurrentLine(textBefore: string): string {
   }
 
   // Class declaration: class ClassName {
-  match = textBefore.match(/class\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*(?:extends\s+[a-zA-Z_$][a-zA-Z0-9_$]*)?\s*$/);
+  match = textBefore.match(
+    /class\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*(?:extends\s+[a-zA-Z_$][a-zA-Z0-9_$]*)?\s*$/
+  );
   if (match) {
     return `class ${match[1]}`;
   }
 
   // Control statements
-  match = textBefore.match(/(if|else\s+if|for|while|switch|try|catch)\s*\([^)]*\)\s*$/);
+  match = textBefore.match(
+    /(if|else\s+if|for|while|switch|try|catch)\s*\([^)]*\)\s*$/
+  );
   if (match) {
     return match[1];
   }
@@ -312,22 +370,35 @@ function extractFromCurrentLine(textBefore: string): string {
 }
 
 // Look at previous lines for context
-function extractFromPreviousLines(lines: string[], currentLineIndex: number, currentTextBefore: string): string {
+function extractFromPreviousLines(
+  lines: string[],
+  currentLineIndex: number,
+  currentTextBefore: string
+): string {
   for (let i = 1; i <= 3 && currentLineIndex - i >= 0; i++) {
     const prevLine = lines[currentLineIndex - i].trim();
-    
-    if (!prevLine || prevLine.startsWith('//') || prevLine.startsWith('/*') || prevLine.endsWith('*/')) {
+
+    if (
+      !prevLine ||
+      prevLine.startsWith('//') ||
+      prevLine.startsWith('/*') ||
+      prevLine.endsWith('*/')
+    ) {
       continue;
     }
 
     // Function declarations
-    let match = prevLine.match(/function\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\([^)]*\)\s*$/);
+    let match = prevLine.match(
+      /function\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\([^)]*\)\s*$/
+    );
     if (match) {
       return `function ${match[1]}()`;
     }
 
     // Arrow function assignments
-    match = prevLine.match(/(?:const|let|var)\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*(?:\([^)]*\)\s*)?=>/);
+    match = prevLine.match(
+      /(?:const|let|var)\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*(?:\([^)]*\)\s*)?=>/
+    );
     if (match) {
       return `${match[1]} ()=>`;
     }
@@ -345,7 +416,9 @@ function extractFromPreviousLines(lines: string[], currentLineIndex: number, cur
     }
 
     // React component definitions
-    match = prevLine.match(/(?:const|let|var)\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*\([^)]*\)\s*=>/);
+    match = prevLine.match(
+      /(?:const|let|var)\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*\([^)]*\)\s*=>/
+    );
     if (match) {
       return `${match[1]} component`;
     }
@@ -362,12 +435,12 @@ function extractFromPreviousLines(lines: string[], currentLineIndex: number, cur
 
 // Basic context extraction as fallback
 function extractBasicContext(textBefore: string): string {
-  const words = textBefore.split(/\s+/).filter(word => word.length > 0);
-  
+  const words = textBefore.split(/\s+/).filter((word) => word.length > 0);
+
   for (let i = words.length - 1; i >= 0; i--) {
     const word = words[i];
     const cleanWord = word.replace(/[^\w$]/g, '');
-    
+
     if (/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(cleanWord) && !isKeyword(cleanWord)) {
       return cleanWord;
     }
@@ -379,13 +452,48 @@ function extractBasicContext(textBefore: string): string {
 // Check if word is JS keyword
 function isKeyword(word: string): boolean {
   const keywords = [
-    'const', 'let', 'var', 'if', 'else', 'for', 'while', 'do', 'switch', 'case',
-    'default', 'break', 'continue', 'return', 'function', 'class', 'import', 'export',
-    'from', 'as', 'async', 'await', 'try', 'catch', 'finally', 'throw', 'new',
-    'this', 'super', 'extends', 'implements', 'interface', 'type', 'enum',
-    'public', 'private', 'protected', 'static', 'readonly', 'abstract'
+    'const',
+    'let',
+    'var',
+    'if',
+    'else',
+    'for',
+    'while',
+    'do',
+    'switch',
+    'case',
+    'default',
+    'break',
+    'continue',
+    'return',
+    'function',
+    'class',
+    'import',
+    'export',
+    'from',
+    'as',
+    'async',
+    'await',
+    'try',
+    'catch',
+    'finally',
+    'throw',
+    'new',
+    'this',
+    'super',
+    'extends',
+    'implements',
+    'interface',
+    'type',
+    'enum',
+    'public',
+    'private',
+    'protected',
+    'static',
+    'readonly',
+    'abstract',
   ];
-  
+
   return keywords.includes(word.toLowerCase());
 }
 
@@ -410,26 +518,44 @@ function isArrowFunctionAfterParen(text: string, openPos: number): boolean {
     }
 
     if (inSingle) {
-      if (ch === '\\') { escape = true; }
-      else if (ch === '\'') { inSingle = false; }
+      if (ch === '\\') {
+        escape = true;
+      } else if (ch === "'") {
+        inSingle = false;
+      }
       continue;
     }
 
     if (inDouble) {
-      if (ch === '\\') { escape = true; }
-      else if (ch === '"') { inDouble = false; }
+      if (ch === '\\') {
+        escape = true;
+      } else if (ch === '"') {
+        inDouble = false;
+      }
       continue;
     }
 
     if (inBacktick) {
-      if (ch === '\\') { escape = true; }
-      else if (ch === '`') { inBacktick = false; }
+      if (ch === '\\') {
+        escape = true;
+      } else if (ch === '`') {
+        inBacktick = false;
+      }
       continue;
     }
 
-    if (ch === '\'') { inSingle = true; continue; }
-    if (ch === '"') { inDouble = true; continue; }
-    if (ch === '`') { inBacktick = true; continue; }
+    if (ch === "'") {
+      inSingle = true;
+      continue;
+    }
+    if (ch === '"') {
+      inDouble = true;
+      continue;
+    }
+    if (ch === '`') {
+      inBacktick = true;
+      continue;
+    }
 
     if (ch === '(') {
       depth++;
@@ -459,7 +585,7 @@ function getLanguageSpecificContext(
   openPos: number
 ): string {
   const textBefore = lineText.substring(0, openCharIndex).trim();
-  
+
   switch (languageId) {
     case 'json':
     case 'jsonc':
@@ -469,52 +595,59 @@ function getLanguageSpecificContext(
         return jsonMatch[1];
       }
       break;
-      
+
     case 'python':
       // Python functions/classes
-      const pythonFuncMatch = textBefore.match(/def\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\([^)]*\)\s*:\s*$/);
+      const pythonFuncMatch = textBefore.match(
+        /def\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\([^)]*\)\s*:\s*$/
+      );
       if (pythonFuncMatch) {
         return `def ${pythonFuncMatch[1]}()`;
       }
-      const pythonClassMatch = textBefore.match(/class\s+([a-zA-Z_][a-zA-Z0-9_]*)/);
+      const pythonClassMatch = textBefore.match(
+        /class\s+([a-zA-Z_][a-zA-Z0-9_]*)/
+      );
       if (pythonClassMatch) {
         return `class ${pythonClassMatch[1]}`;
       }
       break;
-      
+
     case 'php':
       // PHP functions
-      const phpFuncMatch = textBefore.match(/function\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\([^)]*\)\s*$/);
+      const phpFuncMatch = textBefore.match(
+        /function\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\([^)]*\)\s*$/
+      );
       if (phpFuncMatch) {
         return `function ${phpFuncMatch[1]}()`;
       }
       break;
-      
+
     case 'java':
     case 'csharp':
       // Java/C# methods
-      const javaMethodMatch = textBefore.match(/(?:public|private|protected|static)?\s*(?:\w+\s+)*([a-zA-Z_][a-zA-Z0-9_]*)\s*\([^)]*\)\s*$/);
+      const javaMethodMatch = textBefore.match(
+        /(?:public|private|protected|static)?\s*(?:\w+\s+)*([a-zA-Z_][a-zA-Z0-9_]*)\s*\([^)]*\)\s*$/
+      );
       if (javaMethodMatch) {
         return `${javaMethodMatch[1]}()`;
       }
       break;
   }
-  
+
   // Generic fallback
   const genericMatch = textBefore.match(/([a-zA-Z_$][a-zA-Z0-9_$]*)\s*$/);
   if (genericMatch && !isKeyword(genericMatch[1])) {
     return genericMatch[1];
   }
-  
+
   return '';
 }
 
 /*
-  * TODO: FUTURE LANGUAGE EXTENSIONS: Add more language patterns here as needed
+ * TODO: FUTURE LANGUAGE EXTENSIONS: Add more language patterns here as needed
  */
 
 // =============== ASTRO =============== (Future)
-
 
 // =============== MAIN CONTEXT EXTRACTOR ===============
 
@@ -538,27 +671,46 @@ export function extractContextualInfo(
 
     if (openChar === '{'.charCodeAt(0)) {
       // CSS or inside <style> block
-      const isCSS = ['css', 'scss', 'sass', 'less', 'stylus'].includes(languageId);
+      const isCSS = ['css', 'scss', 'sass', 'less', 'stylus'].includes(
+        languageId
+      );
       const insideStyle = isInsideStyleBlock(text, openPos, languageId);
 
       if (isCSS || insideStyle) {
         contextInfo = getCSSContext(lineText, openCharIndex);
       } else {
-        contextInfo = getJavaScriptContext(lineText, openCharIndex, text, openPos);
+        contextInfo = getJavaScriptContext(
+          lineText,
+          openCharIndex,
+          text,
+          openPos
+        );
       }
     } else if (openChar === '['.charCodeAt(0)) {
       // Arrays and object property access
-      contextInfo = getJavaScriptContext(lineText, openCharIndex, text, openPos);
+      contextInfo = getJavaScriptContext(
+        lineText,
+        openCharIndex,
+        text,
+        openPos
+      );
       if (!contextInfo) {
         const beforeBracket = lineText.substring(0, openCharIndex).trim();
-        const arrayMatch = beforeBracket.match(/([a-zA-Z_$][a-zA-Z0-9_$]*)\s*$/);
+        const arrayMatch = beforeBracket.match(
+          /([a-zA-Z_$][a-zA-Z0-9_$]*)\s*$/
+        );
         if (arrayMatch) {
           contextInfo = `${arrayMatch[1]}[]`;
         }
       }
     } else if (openChar === '('.charCodeAt(0)) {
       // Function calls and parameter lists
-      contextInfo = getJavaScriptContext(lineText, openCharIndex, text, openPos);
+      contextInfo = getJavaScriptContext(
+        lineText,
+        openCharIndex,
+        text,
+        openPos
+      );
       if (!contextInfo) {
         const beforeParen = lineText.substring(0, openCharIndex).trim();
         const funcMatch = beforeParen.match(/([a-zA-Z_$][a-zA-Z0-9_$]*)\s*$/);
@@ -586,7 +738,13 @@ export function extractContextualInfo(
 
     // Try language-specific handling if no context found
     if (!contextInfo && languageId) {
-      contextInfo = getLanguageSpecificContext(languageId, lineText, openCharIndex, text, openPos);
+      contextInfo = getLanguageSpecificContext(
+        languageId,
+        lineText,
+        openCharIndex,
+        text,
+        openPos
+      );
     }
 
     // Cleanup and length limit
