@@ -1068,6 +1068,35 @@ function updateDecorationsIncremental(
         continue;
       }
 
+      // Avoid placing decoration in the middle of the line.
+      // If there is any non-whitespace content after the closing bracket
+      // (ignoring a trailing comma or semicolon), skip the decoration.
+      try {
+        const endLineText = doc.lineAt(endPosition.line).text;
+        let idx = endPosition.character + 1; // character after the closing bracket
+
+        // Skip whitespace
+        while (idx < endLineText.length && /\s/.test(endLineText[idx])) {
+          idx++;
+        }
+
+        // Optional trailing comma/semicolon
+        if (idx < endLineText.length && (endLineText[idx] === ',' || endLineText[idx] === ';')) {
+          idx++;
+          while (idx < endLineText.length && /\s/.test(endLineText[idx])) {
+            idx++;
+          }
+        }
+
+        // If anything else remains on the line, don't render here
+        if (idx < endLineText.length) {
+          continue;
+        }
+      } catch (e) {
+        // On any error evaluating the line tail, fail safe by skipping decoration
+        continue;
+      }
+
       usedLines.add(endLine);
 
       const contextInfo = getContextualInfo(text, open, close, doc);
