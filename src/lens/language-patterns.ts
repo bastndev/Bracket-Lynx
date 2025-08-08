@@ -509,6 +509,13 @@ function getLanguageSpecificContext(
   return '';
 }
 
+/*
+  * FUTURE LANGUAGE EXTENSIONS: Add more language patterns here as needed
+ */
+
+// =============== ASTRO =============== (Future)
+
+
 // =============== MAIN CONTEXT EXTRACTOR ===============
 
 // Main function to get contextual info based on language and bracket type
