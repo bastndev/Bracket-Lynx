@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 // ===== STATE MANAGEMENT =====
 let isEnabled = true;
 let bracketLensProvider: any = undefined;
-// Map to track per-editor disabled state
+// Map to track per-file disabled state (keyed by document URI)
 const disabledEditors = new Map<string, boolean>();
 
 // ===== TOGGLE FUNCTIONS =====
@@ -178,7 +178,7 @@ function deactivateExtension(): void {
  * Generate a unique key for an editor (file path + view column)
  */
 function getEditorKey(editor: vscode.TextEditor): string {
-  return `${editor.document.uri.toString()}:${editor.viewColumn || 1}`;
+  return editor.document.uri.toString();
 }
 
 // ===== CLEANUP FUNCTIONS =====
@@ -189,24 +189,22 @@ function getEditorKey(editor: vscode.TextEditor): string {
 export function cleanupClosedEditor(document: vscode.TextDocument): void {
   const documentUri = document.uri.toString();
 
-  // Find and remove all entries for this document (all view columns)
-  const keysToDelete: string[] = [];
+  // Remove per-file key
+  const removed = disabledEditors.delete(documentUri);
 
+  // Backward-compat: also remove any legacy keys that included viewColumn
+  const legacyKeysToDelete: string[] = [];
   for (const [key] of disabledEditors) {
     if (key.startsWith(documentUri + ':')) {
-      keysToDelete.push(key);
+      legacyKeysToDelete.push(key);
     }
   }
-
-  // Remove the keys
-  keysToDelete.forEach((key) => {
-    disabledEditors.delete(key);
-  });
+  legacyKeysToDelete.forEach((key) => disabledEditors.delete(key));
 
   // Optional: Log cleanup for debugging (remove in production)
-  if (keysToDelete.length > 0) {
+  if (removed || legacyKeysToDelete.length > 0) {
     console.debug(
-      `Bracket Lens: Cleaned up ${keysToDelete.length} editor states for closed document`
+      `Bracket Lens: Cleaned up disabled state for closed document (legacy keys removed: ${legacyKeysToDelete.length})`
     );
   }
 }
@@ -215,17 +213,17 @@ export function cleanupClosedEditor(document: vscode.TextDocument): void {
  * Clean up all disabled editor states for editors that are no longer visible
  */
 export function cleanupAllClosedEditors(): void {
-  const visibleEditorKeys = new Set<string>();
+  const visibleUris = new Set<string>();
 
-  // Collect keys of all currently visible editors
+  // Collect URIs of all currently visible editors
   vscode.window.visibleTextEditors.forEach((editor) => {
-    visibleEditorKeys.add(getEditorKey(editor));
+    visibleUris.add(editor.document.uri.toString());
   });
 
   // Find keys that are no longer visible
   const keysToDelete: string[] = [];
   for (const [key] of disabledEditors) {
-    if (!visibleEditorKeys.has(key)) {
+    if (!visibleUris.has(key)) {
       keysToDelete.push(key);
     }
   }
