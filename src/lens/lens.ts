@@ -823,7 +823,7 @@ function getOrUpdateIncrementalCache(
   const cached = incrementalCache.get(fileUri);
 
   // If no changes provided or cache is invalid, do full analysis
-  if (!changes || !cached || cached.textHash === textHash || 
+  if (!changes || !cached || cached.textHash !== textHash || 
       Date.now() - cached.timestamp > INCREMENTAL_CACHE_MAX_AGE) {
     
     // Fallback to full analysis
