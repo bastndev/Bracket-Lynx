@@ -225,12 +225,19 @@ export function getJavaScriptContext(
     // Try extracting context from current line first
     let context = extractFromCurrentLine(textBefore);
     if (context) {
+      // If this is an arrow function parameter list, append ()=> for clarity
+      if (text[openPos] === '(' && isArrowFunctionAfterParen(text, openPos) && !/\(\)\s*=>\s*$/.test(context)) {
+        context = `${context} ()=>`;
+      }
       return context;
     }
 
     // If current line doesn't have context, look at previous lines
     context = extractFromPreviousLines(lines, currentLineIndex, textBefore);
     if (context) {
+      if (text[openPos] === '(' && isArrowFunctionAfterParen(text, openPos) && !/\(\)\s*=>\s*$/.test(context)) {
+        context = `${context} ()=>`;
+      }
       return context;
     }
 
@@ -239,12 +246,20 @@ export function getJavaScriptContext(
     for (const { regex, format } of patterns) {
       const match = textBefore.match(regex);
       if (match) {
-        return format(match);
+        let ctx = format(match);
+        if (text[openPos] === '(' && isArrowFunctionAfterParen(text, openPos) && !/\(\)\s*=>\s*$/.test(ctx)) {
+          ctx = `${ctx} ()=>`;
+        }
+        return ctx;
       }
     }
 
     // Fallback to basic extraction
-    return extractBasicContext(textBefore);
+    let basic = extractBasicContext(textBefore);
+    if (basic && text[openPos] === '(' && isArrowFunctionAfterParen(text, openPos) && !/\(\)\s*=>\s*$/.test(basic)) {
+      basic = `${basic} ()=>`;
+    }
+    return basic;
     
   } catch (error) {
     console.error('Bracket Lens: Error extracting JavaScript context:', error);
@@ -272,6 +287,20 @@ function extractFromCurrentLine(textBefore: string): string {
   match = textBefore.match(/(?:const|let|var)\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*(?:\([^)]*\)\s*)?=>\s*$/);
   if (match) {
     return `${match[1]} ()=>`;
+  }
+
+  // Export statements (prioritize before plain assignments)
+  if (textBefore.includes('export default')) {
+    match = textBefore.match(/export\s+default\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*$/);
+    if (match) {
+      return `export default ${match[1]}`;
+    }
+    return 'export default';
+  }
+
+  match = textBefore.match(/export\s+(?:const|let|var|function|class)\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/);
+  if (match) {
+    return `export ${match[1]}`;
   }
 
   // Object method: methodName() {
@@ -313,20 +342,6 @@ function extractFromCurrentLine(textBefore: string): string {
   match = textBefore.match(/(else|finally)\s*$/);
   if (match) {
     return match[1];
-  }
-
-  // Export statements
-  if (textBefore.includes('export default')) {
-    match = textBefore.match(/export\s+default\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*$/);
-    if (match) {
-      return `export default ${match[1]}`;
-    }
-    return 'export default';
-  }
-
-  match = textBefore.match(/export\s+(?:const|let|var|function|class)\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/);
-  if (match) {
-    return `export ${match[1]}`;
   }
 
   return '';
@@ -418,6 +433,68 @@ function isKeyword(word: string): boolean {
   ];
   
   return keywords.includes(word.toLowerCase());
+}
+
+// ===== UTILITIES =====
+// Detect if the parentheses starting at openPos correspond to an arrow function parameter list,
+// i.e., the matching closing ')' is followed by optional whitespace and then '=>'.
+function isArrowFunctionAfterParen(text: string, openPos: number): boolean {
+  if (openPos < 0 || openPos >= text.length || text[openPos] !== '(') {
+    return false;
+  }
+
+  let depth = 0;
+  let inSingle = false;
+  let inDouble = false;
+  let inBacktick = false;
+  let escape = false;
+
+  for (let i = openPos; i < text.length; i++) {
+    const ch = text[i];
+
+    if (escape) {
+      escape = false;
+      continue;
+    }
+
+    if (inSingle) {
+      if (ch === '\\') { escape = true; }
+      else if (ch === '\'') { inSingle = false; }
+      continue;
+    }
+
+    if (inDouble) {
+      if (ch === '\\') { escape = true; }
+      else if (ch === '"') { inDouble = false; }
+      continue;
+    }
+
+    if (inBacktick) {
+      if (ch === '\\') { escape = true; }
+      else if (ch === '`') { inBacktick = false; }
+      continue;
+    }
+
+    if (ch === '\'') { inSingle = true; continue; }
+    if (ch === '"') { inDouble = true; continue; }
+    if (ch === '`') { inBacktick = true; continue; }
+
+    if (ch === '(') {
+      depth++;
+    } else if (ch === ')') {
+      depth--;
+      if (depth === 0) {
+        // Found matching ')'; check for => after optional whitespace
+        let j = i + 1;
+        while (j < text.length && /\s/.test(text[j])) {
+          j++;
+        }
+        return text.slice(j, j + 2) === '=>';
+      }
+    }
+  }
+
+  return false;
 }
 
 // ===== FUTURE LANGUAGE EXTENSIONS =====
