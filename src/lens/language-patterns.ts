@@ -647,7 +647,8 @@ function getLanguageSpecificContext(
  * TODO: FUTURE LANGUAGE EXTENSIONS: Add more language patterns here as needed
  */
 
-// =============== ASTRO =============== (Future)
+// =============== MARK: ASTRO =============== (build)
+
 
 // =============== MAIN CONTEXT EXTRACTOR ===============
 
