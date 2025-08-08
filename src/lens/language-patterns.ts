@@ -510,7 +510,7 @@ function getLanguageSpecificContext(
 }
 
 /*
-  * FUTURE LANGUAGE EXTENSIONS: Add more language patterns here as needed
+  * TODO: FUTURE LANGUAGE EXTENSIONS: Add more language patterns here as needed
  */
 
 // =============== ASTRO =============== (Future)
