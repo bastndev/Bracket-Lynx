@@ -82,7 +82,7 @@ export function changeDecorationColor(): void {
     const colorOptions: ColorOption[] = [
         { label: '⚫ Default Gray', value: '#515151', description: 'Default bracket color' },
         { label: '⚪ Light Gray', value: '#adb5bd', description: 'Light gray decorations' },
-        { label: '⚫ Dark Gray', value: '#999999', description: 'Dark gray decorations' },
+        { label: '🔵 Dark Gray', value: '#535466', description: 'Dark gray decorations' },
         { label: '✏️ Custom', value: 'custom', description: 'Enter custom hex color' },
     ];
 
