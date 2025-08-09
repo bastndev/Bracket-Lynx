@@ -9,51 +9,6 @@ const disabledEditors = new Map<string, boolean>();
 // ===== TOGGLE FUNCTIONS =====
 
 /**
- * Show main menu with all toggle options
- */
-export function showBracketLynxMenu(): void {
-  const options = [
-    {
-      label: '🌐 Toggle Global',
-      description: 'Activate/deactivate for all files',
-      action: 'global',
-    },
-    {
-      label: '📄 Toggle Current File',
-      description: 'Activate/deactivate only current file',
-      action: 'current',
-    },
-    {
-      label: '♻️ Refresh',
-      description: 'Update decorations for current file',
-      action: 'refresh',
-    },
-  ];
-
-  vscode.window
-    .showQuickPick(options, {
-      placeHolder: 'Choose Bracket Lynx action...',
-    })
-    .then((selected) => {
-      if (!selected) {
-        return;
-      }
-
-      switch (selected.action) {
-        case 'global':
-          toggleBracketLynx();
-          break;
-        case 'current':
-          toggleCurrentEditor();
-          break;
-        case 'refresh':
-          refreshBrackets();
-          break;
-      }
-    });
-}
-
-/**
  * Toggle the entire Bracket Lynx extension on/off
  */
 export function toggleBracketLynx(): void {
@@ -166,6 +121,12 @@ export function refreshBrackets(): void {
  */
 export function setBracketLynxProvider(provider: any): void {
   bracketLynxProvider = provider;
+
+  // Set provider for color system
+  const { setBracketLynxProviderForColors, initializeColorSystem } = require('./colors');
+  setBracketLynxProviderForColors(provider);
+  // Initialize color system
+  initializeColorSystem();
 }
 
 // ===== INTERNAL FUNCTIONS =====
@@ -239,4 +200,60 @@ export function cleanupAllClosedEditors(): void {
   keysToDelete.forEach((key) => {
     disabledEditors.delete(key);
   });
+}
+
+/**
+ * Show main menu with all toggle options
+ */
+export function showBracketLynxMenu(): void {
+  const options = [
+    {
+      label: '🌐 Toggle Global',
+      description: 'Activate/deactivate for all files',
+      action: 'global',
+    },
+    {
+      label: '📄 Toggle Current File',
+      description: 'Activate/deactivate only current file',
+      action: 'current',
+    },
+    {
+      label: '♻️ Refresh',
+      description: 'Update decorations for current file',
+      action: 'refresh',
+    },
+    // NEW: Add color change option
+    {
+      label: '🎨 Change Color',
+      description: 'Change decoration color with preview',
+      action: 'color',
+    },
+  ];
+
+  vscode.window
+    .showQuickPick(options, {
+      placeHolder: 'Choose Bracket Lynx action...',
+    })
+    .then((selected) => {
+      if (!selected) {
+        return;
+      }
+
+      switch (selected.action) {
+        case 'global':
+          toggleBracketLynx();
+          break;
+        case 'current':
+          toggleCurrentEditor();
+          break;
+        case 'refresh':
+          refreshBrackets();
+          break;
+        // NEW: Handle color change
+        case 'color':
+          const { changeDecorationColor } = require('./colors');
+          changeDecorationColor();
+          break;
+      }
+    });
 }

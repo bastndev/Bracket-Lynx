@@ -91,7 +91,23 @@ export class BracketLynxConfig {
   }
 
   static get color(): string {
-    return this.getConfig().get('color', '#515151');
+    // First try to get color from the color system
+    try {
+      const { getEffectiveColor } = require('../actions/colors');
+      const effectiveColor = getEffectiveColor();
+      if (effectiveColor) {
+        return effectiveColor; // Always use color system color if available
+      }
+    } catch (error) {
+      // Fallback silently if color system is not available
+    }
+
+    // Fallback to configuration or default
+    try {
+      return this.getConfig().get('color', '#515151');
+    } catch {
+      return '#515151';
+    }
   }
 
   static get fontStyle(): string {
@@ -1555,5 +1571,18 @@ export class BracketLynx {
     optimizedParser.dispose();
 
     // Advanced cache cleanup is handled automatically
+  }
+
+  /**
+   * Force refresh color for all decorations - called by color system
+   */
+  static forceColorRefresh(): void {
+    console.log('🎨 Force refreshing colors for all decorations');
+    
+    // Clear all caches to force recreation with new color
+    CacheManager.clearAllDecorationCache();
+    
+    // Update all visible editors
+    this.updateAllDecoration();
   }
 }
