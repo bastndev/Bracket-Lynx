@@ -1,42 +1,59 @@
 import * as vscode from 'vscode';
-import { BracketLensProvider } from './lens/lens';
-import { showBracketLensMenu, setBracketLensProvider, cleanupClosedEditor, cleanupAllClosedEditors } from './actions/toggle';
+import { BracketLynx } from './lens/lens';
+import { showBracketLynxMenu, setBracketLynxProvider, cleanupClosedEditor } from './actions/toggle';
 
-// ===== EXTENSION ENTRY POINT =====
+// ============================================================================
+// EXTENSION BRIDGE - Simple interface to the BracketLynx functionality
+// ============================================================================
 
-let bracketLensProvider: BracketLensProvider | undefined;
+export let extensionContext: vscode.ExtensionContext;
 
-export function activate(context: vscode.ExtensionContext): void {
-  // Initialize the bracket lens provider
-  bracketLensProvider = new BracketLensProvider();
-  
-  // Set provider reference for toggle functionality
-  setBracketLensProvider(bracketLensProvider);
-  
-  // Register main menu command
-  const mainMenuCommand = vscode.commands.registerCommand(
-    'bracketLens.menu',
-    showBracketLensMenu
-  );
-  
-  // Register cleanup event listeners
-  const onDidCloseTextDocument = vscode.workspace.onDidCloseTextDocument((document) => {
-    cleanupClosedEditor(document);
-  });
-  
-  const onDidChangeVisibleTextEditors = vscode.window.onDidChangeVisibleTextEditors(() => {
-    // Clean up stale editor states when visible editors change
-    cleanupAllClosedEditors();
-  });
-  
-  // Add to subscriptions for proper cleanup
-  context.subscriptions.push(
-    mainMenuCommand,
-    onDidCloseTextDocument,
-    onDidChangeVisibleTextEditors
-  );
-}
 
-export function deactivate(): void {
-  bracketLensProvider?.dispose();
-}
+
+// ============================================================================
+// EXTENSION ACTIVATION
+// ============================================================================
+
+export const activate = async (context: vscode.ExtensionContext) => {
+    extensionContext = context;
+    
+    // Set the bracket lens provider for the toggle system
+    setBracketLynxProvider(BracketLynx);
+    
+    // Register commands
+    context.subscriptions.push(
+        vscode.commands.registerCommand(
+            'bracketLynx.menu',
+            showBracketLynxMenu
+        )
+    );
+
+    // Register event listeners
+    context.subscriptions.push(
+        vscode.workspace.onDidChangeConfiguration(
+            async (event) => {
+                if (event.affectsConfiguration('bracketLens')) {
+                    BracketLynx.onDidChangeConfiguration();
+                }
+            }
+        ),
+        vscode.workspace.onDidChangeWorkspaceFolders(() => BracketLynx.onDidChangeConfiguration()),
+        vscode.workspace.onDidChangeTextDocument(event => BracketLynx.onDidChangeTextDocument(event.document)),
+        vscode.workspace.onDidOpenTextDocument((document) => BracketLynx.onDidOpenTextDocument(document)),
+        vscode.workspace.onDidSaveTextDocument((document) => BracketLynx.onDidSaveTextDocument(document)),
+        vscode.workspace.onDidCloseTextDocument((document) => {
+            BracketLynx.onDidChangeTextDocument(document);
+            cleanupClosedEditor(document);
+        }),
+        vscode.window.onDidChangeActiveTextEditor(() => BracketLynx.onDidChangeActiveTextEditor())
+    );
+    
+    // Initialize decorations for visible editors
+    vscode.window.visibleTextEditors.forEach(editor => 
+        BracketLynx.delayUpdateDecoration(editor)
+    );
+};
+
+export const deactivate = () => {
+    // Extension cleanup is handled automatically by VSCode
+};
