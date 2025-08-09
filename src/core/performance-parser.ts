@@ -60,6 +60,9 @@ export class OptimizedBracketParser {
   private parseStateCache = new Map<string, ParseStateCache>();
   private tokenCache = new Map<string, TokenCacheEntry>();
   
+  // Fallback parser to avoid circular dependencies
+  private fallbackParser?: (document: vscode.TextDocument) => BracketEntry[];
+  
   // Configuration
   private readonly PARSE_CACHE_INTERVAL = 100; // Cache state every 100 characters
   private readonly PARSE_CACHE_MAX_AGE = 2 * 60 * 1000; // 2 minutes
@@ -85,6 +88,17 @@ export class OptimizedBracketParser {
       OptimizedBracketParser.instance = new OptimizedBracketParser();
     }
     return OptimizedBracketParser.instance;
+  }
+
+  /**
+   * Set fallback parser to avoid circular dependencies
+   */
+  setFallbackParser(parser: (document: vscode.TextDocument) => BracketEntry[]): void {
+    this.fallbackParser = parser;
+    
+    if (BracketLynxConfig.debug) {
+      console.log('Bracket Lynx: Fallback parser configured successfully');
+    }
   }
 
   // ============================================================================
@@ -188,8 +202,18 @@ export class OptimizedBracketParser {
       
     } catch (error) {
       console.error('Bracket Lynx: Error in incremental parsing, falling back to full parse:', error);
+      
+      // Try optimized parsing first, then fallback if needed
+      let fallbackBrackets: BracketEntry[] = [];
+      try {
+        fallbackBrackets = this.parseBrackets(document);
+      } catch (parseError) {
+        console.error('Bracket Lynx: Error in optimized parsing, using fallback:', parseError);
+        fallbackBrackets = this.fallbackParsing(document);
+      }
+      
       return {
-        brackets: this.parseBrackets(document),
+        brackets: fallbackBrackets,
         affectedRegions: [],
         parseTime: Date.now() - startTime
       };
@@ -657,9 +681,21 @@ export class OptimizedBracketParser {
    * Fallback to original parsing method
    */
   private fallbackParsing(document: vscode.TextDocument): BracketEntry[] {
-    // Import and use the original BracketParser
-    const { BracketParser } = require('../lens/lens');
-    return BracketParser.parseBrackets(document);
+    if (!this.fallbackParser) {
+      console.error('Bracket Lynx: No fallback parser configured! This may cause parsing issues.');
+      return [];
+    }
+    
+    if (BracketLynxConfig.debug) {
+      console.log(`Bracket Lynx: Using fallback parser for: ${document.fileName}`);
+    }
+    
+    try {
+      return this.fallbackParser(document);
+    } catch (error) {
+      console.error('Bracket Lynx: Error in fallback parsing:', error);
+      return [];
+    }
   }
 
   // ============================================================================
@@ -1042,8 +1078,16 @@ export class OptimizedBracketParser {
       parseStateCacheSize: this.parseStateCache.size,
       tokenCacheSize: this.tokenCache.size,
       maxCacheSize: this.CACHE_MAX_SIZE,
-      performanceFilters: this.PERFORMANCE_FILTERS
+      performanceFilters: this.PERFORMANCE_FILTERS,
+      hasFallbackParser: !!this.fallbackParser
     };
+  }
+
+  /**
+   * Check if fallback parser is configured
+   */
+  hasFallbackParser(): boolean {
+    return !!this.fallbackParser;
   }
   
   /**
@@ -1148,5 +1192,10 @@ export class OptimizedBracketParser {
    */
   dispose(): void {
     this.clearAllCache();
+    this.fallbackParser = undefined;
+    
+    if (BracketLynxConfig.debug) {
+      console.log('Bracket Lynx: OptimizedBracketParser disposed successfully');
+    }
   }
 }

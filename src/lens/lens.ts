@@ -204,16 +204,30 @@ export class DocumentDecorationCacheEntry {
     if (shouldUseOriginalParser(document)) {
       // Use original parser for problematic files
       this.brackets = BracketParser.parseBrackets(document);
-      
+
       if (BracketLynxConfig.debug) {
-        console.log(`Bracket Lynx: Using original parser for: ${document.fileName} (${document.languageId})`);
+        console.log(
+          `Bracket Lynx: Using original parser for: ${document.fileName} (${document.languageId})`
+        );
       }
     } else {
       // Use optimized parser for other files
       const optimizedParser = OptimizedBracketParser.getInstance();
+
+      // Configure fallback parser to avoid circular dependencies
+      optimizedParser.setFallbackParser(
+        BracketParser.parseBrackets.bind(BracketParser)
+      );
+
       this.brackets = optimizedParser.parseBrackets(document);
+
+      if (BracketLynxConfig.debug) {
+        console.log(
+          `Bracket Lynx: Using optimized parser for: ${document.fileName} (${document.languageId})`
+        );
+      }
     }
-    
+
     this.decorationSource =
       BracketDecorationGenerator.getBracketDecorationSource(
         document,
@@ -1334,7 +1348,9 @@ export class BracketLynx {
       // Use parser exception manager
       if (shouldUseOriginalParser(document)) {
         if (BracketLynxConfig.debug) {
-          console.log(`Bracket Lynx: Skipping incremental parsing for: ${document.fileName}`);
+          console.log(
+            `Bracket Lynx: Skipping incremental parsing for: ${document.fileName}`
+          );
         }
         CacheManager.clearDecorationCache(document);
         return;
