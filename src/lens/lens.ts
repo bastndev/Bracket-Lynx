@@ -4,6 +4,8 @@ import {
   SmartDebouncer,
 } from '../core/performance-cache';
 import { OptimizedBracketParser } from '../core/performance-parser';
+// NEW: Import parser exceptions
+import { shouldUseOriginalParser } from '../core/parser-exceptions';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -198,16 +200,16 @@ export class DocumentDecorationCacheEntry {
   decorationSource: BracketDecorationSource[] = [];
 
   constructor(document: vscode.TextDocument) {
-    // HYBRID SOLUTION: Use original parser only for .astro files
-    if (document.fileName.endsWith('.astro') || document.languageId === 'astro') {
-      // Use original parser for Astro files
+    // Use parser exception manager
+    if (shouldUseOriginalParser(document)) {
+      // Use original parser for problematic files
       this.brackets = BracketParser.parseBrackets(document);
       
       if (BracketLynxConfig.debug) {
-        console.log(`Bracket Lynx: Using original parser for Astro file: ${document.fileName}`);
+        console.log(`Bracket Lynx: Using original parser for: ${document.fileName} (${document.languageId})`);
       }
     } else {
-      // Use optimized parser for all other files
+      // Use optimized parser for other files
       const optimizedParser = OptimizedBracketParser.getInstance();
       this.brackets = optimizedParser.parseBrackets(document);
     }
@@ -1329,10 +1331,10 @@ export class BracketLynx {
     changes: readonly vscode.TextDocumentContentChangeEvent[]
   ): void {
     try {
-      // Skip incremental parsing for Astro files (use full cache clear)
-      if (document.fileName.endsWith('.astro') || document.languageId === 'astro') {
+      // Use parser exception manager
+      if (shouldUseOriginalParser(document)) {
         if (BracketLynxConfig.debug) {
-          console.log(`Bracket Lynx: Skipping incremental parsing for Astro file: ${document.fileName}`);
+          console.log(`Bracket Lynx: Skipping incremental parsing for: ${document.fileName}`);
         }
         CacheManager.clearDecorationCache(document);
         return;
