@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
-import { BracketLens } from './lens/lens';
-import { showBracketLensMenu, setBracketLensProvider, cleanupClosedEditor } from './actions/toggle';
+import { BracketLynx } from './lens/lens';
+import { showBracketLynxMenu, setBracketLynxProvider, cleanupClosedEditor } from './actions/toggle';
 
 // ============================================================================
-// EXTENSION BRIDGE - Simple interface to the BracketLens functionality
+// EXTENSION BRIDGE - Simple interface to the BracketLynx functionality
 // ============================================================================
 
 export let extensionContext: vscode.ExtensionContext;
@@ -18,13 +18,13 @@ export const activate = async (context: vscode.ExtensionContext) => {
     extensionContext = context;
     
     // Set the bracket lens provider for the toggle system
-    setBracketLensProvider(BracketLens);
+    setBracketLynxProvider(BracketLynx);
     
     // Register commands
     context.subscriptions.push(
         vscode.commands.registerCommand(
-            'bracketLens.menu',
-            showBracketLensMenu
+            'bracketLynx.menu',
+            showBracketLynxMenu
         )
     );
 
@@ -33,24 +33,24 @@ export const activate = async (context: vscode.ExtensionContext) => {
         vscode.workspace.onDidChangeConfiguration(
             async (event) => {
                 if (event.affectsConfiguration('bracketLens')) {
-                    BracketLens.onDidChangeConfiguration();
+                    BracketLynx.onDidChangeConfiguration();
                 }
             }
         ),
-        vscode.workspace.onDidChangeWorkspaceFolders(() => BracketLens.onDidChangeConfiguration()),
-        vscode.workspace.onDidChangeTextDocument(event => BracketLens.onDidChangeTextDocument(event.document)),
-        vscode.workspace.onDidOpenTextDocument((document) => BracketLens.onDidOpenTextDocument(document)),
-        vscode.workspace.onDidSaveTextDocument((document) => BracketLens.onDidSaveTextDocument(document)),
+        vscode.workspace.onDidChangeWorkspaceFolders(() => BracketLynx.onDidChangeConfiguration()),
+        vscode.workspace.onDidChangeTextDocument(event => BracketLynx.onDidChangeTextDocument(event.document)),
+        vscode.workspace.onDidOpenTextDocument((document) => BracketLynx.onDidOpenTextDocument(document)),
+        vscode.workspace.onDidSaveTextDocument((document) => BracketLynx.onDidSaveTextDocument(document)),
         vscode.workspace.onDidCloseTextDocument((document) => {
-            BracketLens.onDidChangeTextDocument(document);
+            BracketLynx.onDidChangeTextDocument(document);
             cleanupClosedEditor(document);
         }),
-        vscode.window.onDidChangeActiveTextEditor(() => BracketLens.onDidChangeActiveTextEditor())
+        vscode.window.onDidChangeActiveTextEditor(() => BracketLynx.onDidChangeActiveTextEditor())
     );
     
     // Initialize decorations for visible editors
     vscode.window.visibleTextEditors.forEach(editor => 
-        BracketLens.delayUpdateDecoration(editor)
+        BracketLynx.delayUpdateDecoration(editor)
     );
 };
 

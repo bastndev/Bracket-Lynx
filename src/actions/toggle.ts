@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 
 // ===== STATE MANAGEMENT =====
 let isEnabled = true;
-let bracketLensProvider: any = undefined;
+let bracketLynxProvider: any = undefined;
 // Map to track per-file disabled state (keyed by document URI)
 const disabledEditors = new Map<string, boolean>();
 
@@ -11,7 +11,7 @@ const disabledEditors = new Map<string, boolean>();
 /**
  * Show main menu with all toggle options
  */
-export function showBracketLensMenu(): void {
+export function showBracketLynxMenu(): void {
   const options = [
     {
       label: '🌐 Toggle Global',
@@ -32,7 +32,7 @@ export function showBracketLensMenu(): void {
 
   vscode.window
     .showQuickPick(options, {
-      placeHolder: 'Choose Bracket Lens action...',
+      placeHolder: 'Choose Bracket Lynx action...',
     })
     .then((selected) => {
       if (!selected) {
@@ -41,7 +41,7 @@ export function showBracketLensMenu(): void {
 
       switch (selected.action) {
         case 'global':
-          toggleBracketLens();
+          toggleBracketLynx();
           break;
         case 'current':
           toggleCurrentEditor();
@@ -54,20 +54,20 @@ export function showBracketLensMenu(): void {
 }
 
 /**
- * Toggle the entire Bracket Lens extension on/off
+ * Toggle the entire Bracket Lynx extension on/off
  */
-export function toggleBracketLens(): void {
+export function toggleBracketLynx(): void {
   isEnabled = !isEnabled;
 
   if (isEnabled) {
     // Reactivate: start processing current editor
     reactivateExtension();
-    vscode.window.showInformationMessage('🌐 Bracket Lens: Activated globally');
+    vscode.window.showInformationMessage('🌐 Bracket Lynx: Activated globally');
   } else {
     // Deactivate: stop processing and clear all decorations
     deactivateExtension();
     vscode.window.showInformationMessage(
-      '🌐 Bracket Lens: Deactivated globally'
+      '🌐 Bracket Lynx: Deactivated globally'
     );
   }
 }
@@ -92,7 +92,7 @@ export function isEditorEnabled(editor: vscode.TextEditor): boolean {
 }
 
 /**
- * Toggle Bracket Lens for the current active editor only
+ * Toggle Bracket Lynx for the current active editor only
  */
 export function toggleCurrentEditor(): void {
   const activeEditor = vscode.window.activeTextEditor;
@@ -107,22 +107,22 @@ export function toggleCurrentEditor(): void {
   if (isCurrentlyDisabled) {
     // Enable this editor
     disabledEditors.delete(editorKey);
-    if (bracketLensProvider && isEnabled) {
-      bracketLensProvider.setEditorMuted?.(activeEditor, false);
-      bracketLensProvider.delayUpdateDecoration?.(activeEditor);
+    if (bracketLynxProvider && isEnabled) {
+      bracketLynxProvider.setEditorMuted?.(activeEditor, false);
+      bracketLynxProvider.delayUpdateDecoration?.(activeEditor);
     }
     vscode.window.showInformationMessage(
-      '📄 Bracket Lens: Enabled for current file'
+      '📄 Bracket Lynx: Enabled for current file'
     );
   } else {
     // Disable this editor
     disabledEditors.set(editorKey, true);
-    if (bracketLensProvider) {
-      bracketLensProvider.setEditorMuted?.(activeEditor, true);
-      bracketLensProvider.clearDecorations?.(activeEditor);
+    if (bracketLynxProvider) {
+      bracketLynxProvider.setEditorMuted?.(activeEditor, true);
+      bracketLynxProvider.clearDecorations?.(activeEditor);
     }
     vscode.window.showInformationMessage(
-      '📄 Bracket Lens: Disabled for current file'
+      '📄 Bracket Lynx: Disabled for current file'
     );
   }
 }
@@ -137,14 +137,14 @@ export function refreshBrackets(): void {
     return;
   }
 
-  if (bracketLensProvider && isEditorEnabled(activeEditor)) {
+  if (bracketLynxProvider && isEditorEnabled(activeEditor)) {
     // Clear cache and force update
-    bracketLensProvider.clearDecorationCache?.(activeEditor.document);
-    bracketLensProvider.delayUpdateDecoration?.(activeEditor);
-    vscode.window.showInformationMessage('♻️ Bracket Lens: Refreshed');
+    bracketLynxProvider.clearDecorationCache?.(activeEditor.document);
+    bracketLynxProvider.delayUpdateDecoration?.(activeEditor);
+    vscode.window.showInformationMessage('♻️ Bracket Lynx: Refreshed');
   } else {
     vscode.window.showInformationMessage(
-      '♻️ Bracket Lens: Cannot refresh (disabled)'
+      '♻️ Bracket Lynx: Cannot refresh (disabled)'
     );
   }
 }
@@ -152,23 +152,23 @@ export function refreshBrackets(): void {
 /**
  * Set the bracket lens provider reference
  */
-export function setBracketLensProvider(provider: any): void {
-  bracketLensProvider = provider;
+export function setBracketLynxProvider(provider: any): void {
+  bracketLynxProvider = provider;
 }
 
 // ===== INTERNAL FUNCTIONS =====
 
 function reactivateExtension(): void {
-  if (bracketLensProvider) {
+  if (bracketLynxProvider) {
     // Set global mute to false
-    bracketLensProvider.setMutedAll?.(false);
+    bracketLynxProvider.setMutedAll?.(false);
   }
 }
 
 function deactivateExtension(): void {
-  if (bracketLensProvider) {
+  if (bracketLynxProvider) {
     // Set global mute to true (this will also clear decorations)
-    bracketLensProvider.setMutedAll?.(true);
+    bracketLynxProvider.setMutedAll?.(true);
   }
 }
 
@@ -202,7 +202,7 @@ export function cleanupClosedEditor(document: vscode.TextDocument): void {
   // Optional: Log cleanup for debugging (remove in production)
   if (removed || legacyKeysToDelete.length > 0) {
     console.debug(
-      `Bracket Lens: Cleaned up disabled state for closed document (legacy keys removed: ${legacyKeysToDelete.length})`
+      `Bracket Lynx: Cleaned up disabled state for closed document (legacy keys removed: ${legacyKeysToDelete.length})`
     );
   }
 }
@@ -234,7 +234,7 @@ export function cleanupAllClosedEditors(): void {
   // Optional: Log cleanup for debugging (remove in production)
   if (keysToDelete.length > 0) {
     console.debug(
-      `Bracket Lens: Cleaned up ${keysToDelete.length} stale editor states`
+      `Bracket Lynx: Cleaned up ${keysToDelete.length} stale editor states`
     );
   }
 }

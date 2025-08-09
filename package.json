@@ -69,7 +69,7 @@
   "contributes": {
     "commands": [
       {
-        "command": "bracketLens.menu",
+        "command": "bracketLynx.menu",
         "title": "Bracket Lynx: Toggle & Refresh 🛠️"
       }
     ]

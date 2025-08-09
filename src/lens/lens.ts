@@ -66,7 +66,7 @@ export interface BracketDecorationSource {
 // ============================================================================
 // CONFIGURATION
 // ============================================================================
-export class BracketLensConfig {
+export class BracketLynxConfig {
   private static getConfig() {
     return vscode.workspace.getConfiguration('bracketLens');
   }
@@ -167,7 +167,7 @@ const isInlineScope = (bracket: BracketEntry) =>
   bracket.end.position.line <= bracket.start.position.line;
 
 const debug = (output: any) => {
-  if (BracketLensConfig.debug) {
+  if (BracketLynxConfig.debug) {
     console.debug(output);
   }
 };
@@ -267,7 +267,7 @@ export class CacheManager {
 export class BracketParser {
   static parseBrackets(document: vscode.TextDocument): BracketEntry[] {
     const result: BracketEntry[] = [];
-    const languageConfiguration = BracketLensConfig.languageConfiguration;
+    const languageConfiguration = BracketLynxConfig.languageConfiguration;
     const regulate = languageConfiguration.ignoreCase
       ? (text: string) => text.replace(/\s+/, ' ').toLowerCase()
       : (text: string) => text.replace(/\s+/, ' ');
@@ -801,7 +801,7 @@ export class BracketHeaderGenerator {
     document: vscode.TextDocument,
     context: BracketContext
   ): string {
-    const maxBracketHeaderLength = BracketLensConfig.maxBracketHeaderLength;
+    const maxBracketHeaderLength = BracketLynxConfig.maxBracketHeaderLength;
     const regulateHeader = (text: string) => {
       let result = text.replace(/\s+/gu, ' ').trim();
       if (maxBracketHeaderLength < result.length) {
@@ -846,7 +846,7 @@ export class BracketHeaderGenerator {
     regulateHeader: (text: string) => string,
     isValidHeader: (text: string) => boolean
   ): string | null {
-    const languageConfiguration = BracketLensConfig.languageConfiguration;
+    const languageConfiguration = BracketLynxConfig.languageConfiguration;
     const terminators = languageConfiguration.terminators ?? [];
     const topLimit =
       context.previousEntry?.end.position ??
@@ -940,9 +940,9 @@ export class BracketDecorationGenerator {
     document: vscode.TextDocument,
     brackets: BracketEntry[]
   ): BracketDecorationSource[] {
-    const prefix = BracketLensConfig.prefix;
-    const unmatchBracketsPrefix = BracketLensConfig.unmatchBracketsPrefix;
-    const minBracketScopeLines = BracketLensConfig.minBracketScopeLines;
+    const prefix = BracketLynxConfig.prefix;
+    const unmatchBracketsPrefix = BracketLynxConfig.unmatchBracketsPrefix;
+    const minBracketScopeLines = BracketLynxConfig.minBracketScopeLines;
     const result: BracketDecorationSource[] = [];
 
     const getLineNumbers = (entry: BracketEntry): string => {
@@ -1015,13 +1015,13 @@ export class BracketDecorationGenerator {
 // MAIN BRACKET LENS CLASS
 // ============================================================================
 
-export class BracketLens {
+export class BracketLynx {
   private static isMutedAll: boolean = false;
   private static lastUpdateStamp = new Map<vscode.TextEditor, number>();
 
   static updateDecoration(textEditor: vscode.TextEditor) {
     const editorCache = CacheManager.editorCache.get(textEditor);
-    if ('none' !== BracketLensConfig.mode) {
+    if ('none' !== BracketLynxConfig.mode) {
       const isMuted =
         undefined !== editorCache?.isMuted
           ? editorCache.isMuted
@@ -1037,7 +1037,7 @@ export class BracketLens {
           });
 
         const options: vscode.DecorationOptions[] = [];
-        const color = BracketLensConfig.color;
+        const color = BracketLynxConfig.color;
 
         CacheManager.getDocumentCache(
           textEditor.document
@@ -1168,21 +1168,21 @@ export class BracketLens {
   }
 
   static onDidOpenTextDocument(document: vscode.TextDocument): void {
-    const mode = BracketLensConfig.mode;
+    const mode = BracketLynxConfig.mode;
     if ('auto' === mode || 'on-save' === mode) {
       this.delayUpdateDecorationByDocument(document);
     }
   }
 
   static onDidSaveTextDocument(document: vscode.TextDocument): void {
-    if ('on-save' === BracketLensConfig.mode) {
+    if ('on-save' === BracketLynxConfig.mode) {
       this.updateDecorationByDocument(document);
     }
   }
 
   static onDidChangeTextDocument(document: vscode.TextDocument): void {
     CacheManager.clearDecorationCache(document);
-    if ('auto' === BracketLensConfig.mode) {
+    if ('auto' === BracketLynxConfig.mode) {
       this.delayUpdateDecorationByDocument(document);
     }
   }
