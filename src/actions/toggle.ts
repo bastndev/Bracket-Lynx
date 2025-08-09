@@ -108,7 +108,8 @@ export function toggleCurrentEditor(): void {
     // Enable this editor
     disabledEditors.delete(editorKey);
     if (bracketLensProvider && isEnabled) {
-      bracketLensProvider.forceUpdate(activeEditor);
+      bracketLensProvider.setEditorMuted?.(activeEditor, false);
+      bracketLensProvider.delayUpdateDecoration?.(activeEditor);
     }
     vscode.window.showInformationMessage(
       '📄 Bracket Lens: Enabled for current file'
@@ -117,7 +118,8 @@ export function toggleCurrentEditor(): void {
     // Disable this editor
     disabledEditors.set(editorKey, true);
     if (bracketLensProvider) {
-      bracketLensProvider.clearDecorations(activeEditor);
+      bracketLensProvider.setEditorMuted?.(activeEditor, true);
+      bracketLensProvider.clearDecorations?.(activeEditor);
     }
     vscode.window.showInformationMessage(
       '📄 Bracket Lens: Disabled for current file'
@@ -136,7 +138,9 @@ export function refreshBrackets(): void {
   }
 
   if (bracketLensProvider && isEditorEnabled(activeEditor)) {
-    bracketLensProvider.forceUpdate(activeEditor);
+    // Clear cache and force update
+    bracketLensProvider.clearDecorationCache?.(activeEditor.document);
+    bracketLensProvider.delayUpdateDecoration?.(activeEditor);
     vscode.window.showInformationMessage('♻️ Bracket Lens: Refreshed');
   } else {
     vscode.window.showInformationMessage(
@@ -156,21 +160,15 @@ export function setBracketLensProvider(provider: any): void {
 
 function reactivateExtension(): void {
   if (bracketLensProvider) {
-    // Trigger immediate update for current active editor
-    const activeEditor = vscode.window.activeTextEditor;
-    if (activeEditor) {
-      // Force update decorations
-      bracketLensProvider.forceUpdate?.(activeEditor);
-    }
+    // Set global mute to false
+    bracketLensProvider.setMutedAll?.(false);
   }
 }
 
 function deactivateExtension(): void {
   if (bracketLensProvider) {
-    // Clear all decorations from all visible editors
-    vscode.window.visibleTextEditors.forEach((editor) => {
-      bracketLensProvider.clearDecorations?.(editor);
-    });
+    // Set global mute to true (this will also clear decorations)
+    bracketLensProvider.setMutedAll?.(true);
   }
 }
 

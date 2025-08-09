@@ -1,36 +1,59 @@
 import * as vscode from 'vscode';
-import { BracketLensProvider } from './lens/lens';
+import { BracketLens } from './lens/lens';
 import { showBracketLensMenu, setBracketLensProvider, cleanupClosedEditor } from './actions/toggle';
 
-// ===== EXTENSION ENTRY POINT =====
+// ============================================================================
+// EXTENSION BRIDGE - Simple interface to the BracketLens functionality
+// ============================================================================
 
-let bracketLensProvider: BracketLensProvider | undefined;
+export let extensionContext: vscode.ExtensionContext;
 
-export function activate(context: vscode.ExtensionContext): void {
-  // Initialize the bracket lens provider
-  bracketLensProvider = new BracketLensProvider();
-  
-  // Set provider reference for toggle functionality
-  setBracketLensProvider(bracketLensProvider);
-  
-  // Register main menu command
-  const mainMenuCommand = vscode.commands.registerCommand(
-    'bracketLens.menu',
-    showBracketLensMenu
-  );
-  
-  // Register cleanup event listeners
-  const onDidCloseTextDocument = vscode.workspace.onDidCloseTextDocument((document) => {
-    cleanupClosedEditor(document);
-  });
-  
-  // Add to subscriptions for proper cleanup
-  context.subscriptions.push(
-    mainMenuCommand,
-  onDidCloseTextDocument
-  );
-}
 
-export function deactivate(): void {
-  bracketLensProvider?.dispose();
-}
+
+// ============================================================================
+// EXTENSION ACTIVATION
+// ============================================================================
+
+export const activate = async (context: vscode.ExtensionContext) => {
+    extensionContext = context;
+    
+    // Set the bracket lens provider for the toggle system
+    setBracketLensProvider(BracketLens);
+    
+    // Register commands
+    context.subscriptions.push(
+        vscode.commands.registerCommand(
+            'bracketLens.menu',
+            showBracketLensMenu
+        )
+    );
+
+    // Register event listeners
+    context.subscriptions.push(
+        vscode.workspace.onDidChangeConfiguration(
+            async (event) => {
+                if (event.affectsConfiguration('bracketLens')) {
+                    BracketLens.onDidChangeConfiguration();
+                }
+            }
+        ),
+        vscode.workspace.onDidChangeWorkspaceFolders(() => BracketLens.onDidChangeConfiguration()),
+        vscode.workspace.onDidChangeTextDocument(event => BracketLens.onDidChangeTextDocument(event.document)),
+        vscode.workspace.onDidOpenTextDocument((document) => BracketLens.onDidOpenTextDocument(document)),
+        vscode.workspace.onDidSaveTextDocument((document) => BracketLens.onDidSaveTextDocument(document)),
+        vscode.workspace.onDidCloseTextDocument((document) => {
+            BracketLens.onDidChangeTextDocument(document);
+            cleanupClosedEditor(document);
+        }),
+        vscode.window.onDidChangeActiveTextEditor(() => BracketLens.onDidChangeActiveTextEditor())
+    );
+    
+    // Initialize decorations for visible editors
+    vscode.window.visibleTextEditors.forEach(editor => 
+        BracketLens.delayUpdateDecoration(editor)
+    );
+};
+
+export const deactivate = () => {
+    // Extension cleanup is handled automatically by VSCode
+};
