@@ -54,7 +54,7 @@ export class LanguageFormatter {
 
     // Remove complex props: "{ ...props }", "{ prop1, prop2 }", etc.
     result = result.replace(/:\s*\{[^}]*\}/g, '');
-    result = result.replace(/\{[^}]*\}/g, '');
+    result = result.replace(/\{[^}]*\}/g, '').trim();
 
     // Clean up extra spaces
     result = result.replace(/\s+/g, ' ').trim();
