@@ -17,7 +17,7 @@ export let extensionContext: vscode.ExtensionContext;
 export const activate = async (context: vscode.ExtensionContext) => {
     extensionContext = context;
     
-    // Set the bracket lens provider for the toggle system
+    // Set the bracket lynx provider for the toggle system
     setBracketLynxProvider(BracketLynx);
     
     // Register commands
@@ -32,7 +32,7 @@ export const activate = async (context: vscode.ExtensionContext) => {
     context.subscriptions.push(
         vscode.workspace.onDidChangeConfiguration(
             async (event) => {
-                if (event.affectsConfiguration('bracketLens')) {
+                if (event.affectsConfiguration('bracketLynx')) {
                     BracketLynx.onDidChangeConfiguration();
                 }
             }

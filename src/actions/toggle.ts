@@ -162,7 +162,7 @@ export function refreshBrackets(): void {
 }
 
 /**
- * Set the bracket lens provider reference
+ * Set the bracket lynx provider reference
  */
 export function setBracketLynxProvider(provider: any): void {
   bracketLynxProvider = provider;

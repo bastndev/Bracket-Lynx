@@ -79,7 +79,7 @@ export interface BracketDecorationSource {
 // ============================================================================
 export class BracketLynxConfig {
   private static getConfig() {
-    return vscode.workspace.getConfiguration('bracketLens');
+    return vscode.workspace.getConfiguration('bracketLynx');
   }
 
   static get mode(): string {
@@ -1167,7 +1167,7 @@ export class BracketDecorationGenerator {
 }
 
 // ============================================================================
-// MAIN BRACKET LENS CLASS
+// MAIN BRACKET LYNX CLASS
 // ============================================================================
 
 export class BracketLynx {
