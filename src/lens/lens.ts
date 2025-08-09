@@ -1107,8 +1107,12 @@ export class BracketDecorationGenerator {
           const aIsUnmatched = a.bracketHeader.includes('❌');
           const bIsUnmatched = b.bracketHeader.includes('❌');
 
-          if (aIsUnmatched && !bIsUnmatched) {return -1;}
-          if (!aIsUnmatched && bIsUnmatched) {return 1;}
+          if (aIsUnmatched && !bIsUnmatched) {
+            return -1;
+          }
+          if (!aIsUnmatched && bIsUnmatched) {
+            return 1;
+          }
 
           // Then by size
           return bSpan - aSpan;
@@ -1369,10 +1373,16 @@ export class BracketLynx {
    */
   static getPerformanceMetrics() {
     const optimizedParser = OptimizedBracketParser.getInstance();
+    const advancedCache = AdvancedCacheManager.getInstance();
+
     return {
       cache: CacheManager.getCacheMetrics(),
       hitRatio: CacheManager.getCacheHitRatio(),
-      parser: optimizedParser.getCacheStats(),
+      memory: advancedCache.getMemoryMetrics(),
+      parser: {
+        ...optimizedParser.getCacheStats(),
+        memoryUsage: optimizedParser.getMemoryUsage(),
+      },
       performanceFilters: optimizedParser.getPerformanceStats(),
       config: {
         enablePerformanceFilters: BracketLynxConfig.enablePerformanceFilters,
@@ -1383,6 +1393,46 @@ export class BracketLynx {
         minBracketScopeLines: BracketLynxConfig.minBracketScopeLines,
       },
     };
+  }
+
+  /**
+   * Force memory cleanup when under pressure
+   */
+  static forceMemoryCleanup(): void {
+    const advancedCache = AdvancedCacheManager.getInstance();
+    const optimizedParser = OptimizedBracketParser.getInstance();
+
+    // Force aggressive cleanup
+    advancedCache.forceMemoryCleanup();
+    optimizedParser.aggressiveCleanup();
+
+    if (BracketLynxConfig.debug) {
+      console.log('Bracket Lynx: Forced memory cleanup completed');
+    }
+  }
+
+  /**
+   * Enable low memory mode
+   */
+  static enableLowMemoryMode(): void {
+    const advancedCache = AdvancedCacheManager.getInstance();
+    advancedCache.updateConfig({ lowMemoryMode: true });
+
+    if (BracketLynxConfig.debug) {
+      console.log('Bracket Lynx: Low memory mode enabled');
+    }
+  }
+
+  /**
+   * Disable low memory mode
+   */
+  static disableLowMemoryMode(): void {
+    const advancedCache = AdvancedCacheManager.getInstance();
+    advancedCache.updateConfig({ lowMemoryMode: false });
+
+    if (BracketLynxConfig.debug) {
+      console.log('Bracket Lynx: Low memory mode disabled');
+    }
   }
 
   /**
