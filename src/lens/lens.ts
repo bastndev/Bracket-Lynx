@@ -1,4 +1,8 @@
 import * as vscode from 'vscode';
+import {
+  AdvancedCacheManager,
+  SmartDebouncer,
+} from '../core/performance-cache';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -221,21 +225,53 @@ export class EditorDecorationCacheEntry {
 }
 
 export class CacheManager {
+  // Legacy cache maps for backward compatibility
   static documentCache = new Map<
     vscode.TextDocument,
     DocumentDecorationCacheEntry
   >();
   static editorCache = new Map<vscode.TextEditor, EditorDecorationCacheEntry>();
 
-  static getDocumentCache = (document: vscode.TextDocument) =>
-    this.documentCache.get(document) ??
-    new DocumentDecorationCacheEntry(document);
+  // Advanced cache manager instance
+  private static advancedCache = AdvancedCacheManager.getInstance();
 
-  static getEditorCache = (textEditor: vscode.TextEditor) =>
-    this.editorCache.get(textEditor) ??
-    new EditorDecorationCacheEntry(textEditor);
+  static getDocumentCache = (document: vscode.TextDocument) => {
+    // Try advanced cache first
+    const advancedEntry = this.advancedCache.getDocumentCache(document);
+    if (advancedEntry) {
+      return advancedEntry;
+    }
+
+    // Fallback to legacy behavior
+    const existing = this.documentCache.get(document);
+    if (existing) {
+      return existing;
+    }
+
+    // Create new entry and cache it in both systems
+    const newEntry = new DocumentDecorationCacheEntry(document);
+    this.advancedCache.setDocumentCache(
+      document,
+      newEntry.brackets,
+      newEntry.decorationSource
+    );
+    return newEntry;
+  };
+
+  static getEditorCache = (textEditor: vscode.TextEditor) => {
+    // Try advanced cache first
+    const advancedEntry = this.advancedCache.getEditorCache(textEditor);
+    if (advancedEntry) {
+      return advancedEntry;
+    }
+
+    // Create new entry and cache it
+    return this.advancedCache.setEditorCache(textEditor);
+  };
 
   static clearAllDecorationCache = (): void => {
+    this.advancedCache.clearAllCache();
+    // Keep legacy behavior for compatibility
     this.documentCache.clear();
     for (const textEditor of this.editorCache.keys()) {
       this.editorCache.get(textEditor)?.setDirty();
@@ -243,6 +279,9 @@ export class CacheManager {
   };
 
   static clearDecorationCache = (document?: vscode.TextDocument): void => {
+    this.advancedCache.clearDocumentCache(document);
+
+    // Keep legacy behavior for compatibility
     if (document) {
       this.documentCache.delete(document);
       for (const textEditor of this.editorCache.keys()) {
@@ -258,6 +297,15 @@ export class CacheManager {
       }
     }
   };
+
+  // New methods for performance monitoring
+  static getCacheMetrics() {
+    return this.advancedCache.getMetrics();
+  }
+
+  static getCacheHitRatio() {
+    return this.advancedCache.getHitRatio();
+  }
 }
 
 // ============================================================================
@@ -1018,6 +1066,7 @@ export class BracketDecorationGenerator {
 export class BracketLynx {
   private static isMutedAll: boolean = false;
   private static lastUpdateStamp = new Map<vscode.TextEditor, number>();
+  private static smartDebouncer = new SmartDebouncer();
 
   static updateDecoration(textEditor: vscode.TextEditor) {
     const editorCache = CacheManager.editorCache.get(textEditor);
@@ -1069,32 +1118,18 @@ export class BracketLynx {
 
   static delayUpdateDecoration(textEditor: vscode.TextEditor): void {
     if (undefined !== textEditor.viewColumn) {
-      const updateStamp = Date.now();
-      this.lastUpdateStamp.set(textEditor, updateStamp);
-      const textLength = this.getDocumentTextLength(textEditor.document);
-      const logUnit = 16 * 1024;
-      const logRate = Math.pow(
-        Math.max(textLength, logUnit) / logUnit,
-        1.0 / 2.0
-      );
-      const activeEditorDelay =
-        logRate *
-        (100 +
-          (undefined === CacheManager.documentCache.get(textEditor.document)
-            ? 100
-            : 0));
-      const delay =
-        vscode.window.activeTextEditor === textEditor
-          ? activeEditorDelay
-          : (2 * activeEditorDelay + 500) *
-            (1.0 + 0.2 * (textEditor.viewColumn ?? 0));
+      const editorKey = textEditor.document.uri.toString();
+      const isActiveEditor = vscode.window.activeTextEditor === textEditor;
 
-      setTimeout(() => {
-        if (this.lastUpdateStamp.get(textEditor) === updateStamp) {
-          this.lastUpdateStamp.delete(textEditor);
+      // Use smart debouncer for better performance
+      this.smartDebouncer.debounce(
+        editorKey,
+        () => {
           this.updateDecoration(textEditor);
-        }
-      }, delay);
+        },
+        textEditor.document,
+        isActiveEditor
+      );
     }
   }
 
@@ -1157,6 +1192,16 @@ export class BracketLynx {
   static onDidChangeConfiguration(): void {
     CacheManager.clearAllDecorationCache();
     this.updateAllDecoration();
+
+    // Log cache metrics if debug is enabled
+    if (BracketLynxConfig.debug) {
+      const metrics = CacheManager.getCacheMetrics();
+      const hitRatio = CacheManager.getCacheHitRatio();
+      console.log(`Bracket Lynx Cache Metrics:`, {
+        hitRatio: `${(hitRatio * 100).toFixed(1)}%`,
+        ...metrics,
+      });
+    }
   }
 
   static onDidChangeActiveTextEditor(): void {
@@ -1193,5 +1238,27 @@ export class BracketLynx {
       return f(editor);
     }
     return undefined;
+  }
+
+  // ============================================================================
+  // PERFORMANCE AND CLEANUP METHODS
+  // ============================================================================
+
+  /**
+   * Get performance metrics for debugging
+   */
+  static getPerformanceMetrics() {
+    return {
+      cache: CacheManager.getCacheMetrics(),
+      hitRatio: CacheManager.getCacheHitRatio(),
+    };
+  }
+
+  /**
+   * Dispose and cleanup all resources
+   */
+  static dispose(): void {
+    this.smartDebouncer.dispose();
+    // Advanced cache cleanup is handled automatically
   }
 }
