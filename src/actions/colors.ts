@@ -75,8 +75,9 @@ export function changeDecorationColor(): void {
         return;
     }
 
+    // ----- ---- --- custom colors and select color
     const colorOptions: ColorOption[] = [
-        { label: '✏️ Custom', value: 'custom', description: 'Enter custom hex color' },
+        { label: 'Recommended Colors 🌈', value: 'custom', description: 'Enter custom hex color' },
     ];
 
     const config = vscode.workspace.getConfiguration('bracketLynx');
