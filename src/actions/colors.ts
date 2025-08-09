@@ -447,38 +447,3 @@ export async function reloadColorFromConfiguration(): Promise<void> {
         }
     }
 }
-
-/**
- * Diagnostic function to check color system status
- */
-export function diagnoseColorSystem(): void {
-    const currentColorValue = getCurrentColor();
-    const configColorValue = loadColorFromConfiguration();
-    const isValid = isValidHexColor(currentColorValue);
-    
-    // Test if we can save to configuration
-    let canSave = 'Testing...';
-    saveColorToConfiguration(currentColorValue).then(() => {
-        canSave = '✓ Can save';
-    }).catch(() => {
-        canSave = '✗ Cannot save';
-    });
-    
-    vscode.window.showInformationMessage(
-        `🎨 Color System Status:\n` +
-        `Current: ${currentColorValue}\n` +
-        `Config: ${configColorValue}\n` +
-        `Valid: ${isValid}\n` +
-        `Provider: ${bracketLynxProvider ? '✓' : '✗'}\n` +
-        `Save Test: ${canSave}`
-    );
-    
-    console.log('🎨 Bracket Lynx Color System Diagnosis:', {
-        currentColor: currentColorValue,
-        configColor: configColorValue,
-        isValid,
-        hasProvider: !!bracketLynxProvider,
-        effectiveColor: getEffectiveColor(),
-        predefinedColors: getColorPresets().map(c => ({ label: c.label, value: c.value }))
-    });
-}

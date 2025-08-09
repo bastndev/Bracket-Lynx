@@ -227,11 +227,6 @@ export function showBracketLynxMenu(): void {
       description: 'Update decorations for current file',
       action: 'refresh',
     },
-    {
-      label: '🔧 Diagnostics',
-      description: 'Show color system status',
-      action: 'diagnostics',
-    },
   ];
 
   vscode.window
@@ -257,11 +252,6 @@ export function showBracketLynxMenu(): void {
         case 'color':
           const { changeDecorationColor } = require('./colors');
           changeDecorationColor();
-          break;
-        // Handle diagnostics
-        case 'diagnostics':
-          const { diagnoseColorSystem } = require('./colors');
-          diagnoseColorSystem();
           break;
       }
     });
