@@ -25,8 +25,13 @@ export class LanguageFormatter {
       case 'jsx':
         return this.formatTSX(contextInfo);
         
+      case 'css':
+      case 'scss':
+      case 'sass':
+      case 'less':
+        return this.formatCSS(contextInfo);
+        
       // Future languages can be added here:
-      // case 'css': return this.formatCSS(contextInfo);
       // case 'json': return this.formatJSON(contextInfo);
       // case 'astro': return this.formatAstro(contextInfo);
       
@@ -76,8 +81,49 @@ export class LanguageFormatter {
     return result;
   }
 
+  /**
+   * CSS Formatter: Cleans CSS selectors and adds bullets
+   * ".card-animation #lucas #maria, #lucas" → "card-animation •lucas"
+   */
+  private formatCSS(context: string): string {
+    if (!context) {
+      return '';
+    }
+
+    let result = context;
+
+    // Remove commas first
+    result = result.replace(/,/g, '');
+
+    // Remove CSS selector symbols (. and #)
+    result = result.replace(/[.#]/g, '');
+
+    // Clean up extra spaces
+    result = result.replace(/\s+/g, ' ').trim();
+
+    // Split by spaces and filter empty parts
+    const parts = result.split(' ').filter(part => part.length > 0);
+    
+    if (parts.length === 0) {
+      return '';
+    }
+    
+    if (parts.length === 1) {
+      // Single selector: "card-animation" → "card-animation"
+      return parts[0];
+    }
+    
+    if (parts.length === 2) {
+      // Two selectors: "card-animation lucas" → "card-animation •lucas"
+      return `${parts[0]} •${parts[1]}`;
+    }
+    
+    // Multiple selectors: take first and last
+    // "card-animation lucas maria jose" → "card-animation •jose"
+    return `${parts[0]} •${parts[parts.length - 1]}`;
+  }
+
   // Future methods ready to be implemented:
-  // private formatCSS(context: string): string { return context; }
   // private formatJSON(context: string): string { return context; }
   // private formatAstro(context: string): string { return context; }
 }
