@@ -12,9 +12,11 @@
   "typescript.tsc.autoDetect": "off",
   "cSpell.words": [
     "bastndev",
+    "Debouncer",
     "Ghibli",
     "Gohit",
     "Kiro",
+    "Trae",
     "unmatch"
   ]
 }

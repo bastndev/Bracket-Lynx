@@ -38,18 +38,42 @@
   "sponsor": {
     "url": "https://github.com/sponsors/bastndev"
   },
-
+  
+  "main": "./dist/extension.js",
   "activationEvents": [
     "onLanguage:javascript",
     "onLanguage:typescript",
     "onLanguage:javascriptreact",
     "onLanguage:typescriptreact",
+    "onLanguage:css",
+    "onLanguage:scss",
+    "onLanguage:sass",
+    "onLanguage:less",
+    "onLanguage:html",
+    "onLanguage:astro",
+    "onLanguage:vue",
+    "onLanguage:svelte",
+    "onLanguage:xml",
+    "onLanguage:php",
+    "onLanguage:json",
+    "onLanguage:jsonc",
     "onLanguage:dart",
     "onLanguage:python",
     "onLanguage:go",
-    "onLanguage:rust"
+    "onLanguage:rust",
+    "onLanguage:java",
+    "onLanguage:c",
+    "onLanguage:cpp",
+    "onLanguage:csharp"
   ],
-  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "bracketLynx.menu",
+        "title": "Bracket Lynx: Toggle & Refresh 🛠️"
+      }
+    ]
+  },
   "scripts": {
     "compile": "npm run check-types && npm run lint && node esbuild.js",
     "watch": "npm-run-all -p watch:*",
