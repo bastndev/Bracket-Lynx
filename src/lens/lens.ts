@@ -3,6 +3,7 @@ import {
   AdvancedCacheManager,
   SmartDebouncer,
 } from '../core/performance-cache';
+import { OptimizedBracketParser } from '../core/performance-parser';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -197,12 +198,19 @@ export class DocumentDecorationCacheEntry {
   decorationSource: BracketDecorationSource[] = [];
 
   constructor(document: vscode.TextDocument) {
-    // COMMENTED OUT: Use optimized parser - TESTING IF THIS IS THE ISSUE
-    // const optimizedParser = OptimizedBracketParser.getInstance();
-    // this.brackets = optimizedParser.parseBrackets(document);
-    
-    // USE ORIGINAL PARSER INSTEAD
-    this.brackets = BracketParser.parseBrackets(document);
+    // HYBRID SOLUTION: Use original parser only for .astro files
+    if (document.fileName.endsWith('.astro') || document.languageId === 'astro') {
+      // Use original parser for Astro files
+      this.brackets = BracketParser.parseBrackets(document);
+      
+      if (BracketLynxConfig.debug) {
+        console.log(`Bracket Lynx: Using original parser for Astro file: ${document.fileName}`);
+      }
+    } else {
+      // Use optimized parser for all other files
+      const optimizedParser = OptimizedBracketParser.getInstance();
+      this.brackets = optimizedParser.parseBrackets(document);
+    }
     
     this.decorationSource =
       BracketDecorationGenerator.getBracketDecorationSource(
@@ -290,9 +298,9 @@ export class CacheManager {
   static clearAllDecorationCache = (): void => {
     this.advancedCache.clearAllCache();
 
-    // COMMENTED OUT: Clear optimized parser cache - TESTING IF THIS IS THE ISSUE
-    // const optimizedParser = OptimizedBracketParser.getInstance();
-    // optimizedParser.clearAllCache();
+    // RESTORE: Clear optimized parser cache
+    const optimizedParser = OptimizedBracketParser.getInstance();
+    optimizedParser.clearAllCache();
 
     // Keep legacy behavior for compatibility
     this.documentCache.clear();
@@ -304,11 +312,11 @@ export class CacheManager {
   static clearDecorationCache = (document?: vscode.TextDocument): void => {
     this.advancedCache.clearDocumentCache(document);
 
-    // COMMENTED OUT: Clear optimized parser cache for specific document - TESTING IF THIS IS THE ISSUE
-    // if (document) {
-    //   const optimizedParser = OptimizedBracketParser.getInstance();
-    //   optimizedParser.clearFileCache(document.uri.toString());
-    // }
+    // RESTORE: Clear optimized parser cache for specific document
+    if (document) {
+      const optimizedParser = OptimizedBracketParser.getInstance();
+      optimizedParser.clearFileCache(document.uri.toString());
+    }
 
     // Keep legacy behavior for compatibility
     if (document) {
@@ -1301,12 +1309,12 @@ export class BracketLynx {
     document: vscode.TextDocument,
     changes?: readonly vscode.TextDocumentContentChangeEvent[]
   ): void {
-    // COMMENTED OUT: Try incremental parsing - TESTING IF THIS IS THE ISSUE
-    // if (changes && changes.length > 0) {
-    //   this.handleIncrementalChanges(document, changes);
-    // } else {
+    // RESTORE: Try incremental parsing, but only for non-Astro files
+    if (changes && changes.length > 0) {
+      this.handleIncrementalChanges(document, changes);
+    } else {
       CacheManager.clearDecorationCache(document);
-    // }
+    }
 
     if ('auto' === BracketLynxConfig.mode) {
       this.delayUpdateDecorationByDocument(document);
@@ -1316,13 +1324,21 @@ export class BracketLynx {
   /**
    * Handle incremental document changes
    */
-  // COMMENTED OUT: Entire incremental changes method - TESTING IF THIS IS THE ISSUE
-  /*
   private static handleIncrementalChanges(
     document: vscode.TextDocument,
     changes: readonly vscode.TextDocumentContentChangeEvent[]
   ): void {
     try {
+      // Skip incremental parsing for Astro files (use full cache clear)
+      if (document.fileName.endsWith('.astro') || document.languageId === 'astro') {
+        if (BracketLynxConfig.debug) {
+          console.log(`Bracket Lynx: Skipping incremental parsing for Astro file: ${document.fileName}`);
+        }
+        CacheManager.clearDecorationCache(document);
+        return;
+      }
+
+      // Use incremental parsing for other files
       const optimizedParser = OptimizedBracketParser.getInstance();
       const existingCache = CacheManager.documentCache.get(document);
 
@@ -1360,28 +1376,25 @@ export class BracketLynx {
     // Fallback to full cache clear
     CacheManager.clearDecorationCache(document);
   }
-  */
-
-  // ...existing code...
 
   /**
    * Get performance metrics for debugging
    */
   static getPerformanceMetrics() {
-    // COMMENTED OUT: OptimizedBracketParser references - TESTING IF THIS IS THE ISSUE
-    // const optimizedParser = OptimizedBracketParser.getInstance();
+    // RESTORE: OptimizedBracketParser references
+    const optimizedParser = OptimizedBracketParser.getInstance();
     const advancedCache = AdvancedCacheManager.getInstance();
 
     return {
       cache: CacheManager.getCacheMetrics(),
       hitRatio: CacheManager.getCacheHitRatio(),
       memory: advancedCache.getMemoryMetrics(),
-      // COMMENTED OUT: Parser metrics - TESTING IF THIS IS THE ISSUE
-      // parser: {
-      //   ...optimizedParser.getCacheStats(),
-      //   memoryUsage: optimizedParser.getMemoryUsage(),
-      // },
-      // performanceFilters: optimizedParser.getPerformanceStats(),
+      // RESTORE: Parser metrics
+      parser: {
+        ...optimizedParser.getCacheStats(),
+        memoryUsage: optimizedParser.getMemoryUsage(),
+      },
+      performanceFilters: optimizedParser.getPerformanceStats(),
       config: {
         enablePerformanceFilters: BracketLynxConfig.enablePerformanceFilters,
         maxFileSize: `${Math.round(
@@ -1398,13 +1411,13 @@ export class BracketLynx {
    */
   static forceMemoryCleanup(): void {
     const advancedCache = AdvancedCacheManager.getInstance();
-    // COMMENTED OUT: OptimizedBracketParser cleanup - TESTING IF THIS IS THE ISSUE
-    // const optimizedParser = OptimizedBracketParser.getInstance();
+    // RESTORE: OptimizedBracketParser cleanup
+    const optimizedParser = OptimizedBracketParser.getInstance();
 
     // Force aggressive cleanup
     advancedCache.forceMemoryCleanup();
-    // COMMENTED OUT: Parser cleanup - TESTING IF THIS IS THE ISSUE
-    // optimizedParser.aggressiveCleanup();
+    // RESTORE: Parser cleanup
+    optimizedParser.aggressiveCleanup();
 
     if (BracketLynxConfig.debug) {
       console.log('Bracket Lynx: Forced memory cleanup completed');
@@ -1441,9 +1454,9 @@ export class BracketLynx {
   static dispose(): void {
     this.smartDebouncer.dispose();
 
-    // COMMENTED OUT: Cleanup optimized parser - TESTING IF THIS IS THE ISSUE
-    // const optimizedParser = OptimizedBracketParser.getInstance();
-    // optimizedParser.dispose();
+    // RESTORE: Cleanup optimized parser
+    const optimizedParser = OptimizedBracketParser.getInstance();
+    optimizedParser.dispose();
 
     // Advanced cache cleanup is handled automatically
   }
