@@ -464,6 +464,7 @@ export function getColorPresets(): ColorOption[] {
  */
 export function getSuggestedColors(): ColorOption[] {
     return [
+        { label: '⚫ Default Gray', value: '#515151', description: 'Default bracket color' },
         { label: '⚪ Light Gray', value: '#adb5bd', description: 'Light gray decorations' },
         { label: '🔵 Dark Gray', value: '#535466', description: 'Dark blue decorations' },
         { label: '🟡 Yellow', value: '#f1c40f', description: 'Bright yellow decorations' },
