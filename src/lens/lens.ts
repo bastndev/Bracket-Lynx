@@ -6,6 +6,8 @@ import {
 import { OptimizedBracketParser } from '../core/performance-parser';
 // NEW: Import parser exceptions
 import { shouldUseOriginalParser } from '../core/parser-exceptions';
+// NEW: Import language formatter
+import { LanguageFormatter } from './language-formatter';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -898,6 +900,9 @@ export class BracketParser {
 // ============================================================================
 
 export class BracketHeaderGenerator {
+  // NEW: Create language formatter instance
+  private static languageFormatter = new LanguageFormatter();
+
   static getBracketHeader(
     document: vscode.TextDocument,
     context: BracketContext
@@ -905,6 +910,10 @@ export class BracketHeaderGenerator {
     const maxBracketHeaderLength = BracketLynxConfig.maxBracketHeaderLength;
     const regulateHeader = (text: string) => {
       let result = text.replace(/\s+/gu, ' ').trim();
+      
+      // NEW: Apply language-specific formatting before length truncation
+      result = this.languageFormatter.formatContext(result, document.languageId);
+      
       if (maxBracketHeaderLength < result.length) {
         return result.substring(0, maxBracketHeaderLength - 3) + '...';
       }
