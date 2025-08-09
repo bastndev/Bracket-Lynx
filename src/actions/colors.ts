@@ -79,7 +79,6 @@ export function changeDecorationColor(): void {
     const colorOptions: ColorOption[] = [
         ...getSuggestedColors(),
         { label: '✏️ Write Custom', value: 'write-custom', description: 'Enter your own hex color' },
-        { label: '🔧 Diagnostics', value: 'diagnostics', description: 'Show color system status' },
     ];
 
     const config = vscode.workspace.getConfiguration('bracketLynx');
@@ -123,7 +122,7 @@ export function changeDecorationColor(): void {
         if (items.length > 0) {
             const item = items[0];
             // Preview actual colors, but not special actions
-            if (item.value !== 'custom' && item.value !== 'diagnostics' && item.value !== 'write-custom') {
+            if (item.value !== 'custom' && item.value !== 'write-custom') {
                 await applyColorToDecorations(item.value);
             }
         }
@@ -261,10 +260,6 @@ export function changeDecorationColor(): void {
             } else {
                 vscode.window.showErrorMessage('🎨 Failed to change color');
             }
-        } else if (selectedItem.value === 'diagnostics') {
-            // Show diagnostics
-            quickPick.dispose();
-            diagnoseColorSystem();
         } else {
             // User selected a direct color (from suggested colors in main menu)
             quickPick.dispose();
@@ -507,75 +502,5 @@ export async function reloadColorFromConfiguration(): Promise<void> {
         if (bracketLynxProvider) {
             await recreateAllBracketLynxDecorations(configColor);
         }
-    }
-}
-
-/**
- * Diagnose the color system and show status information
- */
-async function diagnoseColorSystem(): Promise<void> {
-    try {
-        const configuration = vscode.workspace.getConfiguration();
-        const currentColorFromConfig = configuration.get('bracketLynx.color', '#ffffff');
-        const effectiveColor = getEffectiveColor();
-        
-        const workspaceConfig = vscode.workspace.getConfiguration('bracketLynx', vscode.workspace.workspaceFolders?.[0]?.uri);
-        const globalConfig = vscode.workspace.getConfiguration('bracketLynx');
-        
-        const workspaceColor = workspaceConfig.get('color');
-        const globalColor = globalConfig.get('color');
-        
-        const diagnosticInfo = [
-            '🔧 **Bracket Lynx Color System Diagnostics**',
-            '',
-            `📊 **Current Status:**`,
-            `• Current Color: \`${currentColorFromConfig}\``,
-            `• Effective Color: \`${effectiveColor}\``,
-            `• Is Valid: ${isValidHexColor(currentColorFromConfig) ? '✅ Yes' : '❌ No'}`,
-            '',
-            `⚙️ **Configuration Sources:**`,
-            `• Workspace Color: ${workspaceColor ? `\`${workspaceColor}\`` : '❌ Not Set'}`,
-            `• Global Color: ${globalColor ? `\`${globalColor}\`` : '❌ Not Set'}`,
-            '',
-            `🗂️ **Workspace Info:**`,
-            `• Has Workspace: ${vscode.workspace.workspaceFolders ? '✅ Yes' : '❌ No'}`,
-            `• Workspace Count: ${vscode.workspace.workspaceFolders?.length || 0}`,
-            '',
-            `💡 **Quick Actions:**`,
-            `• Use "Change Color" to modify the current color`,
-            `• Colors are saved automatically when changed`,
-            `• Workspace settings override global settings`,
-        ].join('\n');
-
-        // Show diagnostics in a webview or information message
-        const action = await vscode.window.showInformationMessage(
-            `🔧 Color system is ${isValidHexColor(currentColorFromConfig) ? 'working properly' : 'having issues'}. Current color: ${currentColorFromConfig}`,
-            'Show Details',
-            'Test Color Preview',
-            'Reset to Default'
-        );
-
-        if (action === 'Show Details') {
-            const document = await vscode.workspace.openTextDocument({
-                content: diagnosticInfo,
-                language: 'markdown'
-            });
-            await vscode.window.showTextDocument(document);
-        } else if (action === 'Test Color Preview') {
-            const originalColor = currentColorFromConfig;
-            await recreateAllBracketLynxDecorations('#ff0000'); // Red test
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            await recreateAllBracketLynxDecorations('#00ff00'); // Green test
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            await recreateAllBracketLynxDecorations(originalColor); // Back to original
-            vscode.window.showInformationMessage('🎨 Color preview test completed');
-        } else if (action === 'Reset to Default') {
-            await recreateAllBracketLynxDecorations('#ffffff');
-            await saveColorToConfiguration('#ffffff');
-            vscode.window.showInformationMessage('🎨 Color reset to default white');
-        }
-        
-    } catch (error) {
-        vscode.window.showErrorMessage(`🔧 Diagnostics failed: ${error}`);
     }
 }
