@@ -218,15 +218,14 @@ export function showBracketLynxMenu(): void {
       action: 'current',
     },
     {
-      label: '♻️ Refresh',
-      description: 'Update decorations for current file',
-      action: 'refresh',
-    },
-    // NEW: Add color change option
-    {
       label: '🎨 Change Color',
       description: 'Change decoration color with preview',
       action: 'color',
+    },
+    {
+      label: '♻️ Refresh',
+      description: 'Update decorations for current file',
+      action: 'refresh',
     },
   ];
 

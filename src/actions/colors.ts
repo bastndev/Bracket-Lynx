@@ -75,10 +75,6 @@ export function changeDecorationColor(): void {
         return;
     }
 
-    // Debug current state
-    console.log('🎨 Starting color change...');
-    debugColorSystem();
-
     const colorOptions: ColorOption[] = [
         { label: '⚫ Default Gray', value: '#515151', description: 'Default bracket color' },
         { label: '🔵 Dark Gray', value: '#535466', description: 'Dark blue decorations' },
@@ -91,17 +87,13 @@ export function changeDecorationColor(): void {
 
     const quickPick = vscode.window.createQuickPick<ColorOption>();
     quickPick.items = colorOptions;
-    quickPick.placeholder = 'Choose a color for <~ #2-10 •GitHub()=> decorations (Use arrows for preview)';
+    quickPick.placeholder = 'Choose a color for bracket decorations';
     quickPick.canSelectMany = false;
 
     // Apply color with proper error handling - SIMPLIFIED VERSION
     const applyColorToDecorations = async (color: string): Promise<boolean> => {
         try {
-            console.log(`🎨 Applying color: ${color}`);
-            
-            // Store color in memory instead of trying to write to unregistered config
             currentColor = color;
-            console.log(`🎨 Color stored in memory: ${currentColor}`);
             
             if (bracketLynxProvider && isExtensionEnabled()) {
                 // Wait a bit
@@ -113,7 +105,6 @@ export function changeDecorationColor(): void {
                 // Additional wait to ensure decorations are applied
                 await new Promise(resolve => setTimeout(resolve, 100));
                 
-                console.log(`🎨 Color application completed`);
                 return true;
             }
             return false;
@@ -145,7 +136,7 @@ export function changeDecorationColor(): void {
             quickPick.hide();
             
             const customColor = await vscode.window.showInputBox({
-                prompt: 'Enter hex color for <~ #2-10 •GitHub()=> decorations',
+                prompt: 'Enter hex color for bracket decorations',
                 placeHolder: '#ffffff',
                 value: originalColor,
                 validateInput: (value) => {
@@ -201,13 +192,10 @@ export function changeDecorationColor(): void {
  */
 async function recreateAllBracketLynxDecorations(overrideColor?: string): Promise<void> {
     if (!bracketLynxProvider) {
-        console.error('🎨 bracketLynxProvider not available');
         return;
     }
 
     try {
-        console.log('🎨 Starting Bracket Lynx decoration recreation...');
-        
         // If we have an override color, temporarily store it
         if (overrideColor) {
             currentColor = overrideColor;
@@ -215,19 +203,14 @@ async function recreateAllBracketLynxDecorations(overrideColor?: string): Promis
         
         // Step 1: Force color refresh if available
         if (typeof bracketLynxProvider.forceColorRefresh === 'function') {
-            console.log('🎨 Force refreshing colors...');
             bracketLynxProvider.forceColorRefresh();
         } else {
             // Fallback to manual steps
-            console.log('🎨 Manual decoration recreation...');
-            
-            // Clear ALL existing decorations first
             bracketLynxProvider.clearAllDecorations();
             await new Promise(resolve => setTimeout(resolve, 50));
 
             // Clear decoration cache for all documents
             if (bracketLynxProvider.clearDecorationCache) {
-                console.log('🎨 Clearing decoration cache...');
                 vscode.window.visibleTextEditors.forEach(editor => {
                     if (editor.document && bracketLynxProvider) {
                         bracketLynxProvider.clearDecorationCache!(editor.document);
@@ -238,27 +221,21 @@ async function recreateAllBracketLynxDecorations(overrideColor?: string): Promis
 
             // Trigger configuration change if available
             if (bracketLynxProvider.onDidChangeConfiguration) {
-                console.log('🎨 Triggering configuration change...');
                 bracketLynxProvider.onDidChangeConfiguration();
                 await new Promise(resolve => setTimeout(resolve, 100));
             }
 
             // Force update all visible editors
-            console.log('🎨 Updating all decorations...');
             bracketLynxProvider.updateAllDecoration();
 
             // Additional force update for active editor
             const activeEditor = vscode.window.activeTextEditor;
             if (activeEditor && isEditorEnabled(activeEditor)) {
-                console.log('🎨 Force updating active editor...');
                 bracketLynxProvider.forceUpdateEditor(activeEditor);
             }
         }
-
-        console.log('🎨 Bracket Lynx decorations recreated successfully');
-        
     } catch (error) {
-        console.error('🎨 Error recreating Bracket Lynx decorations:', error);
+        console.error('🎨 Error recreating decorations:', error);
         throw error;
     }
 }
@@ -275,15 +252,10 @@ export async function setColor(color: string): Promise<void> {
         throw new Error(`Invalid hex color: ${color}`);
     }
 
-    console.log(`🎨 Setting Bracket Lynx color to: ${color}`);
-    
-    // Store color in memory
     currentColor = color;
     
     // Recreate all decorations with the new color
     await recreateAllBracketLynxDecorations(color);
-    
-    console.log(`🎨 Bracket Lynx color successfully set to: ${color}`);
 }
 
 /**
@@ -304,12 +276,9 @@ export function initializeColorSystem(): void {
         const configColor = config.get('color', '#515151');
         if (configColor && configColor !== '#515151') {
             currentColor = configColor;
-            console.log(`🎨 Initialized with config color: ${configColor}`);
-        } else {
-            console.log(`🎨 Initialized with default color: ${currentColor}`);
         }
     } catch (error) {
-        console.log('🎨 Using default color: #515151');
+        // Use default color
     }
 }
 
@@ -341,64 +310,7 @@ export function isValidHexColor(color: string): boolean {
 export function getColorPresets(): ColorOption[] {
     return [
         { label: '⚫ Default Gray', value: '#515151', description: 'Default bracket color' },
-        { label: '🔴 Red', value: '#ff6b6b', description: 'Red decorations' },
-        { label: '🟢 Green', value: '#51cf66', description: 'Green decorations' },
-        { label: '🔵 Blue', value: '#339af0', description: 'Blue decorations' },
-        { label: '🟡 Yellow', value: '#ffd43b', description: 'Yellow decorations' },
-        { label: '🟣 Purple', value: '#9775fa', description: 'Purple decorations' },
-        { label: '🟠 Orange', value: '#ff8c42', description: 'Orange decorations' },
+        { label: '🔵 Dark Gray', value: '#535466', description: 'Dark blue decorations' },
         { label: '⚪ Light Gray', value: '#adb5bd', description: 'Light gray decorations' },
-        { label: '⚫ Dark Gray', value: '#343a40', description: 'Dark gray decorations' },
     ];
-}
-
-/**
- * Debug the color system for troubleshooting
- */
-export function debugColorSystem(): void {
-    console.log('=== BRACKET LYNX COLOR DEBUG ===');
-    console.log('Current color:', getCurrentColor());
-    console.log('Provider available:', !!bracketLynxProvider);
-    console.log('Extension enabled:', isExtensionEnabled());
-    
-    // Test BracketLynxConfig.color
-    try {
-        const { BracketLynxConfig } = require('../lens/lens');
-        console.log('BracketLynxConfig.color:', BracketLynxConfig.color);
-    } catch (error) {
-        console.log('Error accessing BracketLynxConfig.color:', error);
-    }
-    
-    if (bracketLynxProvider) {
-        const methods = [
-            'clearAllDecorations',
-            'updateAllDecoration',
-            'forceUpdateEditor',
-            'clearDecorationCache',
-            'clearEditorDecorations',
-            'onDidChangeConfiguration',
-            'forceColorRefresh'
-        ];
-        
-        console.log('Available provider methods:');
-        methods.forEach(method => {
-            const methodExists = typeof (bracketLynxProvider as any)[method] === 'function';
-            console.log(`- ${method}:`, methodExists ? '✅ Available' : '❌ Missing');
-        });
-    } else {
-        console.log('Bracket Lynx provider is not set');
-    }
-
-    const activeEditor = vscode.window.activeTextEditor;
-    if (activeEditor) {
-        console.log('Active editor:', activeEditor.document.fileName);
-        console.log('Active editor enabled:', isEditorEnabled(activeEditor));
-    }
-    
-    console.log('Visible editors:', vscode.window.visibleTextEditors.length);
-    
-    // Test decorations format
-    console.log('Expected decoration format: <~ #2-10 •GitHub()=>');
-    console.log('Color applies to the entire decoration text');
-    console.log('================================');
 }
