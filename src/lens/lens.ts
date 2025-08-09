@@ -1342,6 +1342,16 @@ export class BracketLynx {
   }
 
   static onDidChangeConfiguration(): void {
+    // Sync color system with configuration changes
+    try {
+      const { onConfigurationChanged } = require('../actions/colors');
+      onConfigurationChanged().catch((error: any) => {
+        console.error('Error syncing color configuration:', error);
+      });
+    } catch (error) {
+      console.warn('Color system not available during configuration change');
+    }
+
     CacheManager.clearAllDecorationCache();
     this.updateAllDecoration();
 

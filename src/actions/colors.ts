@@ -76,9 +76,6 @@ export function changeDecorationColor(): void {
     }
 
     const colorOptions: ColorOption[] = [
-        { label: '⚫ Default Gray', value: '#515151', description: 'Default bracket color' },
-        { label: '⚪ Light Gray', value: '#adb5bd', description: 'Light gray decorations' },
-        { label: '🔵 Dark Gray', value: '#535466', description: 'Dark blue decorations' },
         { label: '✏️ Custom', value: 'custom', description: 'Enter custom hex color' },
     ];
 
@@ -115,12 +112,8 @@ export function changeDecorationColor(): void {
         }
     };
 
-    // Preview during navigation
-    quickPick.onDidChangeActive(async (items) => {
-        if (items.length > 0 && items[0].value !== 'custom') {
-            await applyColorToDecorations(items[0].value);
-        }
-    });
+    // No preview needed since we only have 'custom' option
+    // quickPick.onDidChangeActive is not needed anymore
 
     // Final selection
     quickPick.onDidAccept(async () => {
@@ -130,51 +123,107 @@ export function changeDecorationColor(): void {
             return;
         }
 
-        let finalColor = selectedItem.value;
-
+        // Since we only have 'custom' option, always show the color picker
         if (selectedItem.value === 'custom') {
             quickPick.hide();
             
-            const customColor = await vscode.window.showInputBox({
-                prompt: 'Enter hex color for bracket decorations',
-                placeHolder: '#ffffff',
-                value: originalColor,
-                validateInput: (value) => {
-                    if (!value) { return 'Color is required'; }
-                    if (!isValidHexColor(value)) {
-                        return 'Please enter a valid hex color (e.g., #ff6b6b)';
-                    }
-                    return null;
-                },
+            // Show suggested colors
+            const suggestedColors: ColorOption[] = [
+                ...getSuggestedColors(),
+                { label: '✏️ Write Custom', value: 'write-custom', description: 'Enter your own hex color' },
+            ];
+
+            const colorPicker = vscode.window.createQuickPick<ColorOption>();
+            colorPicker.items = suggestedColors;
+            colorPicker.placeholder = 'Choose a suggested color or write a custom one';
+            colorPicker.canSelectMany = false;
+
+            // Preview suggested colors
+            colorPicker.onDidChangeActive(async (items) => {
+                if (items.length > 0 && items[0].value !== 'write-custom') {
+                    await applyColorToDecorations(items[0].value);
+                }
             });
 
-            if (!customColor) {
-                await applyColorToDecorations(originalColor);
-                quickPick.dispose();
-                return;
-            }
-            
-            finalColor = customColor;
-        }
+            colorPicker.onDidAccept(async () => {
+                const selectedColor = colorPicker.selectedItems[0];
+                if (!selectedColor) {
+                    colorPicker.dispose();
+                    await applyColorToDecorations(originalColor);
+                    await saveColorToConfiguration(originalColor);
+                    quickPick.dispose();
+                    return;
+                }
 
-        // Apply final color with success feedback
-        const success = await applyColorToDecorations(finalColor);
-        
-        if (success) {
-            const colorLabel = selectedItem.value === 'custom' ? finalColor : selectedItem.label;
-            vscode.window.showInformationMessage(`🎨 Bracket Lynx: Color changed to ${colorLabel}`);
-        } else {
-            vscode.window.showErrorMessage('🎨 Failed to change color');
+                let finalColor: string;
+
+                if (selectedColor.value === 'write-custom') {
+                    // Show input box for completely custom color
+                    colorPicker.hide();
+                    
+                    const customColor = await vscode.window.showInputBox({
+                        prompt: 'Enter hex color for bracket decorations',
+                        placeHolder: '#ffffff (example: #ff6b6b, #00ff00, #3498db)',
+                        value: originalColor,
+                        validateInput: (value) => {
+                            if (!value) { return 'Color is required'; }
+                            if (!isValidHexColor(value)) {
+                                return 'Please enter a valid hex color (e.g., #ff6b6b)';
+                            }
+                            return null;
+                        },
+                    });
+
+                    if (!customColor) {
+                        await applyColorToDecorations(originalColor);
+                        await saveColorToConfiguration(originalColor);
+                        colorPicker.dispose();
+                        quickPick.dispose();
+                        return;
+                    }
+                    
+                    finalColor = customColor;
+                } else {
+                    // User selected a suggested color
+                    finalColor = selectedColor.value;
+                }
+
+                colorPicker.dispose();
+                quickPick.dispose();
+                
+                // Apply and save the selected color (suggested or custom)
+                const success = await applyColorToDecorations(finalColor);
+                if (success) {
+                    await saveColorToConfiguration(finalColor);
+                    const colorLabel = selectedColor.value === 'write-custom' ? finalColor : selectedColor.label;
+                    vscode.window.showInformationMessage(`🎨 Bracket Lynx: Color changed to ${colorLabel}`);
+                } else {
+                    vscode.window.showErrorMessage('🎨 Failed to change color');
+                }
+            });
+
+            // Handle cancel for suggested colors
+            colorPicker.onDidHide(() => {
+                if (colorPicker.selectedItems.length === 0) {
+                    applyColorToDecorations(originalColor).then(() => {
+                        saveColorToConfiguration(originalColor);
+                    });
+                }
+                colorPicker.dispose();
+                quickPick.dispose();
+            });
+
+            colorPicker.show();
         }
-        
-        quickPick.dispose();
     });
 
-    // Cancel - restore original color
+    // Cancel - restore original color if user cancels without selecting
     quickPick.onDidHide(() => {
-        if (quickPick.selectedItems.length === 0 || 
-                quickPick.selectedItems[0]?.value !== 'custom') {
-            applyColorToDecorations(originalColor);
+        if (quickPick.selectedItems.length === 0) {
+            // User cancelled without selecting anything, restore original color
+            applyColorToDecorations(originalColor).then(() => {
+                saveColorToConfiguration(originalColor);
+            });
         }
         quickPick.dispose();
     });
@@ -254,15 +303,59 @@ export async function setColor(color: string): Promise<void> {
 
     currentColor = color;
     
+    // Save to configuration for persistence
+    await saveColorToConfiguration(color);
+    
     // Recreate all decorations with the new color
     await recreateAllBracketLynxDecorations(color);
+}
+
+/**
+ * Save color to VS Code workspace configuration for persistence
+ */
+async function saveColorToConfiguration(color: string): Promise<void> {
+    try {
+        const config = vscode.workspace.getConfiguration('bracketLynx');
+        await config.update('color', color, vscode.ConfigurationTarget.Workspace);
+        console.log(`🎨 Color saved to configuration: ${color}`);
+    } catch (error) {
+        // If workspace configuration fails, try global
+        try {
+            const config = vscode.workspace.getConfiguration('bracketLynx');
+            await config.update('color', color, vscode.ConfigurationTarget.Global);
+            console.log(`🎨 Color saved to global configuration: ${color}`);
+        } catch (globalError) {
+            console.warn(`🎨 Failed to save color to configuration:`, globalError);
+            // Even if configuration save fails, we keep the color in memory
+            // This prevents the "configuration not registered" error
+        }
+    }
+}
+
+/**
+ * Load color from VS Code configuration with fallback
+ */
+function loadColorFromConfiguration(): string {
+    try {
+        const config = vscode.workspace.getConfiguration('bracketLynx');
+        const savedColor = config.get<string>('color');
+        if (savedColor && isValidHexColor(savedColor)) {
+            return savedColor;
+        }
+    } catch (error) {
+        console.warn('🎨 Could not load color from configuration:', error);
+    }
+    
+    // Return default color if configuration fails
+    return '#515151';
 }
 
 /**
  * Reset color to default
  */
 export async function resetColorToDefault(): Promise<void> {
-    await setColor('#515151');
+    const defaultColor = '#515151';
+    await setColor(defaultColor);
     vscode.window.showInformationMessage('🎨 Bracket Lynx: Color reset to default gray');
 }
 
@@ -270,16 +363,9 @@ export async function resetColorToDefault(): Promise<void> {
  * Initialize color system - call this when the provider is set
  */
 export function initializeColorSystem(): void {
-    // Set initial color from configuration if available
-    try {
-        const config = vscode.workspace.getConfiguration('bracketLynx');
-        const configColor = config.get('color', '#515151');
-        if (configColor && configColor !== '#515151') {
-            currentColor = configColor;
-        }
-    } catch (error) {
-        // Use default color
-    }
+    // Load color from configuration with proper error handling
+    currentColor = loadColorFromConfiguration();
+    console.log(`🎨 Color system initialized with color: ${currentColor}`);
 }
 
 /**
@@ -313,4 +399,85 @@ export function getColorPresets(): ColorOption[] {
         { label: '🔵 Dark Gray', value: '#535466', description: 'Dark blue decorations' },
         { label: '⚪ Light Gray', value: '#adb5bd', description: 'Light gray decorations' },
     ];
+}
+
+/**
+ * Get suggested color options for custom color picker
+ */
+export function getSuggestedColors(): ColorOption[] {
+    return [
+        { label: '⚪ Light Gray', value: '#adb5bd', description: 'Light gray decorations' },
+        { label: '🔵 Dark Gray', value: '#535466', description: 'Dark blue decorations' },
+        { label: '🟡 Yellow', value: '#f1c40f', description: 'Bright yellow decorations' },
+        { label: '🟢 Green', value: '#2ecc71', description: 'Green decorations' },
+    ];
+}
+
+/**
+ * Handle configuration changes from VS Code settings
+ * This should be called when workspace configuration changes
+ */
+export async function onConfigurationChanged(): Promise<void> {
+    const newColor = loadColorFromConfiguration();
+    if (newColor !== currentColor && isValidHexColor(newColor)) {
+        console.log(`🎨 Configuration changed, updating color from ${currentColor} to ${newColor}`);
+        currentColor = newColor;
+        
+        // Recreate decorations with the new color
+        if (bracketLynxProvider) {
+            try {
+                await recreateAllBracketLynxDecorations(newColor);
+            } catch (error) {
+                console.error('🎨 Error updating decorations after configuration change:', error);
+            }
+        }
+    }
+}
+
+/**
+ * Force reload color from configuration
+ */
+export async function reloadColorFromConfiguration(): Promise<void> {
+    const configColor = loadColorFromConfiguration();
+    if (configColor !== currentColor) {
+        currentColor = configColor;
+        if (bracketLynxProvider) {
+            await recreateAllBracketLynxDecorations(configColor);
+        }
+    }
+}
+
+/**
+ * Diagnostic function to check color system status
+ */
+export function diagnoseColorSystem(): void {
+    const currentColorValue = getCurrentColor();
+    const configColorValue = loadColorFromConfiguration();
+    const isValid = isValidHexColor(currentColorValue);
+    
+    // Test if we can save to configuration
+    let canSave = 'Testing...';
+    saveColorToConfiguration(currentColorValue).then(() => {
+        canSave = '✓ Can save';
+    }).catch(() => {
+        canSave = '✗ Cannot save';
+    });
+    
+    vscode.window.showInformationMessage(
+        `🎨 Color System Status:\n` +
+        `Current: ${currentColorValue}\n` +
+        `Config: ${configColorValue}\n` +
+        `Valid: ${isValid}\n` +
+        `Provider: ${bracketLynxProvider ? '✓' : '✗'}\n` +
+        `Save Test: ${canSave}`
+    );
+    
+    console.log('🎨 Bracket Lynx Color System Diagnosis:', {
+        currentColor: currentColorValue,
+        configColor: configColorValue,
+        isValid,
+        hasProvider: !!bracketLynxProvider,
+        effectiveColor: getEffectiveColor(),
+        predefinedColors: getColorPresets().map(c => ({ label: c.label, value: c.value }))
+    });
 }
