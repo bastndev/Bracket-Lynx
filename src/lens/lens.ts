@@ -3,6 +3,7 @@ import {
   AdvancedCacheManager,
   SmartDebouncer,
 } from '../core/performance-cache';
+import { OptimizedBracketParser } from '../core/performance-parser';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -185,7 +186,9 @@ export class DocumentDecorationCacheEntry {
   decorationSource: BracketDecorationSource[] = [];
 
   constructor(document: vscode.TextDocument) {
-    this.brackets = BracketParser.parseBrackets(document);
+    // Use optimized parser for better performance
+    const optimizedParser = OptimizedBracketParser.getInstance();
+    this.brackets = optimizedParser.parseBrackets(document);
     this.decorationSource =
       BracketDecorationGenerator.getBracketDecorationSource(
         document,
@@ -271,6 +274,11 @@ export class CacheManager {
 
   static clearAllDecorationCache = (): void => {
     this.advancedCache.clearAllCache();
+
+    // Clear optimized parser cache
+    const optimizedParser = OptimizedBracketParser.getInstance();
+    optimizedParser.clearAllCache();
+
     // Keep legacy behavior for compatibility
     this.documentCache.clear();
     for (const textEditor of this.editorCache.keys()) {
@@ -280,6 +288,12 @@ export class CacheManager {
 
   static clearDecorationCache = (document?: vscode.TextDocument): void => {
     this.advancedCache.clearDocumentCache(document);
+
+    // Clear optimized parser cache for specific document
+    if (document) {
+      const optimizedParser = OptimizedBracketParser.getInstance();
+      optimizedParser.clearFileCache(document.uri.toString());
+    }
 
     // Keep legacy behavior for compatibility
     if (document) {
@@ -1225,11 +1239,66 @@ export class BracketLynx {
     }
   }
 
-  static onDidChangeTextDocument(document: vscode.TextDocument): void {
-    CacheManager.clearDecorationCache(document);
+  static onDidChangeTextDocument(
+    document: vscode.TextDocument,
+    changes?: readonly vscode.TextDocumentContentChangeEvent[]
+  ): void {
+    // Try incremental parsing if changes are provided
+    if (changes && changes.length > 0) {
+      this.handleIncrementalChanges(document, changes);
+    } else {
+      CacheManager.clearDecorationCache(document);
+    }
+
     if ('auto' === BracketLynxConfig.mode) {
       this.delayUpdateDecorationByDocument(document);
     }
+  }
+
+  /**
+   * Handle incremental document changes
+   */
+  private static handleIncrementalChanges(
+    document: vscode.TextDocument,
+    changes: readonly vscode.TextDocumentContentChangeEvent[]
+  ): void {
+    try {
+      const optimizedParser = OptimizedBracketParser.getInstance();
+      const existingCache = CacheManager.documentCache.get(document);
+
+      if (existingCache && existingCache.brackets) {
+        // Try incremental parsing
+        const incrementalResult = optimizedParser.parseIncremental(
+          document,
+          changes,
+          existingCache.brackets
+        );
+
+        // Update cache with incremental results
+        existingCache.brackets = incrementalResult.brackets;
+        existingCache.decorationSource =
+          BracketDecorationGenerator.getBracketDecorationSource(
+            document,
+            incrementalResult.brackets
+          );
+
+        if (BracketLynxConfig.debug) {
+          console.log(
+            `Bracket Lynx: Incremental update completed in ${incrementalResult.parseTime}ms`
+          );
+        }
+
+        return;
+      }
+    } catch (error) {
+      console.error(
+        'Bracket Lynx: Error in incremental parsing, falling back to full cache clear:',
+        error
+      );
+    }
+
+    // Fallback to full cache clear
+    CacheManager.clearDecorationCache(document);
   }
 
   private static activeTextEditor<T>(f: (textEditor: vscode.TextEditor) => T) {
@@ -1248,9 +1317,11 @@ export class BracketLynx {
    * Get performance metrics for debugging
    */
   static getPerformanceMetrics() {
+    const optimizedParser = OptimizedBracketParser.getInstance();
     return {
       cache: CacheManager.getCacheMetrics(),
       hitRatio: CacheManager.getCacheHitRatio(),
+      parser: optimizedParser.getCacheStats(),
     };
   }
 
@@ -1259,6 +1330,11 @@ export class BracketLynx {
    */
   static dispose(): void {
     this.smartDebouncer.dispose();
+
+    // Cleanup optimized parser
+    const optimizedParser = OptimizedBracketParser.getInstance();
+    optimizedParser.dispose();
+
     // Advanced cache cleanup is handled automatically
   }
 }
