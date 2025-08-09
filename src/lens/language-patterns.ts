@@ -9,78 +9,154 @@ export interface PatternDefinition {
 
 // =============== CSS PATTERNS & EXTRACTORS ===============
 
-export function getCSSContext(lineText: string, openCharIndex: number): string {
+export function getCSSContext(lineText: string, openCharIndex: number, text?: string, openPos?: number): string {
   try {
     const textBefore = lineText.substring(0, openCharIndex).trim();
-    if (!textBefore) {
-      return '';
-    }
-
-    // Remove comments and clean up
-    const cleanText = textBefore.replace(/\/\*.*?\*\//g, '').trim();
-
-    // Extract CSS selectors
-    const selectors = cleanText
-      .split(',')
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0);
-
-    if (selectors.length === 0) {
-      return '';
-    }
-
-    // Process all selectors and extract meaningful names
-    const allCleanedParts: string[] = [];
-
-    for (const selector of selectors) {
-      const selectorParts = selector
-        .trim()
-        .split(/\s+/)
-        .filter((part) => part.length > 0);
-
-      // Clean selector parts (remove . # : symbols but keep track of what they were)
-      const cleanedParts = selectorParts
-        .map((part) => {
-          // Extract the actual name without prefixes and suffixes
-          const cleaned = part
-            .replace(/^[.#:]+/, '')
-            .replace(/:[a-zA-Z-]*$/, '');
-          return cleaned;
-        })
-        .filter(
-          (part) => part.length > 0 && /^[a-zA-Z][a-zA-Z0-9_-]*$/.test(part)
-        );
-
-      // Add the most relevant part from this selector
-      if (cleanedParts.length > 0) {
-        // Prefer the last part (most specific) from each selector
-        const mostRelevant = cleanedParts[cleanedParts.length - 1];
-        if (!allCleanedParts.includes(mostRelevant)) {
-          allCleanedParts.push(mostRelevant);
-        }
+    
+    // If we have context from the current line, use it
+    if (textBefore) {
+      const contextFromCurrentLine = extractCSSSelectorsFromText(textBefore);
+      if (contextFromCurrentLine) {
+        return contextFromCurrentLine;
       }
     }
 
-    if (allCleanedParts.length === 0) {
-      return '';
+    // If no context from current line and we have full text, search previous lines
+    if (text && openPos !== undefined) {
+      const contextFromPreviousLines = searchCSSContextInPreviousLines(text, openPos);
+      if (contextFromPreviousLines) {
+        return contextFromPreviousLines;
+      }
     }
 
-    // Format the output based on how many unique parts we found
-    if (allCleanedParts.length === 1) {
-      return `${HASH_PREFIX_SYMBOL}${allCleanedParts[0]}`;
-    } else if (allCleanedParts.length === 2) {
-      // Show both parts - this handles the case like ".Banner, #banner" -> "Banner banner"
-      return `${HASH_PREFIX_SYMBOL}${allCleanedParts[0]} ${HASH_PREFIX_SYMBOL}${allCleanedParts[1]}`;
-    } else {
-      // For more than 2, show first and last with indication of more
-      const first = allCleanedParts[0];
-      const last = allCleanedParts[allCleanedParts.length - 1];
-      return `${HASH_PREFIX_SYMBOL}${first} ${HASH_PREFIX_SYMBOL}${last}`;
-    }
+    return '';
   } catch (error) {
     console.error('Bracket Lens: Error extracting CSS context:', error);
     return '';
   }
+}
+
+function extractCSSSelectorsFromText(textBefore: string): string {
+  // Remove comments and clean up
+  const cleanText = textBefore.replace(/\/\*.*?\*\//g, '').trim();
+
+  // Extract CSS selectors
+  const selectors = cleanText
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+
+  if (selectors.length === 0) {
+    return '';
+  }
+
+  // Process all selectors and extract meaningful names
+  const allCleanedParts: string[] = [];
+
+  for (const selector of selectors) {
+    const selectorParts = selector
+      .trim()
+      .split(/\s+/)
+      .filter((part) => part.length > 0);
+
+    // Clean selector parts (remove . # : symbols but keep track of what they were)
+    const cleanedParts = selectorParts
+      .map((part) => {
+        // Extract the actual name without prefixes and suffixes
+        const cleaned = part
+          .replace(/^[.#:]+/, '')
+          .replace(/:[a-zA-Z-]*$/, '');
+        return cleaned;
+      })
+      .filter(
+        (part) => part.length > 0 && /^[a-zA-Z][a-zA-Z0-9_-]*$/.test(part)
+      );
+
+    // Add the most relevant part from this selector
+    if (cleanedParts.length > 0) {
+      // Prefer the last part (most specific) from each selector
+      const mostRelevant = cleanedParts[cleanedParts.length - 1];
+      if (!allCleanedParts.includes(mostRelevant)) {
+        allCleanedParts.push(mostRelevant);
+      }
+    }
+  }
+
+  if (allCleanedParts.length === 0) {
+    return '';
+  }
+
+  // Format the output based on how many unique parts we found
+  if (allCleanedParts.length === 1) {
+    return `${HASH_PREFIX_SYMBOL}${allCleanedParts[0]}`;
+  } else if (allCleanedParts.length === 2) {
+    // Show both parts - this handles the case like ".Banner, #banner" -> "Banner banner"
+    return `${HASH_PREFIX_SYMBOL}${allCleanedParts[0]} ${HASH_PREFIX_SYMBOL}${allCleanedParts[1]}`;
+  } else {
+    // For more than 2, show first and last with indication of more
+    const first = allCleanedParts[0];
+    const last = allCleanedParts[allCleanedParts.length - 1];
+    return `${HASH_PREFIX_SYMBOL}${first} ${HASH_PREFIX_SYMBOL}${last}`;
+  }
+}
+
+function searchCSSContextInPreviousLines(text: string, openPos: number): string {
+  const lines = text.substring(0, openPos).split('\n');
+  const currentLineIndex = lines.length - 1;
+  
+  // Search up to 5 lines back for CSS selectors
+  for (let i = 1; i <= 5 && currentLineIndex - i >= 0; i++) {
+    const prevLine = lines[currentLineIndex - i].trim();
+    
+    // Skip empty lines and comments
+    if (!prevLine || prevLine.startsWith('//') || prevLine.startsWith('/*') || prevLine.endsWith('*/')) {
+      continue;
+    }
+    
+    // Look for CSS selectors that might end with { or be followed by {
+    let lineToCheck = prevLine;
+    
+    // Remove trailing { if present
+    if (lineToCheck.endsWith('{')) {
+      lineToCheck = lineToCheck.slice(0, -1).trim();
+    }
+    
+    // Check if this line contains CSS selectors
+    if (containsCSSSelectors(lineToCheck)) {
+      const context = extractCSSSelectorsFromText(lineToCheck);
+      if (context) {
+        return context;
+      }
+    }
+    
+    // Also check if we can combine this line with the next line
+    // This handles cases where selector is on one line and { is on the next
+    if (currentLineIndex - i + 1 < lines.length) {
+      const nextLine = lines[currentLineIndex - i + 1].trim();
+      if (nextLine === '{' || nextLine.startsWith('{')) {
+        const context = extractCSSSelectorsFromText(lineToCheck);
+        if (context) {
+          return context;
+        }
+      }
+    }
+  }
+  
+  return '';
+}
+
+function containsCSSSelectors(line: string): boolean {
+  // Check for common CSS selector patterns
+  const cssPatterns = [
+    /\.[a-zA-Z][a-zA-Z0-9_-]*/, // Class selectors (.class-name)
+    /#[a-zA-Z][a-zA-Z0-9_-]*/, // ID selectors (#id-name)
+    /^[a-zA-Z][a-zA-Z0-9]*$/, // Element selectors (div, span, etc.)
+    /:[a-zA-Z-]+/, // Pseudo selectors (:hover, :focus, etc.)
+    /\[[^\]]+\]/, // Attribute selectors ([type="text"])
+    /[a-zA-Z][a-zA-Z0-9_-]*\s*,/, // Multiple selectors (selector1, selector2)
+  ];
+  
+  return cssPatterns.some(pattern => pattern.test(line));
 }
 
 // Check if position is inside <style> block
@@ -678,7 +754,7 @@ export function extractContextualInfo(
       const insideStyle = isInsideStyleBlock(text, openPos, languageId);
 
       if (isCSS || insideStyle) {
-        contextInfo = getCSSContext(lineText, openCharIndex);
+        contextInfo = getCSSContext(lineText, openCharIndex, text, openPos);
       } else {
         contextInfo = getJavaScriptContext(
           lineText,
