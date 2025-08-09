@@ -3,7 +3,6 @@ import {
   AdvancedCacheManager,
   SmartDebouncer,
 } from '../core/performance-cache';
-import { OptimizedBracketParser } from '../core/performance-parser';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -198,9 +197,13 @@ export class DocumentDecorationCacheEntry {
   decorationSource: BracketDecorationSource[] = [];
 
   constructor(document: vscode.TextDocument) {
-    // Use optimized parser for better performance
-    const optimizedParser = OptimizedBracketParser.getInstance();
-    this.brackets = optimizedParser.parseBrackets(document);
+    // COMMENTED OUT: Use optimized parser - TESTING IF THIS IS THE ISSUE
+    // const optimizedParser = OptimizedBracketParser.getInstance();
+    // this.brackets = optimizedParser.parseBrackets(document);
+    
+    // USE ORIGINAL PARSER INSTEAD
+    this.brackets = BracketParser.parseBrackets(document);
+    
     this.decorationSource =
       BracketDecorationGenerator.getBracketDecorationSource(
         document,
@@ -287,9 +290,9 @@ export class CacheManager {
   static clearAllDecorationCache = (): void => {
     this.advancedCache.clearAllCache();
 
-    // Clear optimized parser cache
-    const optimizedParser = OptimizedBracketParser.getInstance();
-    optimizedParser.clearAllCache();
+    // COMMENTED OUT: Clear optimized parser cache - TESTING IF THIS IS THE ISSUE
+    // const optimizedParser = OptimizedBracketParser.getInstance();
+    // optimizedParser.clearAllCache();
 
     // Keep legacy behavior for compatibility
     this.documentCache.clear();
@@ -301,11 +304,11 @@ export class CacheManager {
   static clearDecorationCache = (document?: vscode.TextDocument): void => {
     this.advancedCache.clearDocumentCache(document);
 
-    // Clear optimized parser cache for specific document
-    if (document) {
-      const optimizedParser = OptimizedBracketParser.getInstance();
-      optimizedParser.clearFileCache(document.uri.toString());
-    }
+    // COMMENTED OUT: Clear optimized parser cache for specific document - TESTING IF THIS IS THE ISSUE
+    // if (document) {
+    //   const optimizedParser = OptimizedBracketParser.getInstance();
+    //   optimizedParser.clearFileCache(document.uri.toString());
+    // }
 
     // Keep legacy behavior for compatibility
     if (document) {
@@ -1298,12 +1301,12 @@ export class BracketLynx {
     document: vscode.TextDocument,
     changes?: readonly vscode.TextDocumentContentChangeEvent[]
   ): void {
-    // Try incremental parsing if changes are provided
-    if (changes && changes.length > 0) {
-      this.handleIncrementalChanges(document, changes);
-    } else {
+    // COMMENTED OUT: Try incremental parsing - TESTING IF THIS IS THE ISSUE
+    // if (changes && changes.length > 0) {
+    //   this.handleIncrementalChanges(document, changes);
+    // } else {
       CacheManager.clearDecorationCache(document);
-    }
+    // }
 
     if ('auto' === BracketLynxConfig.mode) {
       this.delayUpdateDecorationByDocument(document);
@@ -1313,6 +1316,8 @@ export class BracketLynx {
   /**
    * Handle incremental document changes
    */
+  // COMMENTED OUT: Entire incremental changes method - TESTING IF THIS IS THE ISSUE
+  /*
   private static handleIncrementalChanges(
     document: vscode.TextDocument,
     changes: readonly vscode.TextDocumentContentChangeEvent[]
@@ -1355,35 +1360,28 @@ export class BracketLynx {
     // Fallback to full cache clear
     CacheManager.clearDecorationCache(document);
   }
+  */
 
-  private static activeTextEditor<T>(f: (textEditor: vscode.TextEditor) => T) {
-    const editor = vscode.window.activeTextEditor;
-    if (editor) {
-      return f(editor);
-    }
-    return undefined;
-  }
-
-  // ============================================================================
-  // PERFORMANCE AND CLEANUP METHODS
-  // ============================================================================
+  // ...existing code...
 
   /**
    * Get performance metrics for debugging
    */
   static getPerformanceMetrics() {
-    const optimizedParser = OptimizedBracketParser.getInstance();
+    // COMMENTED OUT: OptimizedBracketParser references - TESTING IF THIS IS THE ISSUE
+    // const optimizedParser = OptimizedBracketParser.getInstance();
     const advancedCache = AdvancedCacheManager.getInstance();
 
     return {
       cache: CacheManager.getCacheMetrics(),
       hitRatio: CacheManager.getCacheHitRatio(),
       memory: advancedCache.getMemoryMetrics(),
-      parser: {
-        ...optimizedParser.getCacheStats(),
-        memoryUsage: optimizedParser.getMemoryUsage(),
-      },
-      performanceFilters: optimizedParser.getPerformanceStats(),
+      // COMMENTED OUT: Parser metrics - TESTING IF THIS IS THE ISSUE
+      // parser: {
+      //   ...optimizedParser.getCacheStats(),
+      //   memoryUsage: optimizedParser.getMemoryUsage(),
+      // },
+      // performanceFilters: optimizedParser.getPerformanceStats(),
       config: {
         enablePerformanceFilters: BracketLynxConfig.enablePerformanceFilters,
         maxFileSize: `${Math.round(
@@ -1400,11 +1398,13 @@ export class BracketLynx {
    */
   static forceMemoryCleanup(): void {
     const advancedCache = AdvancedCacheManager.getInstance();
-    const optimizedParser = OptimizedBracketParser.getInstance();
+    // COMMENTED OUT: OptimizedBracketParser cleanup - TESTING IF THIS IS THE ISSUE
+    // const optimizedParser = OptimizedBracketParser.getInstance();
 
     // Force aggressive cleanup
     advancedCache.forceMemoryCleanup();
-    optimizedParser.aggressiveCleanup();
+    // COMMENTED OUT: Parser cleanup - TESTING IF THIS IS THE ISSUE
+    // optimizedParser.aggressiveCleanup();
 
     if (BracketLynxConfig.debug) {
       console.log('Bracket Lynx: Forced memory cleanup completed');
@@ -1441,9 +1441,9 @@ export class BracketLynx {
   static dispose(): void {
     this.smartDebouncer.dispose();
 
-    // Cleanup optimized parser
-    const optimizedParser = OptimizedBracketParser.getInstance();
-    optimizedParser.dispose();
+    // COMMENTED OUT: Cleanup optimized parser - TESTING IF THIS IS THE ISSUE
+    // const optimizedParser = OptimizedBracketParser.getInstance();
+    // optimizedParser.dispose();
 
     // Advanced cache cleanup is handled automatically
   }
