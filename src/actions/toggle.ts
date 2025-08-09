@@ -28,6 +28,11 @@ export function showBracketLynxMenu(): void {
       description: 'Update decorations for current file',
       action: 'refresh',
     },
+    {
+      label: '🔍 Debug Info',
+      description: 'Show current toggle states for debugging',
+      action: 'debug',
+    },
   ];
 
   vscode.window
@@ -48,6 +53,9 @@ export function showBracketLynxMenu(): void {
           break;
         case 'refresh':
           refreshBrackets();
+          break;
+        case 'debug':
+          showDebugInfo();
           break;
       }
     });
@@ -92,6 +100,18 @@ export function isEditorEnabled(editor: vscode.TextEditor): boolean {
 }
 
 /**
+ * Check if a specific document is enabled (using document URI)
+ */
+export function isDocumentEnabled(document: vscode.TextDocument): boolean {
+  if (!isEnabled) {
+    return false; // Global disabled overrides everything
+  }
+
+  const documentUri = document.uri.toString();
+  return !disabledEditors.get(documentUri); // If not in map, it's enabled
+}
+
+/**
  * Toggle Bracket Lynx for the current active editor only
  */
 export function toggleCurrentEditor(): void {
@@ -108,8 +128,8 @@ export function toggleCurrentEditor(): void {
     // Enable this editor
     disabledEditors.delete(editorKey);
     if (bracketLynxProvider && isEnabled) {
-      bracketLynxProvider.setEditorMuted?.(activeEditor, false);
-      bracketLynxProvider.delayUpdateDecoration?.(activeEditor);
+      // Force update decorations for this editor
+      bracketLynxProvider.forceUpdateEditor?.(activeEditor);
     }
     vscode.window.showInformationMessage(
       '📄 Bracket Lynx: Enabled for current file'
@@ -118,8 +138,8 @@ export function toggleCurrentEditor(): void {
     // Disable this editor
     disabledEditors.set(editorKey, true);
     if (bracketLynxProvider) {
-      bracketLynxProvider.setEditorMuted?.(activeEditor, true);
-      bracketLynxProvider.clearDecorations?.(activeEditor);
+      // Clear decorations for this editor
+      bracketLynxProvider.clearEditorDecorations?.(activeEditor);
     }
     vscode.window.showInformationMessage(
       '📄 Bracket Lynx: Disabled for current file'
@@ -140,9 +160,14 @@ export function refreshBrackets(): void {
   if (bracketLynxProvider && isEditorEnabled(activeEditor)) {
     // Clear cache and force update
     bracketLynxProvider.clearDecorationCache?.(activeEditor.document);
-    bracketLynxProvider.delayUpdateDecoration?.(activeEditor);
+    bracketLynxProvider.forceUpdateEditor?.(activeEditor);
     vscode.window.showInformationMessage('♻️ Bracket Lynx: Refreshed');
   } else {
+    const debugInfo = getDisabledEditorsDebugInfo();
+    const editorUri = activeEditor.document.uri.toString();
+    console.debug('Refresh blocked. Editor enabled:', isEditorEnabled(activeEditor), 'Extension enabled:', isExtensionEnabled());
+    console.debug('Disabled editors:', debugInfo);
+    console.debug('Current editor URI:', editorUri);
     vscode.window.showInformationMessage(
       '♻️ Bracket Lynx: Cannot refresh (disabled)'
     );
@@ -160,15 +185,15 @@ export function setBracketLynxProvider(provider: any): void {
 
 function reactivateExtension(): void {
   if (bracketLynxProvider) {
-    // Set global mute to false
-    bracketLynxProvider.setMutedAll?.(false);
+    // Update all visible editors
+    bracketLynxProvider.updateAllDecoration?.();
   }
 }
 
 function deactivateExtension(): void {
   if (bracketLynxProvider) {
-    // Set global mute to true (this will also clear decorations)
-    bracketLynxProvider.setMutedAll?.(true);
+    // Clear all decorations
+    bracketLynxProvider.clearAllDecorations?.();
   }
 }
 
@@ -183,14 +208,15 @@ function getEditorKey(editor: vscode.TextEditor): string {
 
 /**
  * Clean up disabled editor state when a document is closed
+ * NOTE: We DON'T remove the disabled state so it persists when the file is reopened
  */
 export function cleanupClosedEditor(document: vscode.TextDocument): void {
   const documentUri = document.uri.toString();
 
-  // Remove per-file key
-  const removed = disabledEditors.delete(documentUri);
+  // DON'T remove the disabled state - we want it to persist
+  // const removed = disabledEditors.delete(documentUri);
 
-  // Backward-compat: also remove any legacy keys that included viewColumn
+  // Only remove any legacy keys that included viewColumn (for backward compatibility)
   const legacyKeysToDelete: string[] = [];
   for (const [key] of disabledEditors) {
     if (key.startsWith(documentUri + ':')) {
@@ -200,15 +226,17 @@ export function cleanupClosedEditor(document: vscode.TextDocument): void {
   legacyKeysToDelete.forEach((key) => disabledEditors.delete(key));
 
   // Optional: Log cleanup for debugging (remove in production)
-  if (removed || legacyKeysToDelete.length > 0) {
+  if (legacyKeysToDelete.length > 0) {
     console.debug(
-      `Bracket Lynx: Cleaned up disabled state for closed document (legacy keys removed: ${legacyKeysToDelete.length})`
+      `Bracket Lynx: Cleaned up legacy keys for closed document (legacy keys removed: ${legacyKeysToDelete.length})`
     );
   }
 }
 
 /**
  * Clean up all disabled editor states for editors that are no longer visible
+ * NOTE: We only clean up temporary/untitled files, not regular files
+ * This allows disabled state to persist when files are closed and reopened
  */
 export function cleanupAllClosedEditors(): void {
   const visibleUris = new Set<string>();
@@ -218,10 +246,11 @@ export function cleanupAllClosedEditors(): void {
     visibleUris.add(editor.document.uri.toString());
   });
 
-  // Find keys that are no longer visible
+  // Find keys that are temporary/untitled files and not visible
   const keysToDelete: string[] = [];
   for (const [key] of disabledEditors) {
-    if (!visibleUris.has(key)) {
+    // Only cleanup untitled/temporary files that are not visible
+    if (!visibleUris.has(key) && (key.startsWith('untitled:') || key.includes('Untitled'))) {
       keysToDelete.push(key);
     }
   }
@@ -234,7 +263,65 @@ export function cleanupAllClosedEditors(): void {
   // Optional: Log cleanup for debugging (remove in production)
   if (keysToDelete.length > 0) {
     console.debug(
-      `Bracket Lynx: Cleaned up ${keysToDelete.length} stale editor states`
+      `Bracket Lynx: Cleaned up ${keysToDelete.length} temporary/untitled file states`
     );
+  }
+}
+
+/**
+ * Get the current disabled state for debugging
+ */
+export function getDisabledEditorsDebugInfo(): { [key: string]: boolean } {
+  const result: { [key: string]: boolean } = {};
+  for (const [key, value] of disabledEditors) {
+    result[key] = value;
+  }
+  return result;
+}
+
+/**
+ * Show debug information about current toggle states
+ */
+function showDebugInfo(): void {
+  const activeEditor = vscode.window.activeTextEditor;
+  const debugInfo = getDisabledEditorsDebugInfo();
+  
+  let message = `🔍 Debug Info:\n`;
+  message += `Global enabled: ${isExtensionEnabled()}\n`;
+  
+  if (activeEditor) {
+    const editorUri = activeEditor.document.uri.toString();
+    const fileName = activeEditor.document.fileName.split('/').pop() || 'Unknown';
+    message += `Current file: ${fileName}\n`;
+    message += `Current editor enabled: ${isEditorEnabled(activeEditor)}\n`;
+    message += `Current document enabled: ${isDocumentEnabled(activeEditor.document)}\n`;
+  } else {
+    message += `No active editor\n`;
+  }
+  
+  message += `\nDisabled files count: ${Object.keys(debugInfo).length}`;
+  
+  if (Object.keys(debugInfo).length > 0) {
+    message += `\nDisabled files:\n`;
+    Object.keys(debugInfo).forEach(uri => {
+      const fileName = uri.split('/').pop() || uri;
+      message += `- ${fileName}\n`;
+    });
+  }
+  
+  vscode.window.showInformationMessage(message, { modal: true });
+}
+
+/**
+ * Clear all disabled states (useful for debugging)
+ */
+export function clearAllDisabledStates(): void {
+  const count = disabledEditors.size;
+  disabledEditors.clear();
+  vscode.window.showInformationMessage(`🧹 Cleared ${count} disabled file states`);
+  
+  // Re-enable decorations for all visible editors
+  if (bracketLynxProvider && isExtensionEnabled()) {
+    bracketLynxProvider.updateAllDecoration?.();
   }
 }

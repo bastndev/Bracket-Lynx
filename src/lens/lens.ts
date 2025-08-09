@@ -6,6 +6,10 @@ import {
 import { OptimizedBracketParser } from '../core/performance-parser';
 // NEW: Import parser exceptions
 import { shouldUseOriginalParser } from '../core/parser-exceptions';
+// NEW: Import language formatter
+import { LanguageFormatter } from './language-formatter';
+// Import toggle system functions
+import { isExtensionEnabled, isEditorEnabled, isDocumentEnabled } from '../actions/toggle';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -898,6 +902,9 @@ export class BracketParser {
 // ============================================================================
 
 export class BracketHeaderGenerator {
+  // NEW: Create language formatter instance
+  private static languageFormatter = new LanguageFormatter();
+
   static getBracketHeader(
     document: vscode.TextDocument,
     context: BracketContext
@@ -905,6 +912,10 @@ export class BracketHeaderGenerator {
     const maxBracketHeaderLength = BracketLynxConfig.maxBracketHeaderLength;
     const regulateHeader = (text: string) => {
       let result = text.replace(/\s+/gu, ' ').trim();
+      
+      // NEW: Apply language-specific formatting before length truncation
+      result = this.languageFormatter.formatContext(result, document.languageId);
+      
       if (maxBracketHeaderLength < result.length) {
         return result.substring(0, maxBracketHeaderLength - 3) + '...';
       }
@@ -1165,6 +1176,14 @@ export class BracketLynx {
   private static smartDebouncer = new SmartDebouncer();
 
   static updateDecoration(textEditor: vscode.TextEditor) {
+    // Check if extension is enabled globally and for this specific editor
+    if (!isExtensionEnabled() || !isEditorEnabled(textEditor)) {
+      const editorCache = CacheManager.editorCache.get(textEditor);
+      editorCache?.dispose();
+      CacheManager.editorCache.delete(textEditor);
+      return;
+    }
+
     const editorCache = CacheManager.editorCache.get(textEditor);
     if ('none' !== BracketLynxConfig.mode) {
       const isMuted =
@@ -1213,6 +1232,11 @@ export class BracketLynx {
   }
 
   static delayUpdateDecoration(textEditor: vscode.TextEditor): void {
+    // Check if extension is enabled for this editor before processing
+    if (!isExtensionEnabled() || !isEditorEnabled(textEditor)) {
+      return;
+    }
+
     if (undefined !== textEditor.viewColumn) {
       const editorKey = textEditor.document.uri.toString();
       const isActiveEditor = vscode.window.activeTextEditor === textEditor;
@@ -1270,19 +1294,35 @@ export class BracketLynx {
   }
 
   static updateDecorationByDocument(document: vscode.TextDocument): void {
+    // Check if extension is enabled for this document
+    if (!isExtensionEnabled() || !isDocumentEnabled(document)) {
+      return;
+    }
+
     vscode.window.visibleTextEditors
       .filter((i) => i.document === document)
       .forEach((i) => this.updateDecoration(i));
   }
 
   static delayUpdateDecorationByDocument(document: vscode.TextDocument): void {
+    // Check if extension is enabled for this document
+    if (!isExtensionEnabled() || !isDocumentEnabled(document)) {
+      return;
+    }
+
     vscode.window.visibleTextEditors
       .filter((i) => i.document === document)
       .forEach((i) => this.delayUpdateDecoration(i));
   }
 
   static updateAllDecoration(): void {
-    vscode.window.visibleTextEditors.forEach((i) => this.updateDecoration(i));
+    if (!isExtensionEnabled()) {
+      return;
+    }
+
+    vscode.window.visibleTextEditors
+      .filter((editor) => isEditorEnabled(editor))
+      .forEach((i) => this.updateDecoration(i));
   }
 
   static onDidChangeConfiguration(): void {
@@ -1303,20 +1343,20 @@ export class BracketLynx {
   static onDidChangeActiveTextEditor(): void {
     CacheManager.clearDecorationCache();
     const activeEditor = vscode.window.activeTextEditor;
-    if (activeEditor) {
+    if (activeEditor && isExtensionEnabled() && isEditorEnabled(activeEditor)) {
       this.delayUpdateDecoration(activeEditor);
     }
   }
 
   static onDidOpenTextDocument(document: vscode.TextDocument): void {
     const mode = BracketLynxConfig.mode;
-    if ('auto' === mode || 'on-save' === mode) {
+    if (isExtensionEnabled() && isDocumentEnabled(document) && ('auto' === mode || 'on-save' === mode)) {
       this.delayUpdateDecorationByDocument(document);
     }
   }
 
   static onDidSaveTextDocument(document: vscode.TextDocument): void {
-    if ('on-save' === BracketLynxConfig.mode) {
+    if (isExtensionEnabled() && isDocumentEnabled(document) && 'on-save' === BracketLynxConfig.mode) {
       this.updateDecorationByDocument(document);
     }
   }
@@ -1325,6 +1365,11 @@ export class BracketLynx {
     document: vscode.TextDocument,
     changes?: readonly vscode.TextDocumentContentChangeEvent[]
   ): void {
+    // Check if extension is enabled for this document
+    if (!isExtensionEnabled() || !isDocumentEnabled(document)) {
+      return;
+    }
+
     // RESTORE: Try incremental parsing, but only for non-Astro files
     if (changes && changes.length > 0) {
       this.handleIncrementalChanges(document, changes);
@@ -1464,6 +1509,39 @@ export class BracketLynx {
     if (BracketLynxConfig.debug) {
       console.log('Bracket Lynx: Low memory mode disabled');
     }
+  }
+
+  // ============================================================================
+  // METHODS FOR TOGGLE SYSTEM INTEGRATION
+  // ============================================================================
+
+  /**
+   * Clear all decorations from all visible editors
+   */
+  static clearAllDecorations(): void {
+    vscode.window.visibleTextEditors.forEach((editor) => {
+      const editorCache = CacheManager.editorCache.get(editor);
+      editorCache?.dispose();
+      CacheManager.editorCache.delete(editor);
+    });
+  }
+
+  /**
+   * Clear decorations for a specific editor (used by toggle system)
+   */
+  static clearEditorDecorations(textEditor: vscode.TextEditor): void {
+    const editorCache = CacheManager.editorCache.get(textEditor);
+    editorCache?.dispose();
+    CacheManager.editorCache.delete(textEditor);
+  }
+
+  /**
+   * Force update decorations for a specific editor (used by toggle system)
+   */
+  static forceUpdateEditor(textEditor: vscode.TextEditor): void {
+    // Clear cache and force update
+    CacheManager.clearDecorationCache(textEditor.document);
+    this.updateDecoration(textEditor);
   }
 
   /**

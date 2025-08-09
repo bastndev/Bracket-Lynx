@@ -9,6 +9,21 @@
 
 </br>
 
+## Toggle System
+
+Bracket Lynx includes a powerful **toggle system** that allows you to control bracket decorations with granular precision. Access the toggle menu with the command `Bracket Lynx: Toggle & Refresh 🛠️` or through your configured keyboard shortcut.
+
+### 🛠️ Toggle Options
+
+| Option                     | Description                                                          | Scope        | Persistence     |
+| -------------------------- | -------------------------------------------------------------------- | ------------ | --------------- |
+| **🌐 Toggle Global**       | Activate/deactivate Bracket Lynx for all files across your workspace | Global       | Session-wide    |
+| **📄 Toggle Current File** | Activate/deactivate only for the currently active file               | Per-file     | File-persistent |
+| **♻️ Refresh**             | Force update decorations for the current file                        | Current file | Immediate       |
+| **🔍 Debug Info**          | Show detailed toggle states for debugging purposes                   | Information  | Diagnostic      |
+
+</br>
+
 ## Installation
 
 Launch _Quick Open_
