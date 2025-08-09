@@ -72,7 +72,77 @@
         "command": "bracketLynx.menu",
         "title": "Bracket Lynx: Toggle & Refresh 🛠️"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Bracket Lynx",
+      "properties": {
+        "bracketLynx.color": {
+          "type": "string",
+          "default": "#515151",
+          "description": "Color used for bracket decorations (hex format)",
+          "pattern": "^#[0-9a-fA-F]{6}$",
+          "patternErrorMessage": "Please enter a valid hex color (e.g., #ff6b6b)"
+        },
+        "bracketLynx.mode": {
+          "type": "string",
+          "enum": ["auto", "manual"],
+          "default": "auto",
+          "description": "Mode for bracket highlighting"
+        },
+        "bracketLynx.debug": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable debug logging"
+        },
+        "bracketLynx.fontStyle": {
+          "type": "string",
+          "enum": ["normal", "italic", "bold"],
+          "default": "italic",
+          "description": "Font style for bracket decorations"
+        },
+        "bracketLynx.prefix": {
+          "type": "string",
+          "default": "<~ ",
+          "description": "Prefix shown before bracket headers"
+        },
+        "bracketLynx.unmatchBracketsPrefix": {
+          "type": "string",
+          "default": "<~ ❌ ",
+          "description": "Prefix shown for unmatched brackets"
+        },
+        "bracketLynx.maxBracketHeaderLength": {
+          "type": "number",
+          "default": 50,
+          "minimum": 10,
+          "maximum": 200,
+          "description": "Maximum length of bracket header text"
+        },
+        "bracketLynx.minBracketScopeLines": {
+          "type": "number",
+          "default": 3,
+          "minimum": 1,
+          "maximum": 50,
+          "description": "Minimum number of lines for bracket scope to show decoration"
+        },
+        "bracketLynx.enablePerformanceFilters": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable performance filters for large files"
+        },
+        "bracketLynx.maxFileSize": {
+          "type": "number",
+          "default": 10485760,
+          "description": "Maximum file size in bytes (default: 10MB)"
+        },
+        "bracketLynx.maxDecorationsPerFile": {
+          "type": "number",
+          "default": 500,
+          "minimum": 50,
+          "maximum": 2000,
+          "description": "Maximum number of decorations per file"
+        }
+      }
+    }
   },
   "scripts": {
     "compile": "npm run check-types && npm run lint && node esbuild.js",
