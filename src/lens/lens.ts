@@ -108,6 +108,18 @@ export class BracketLynxConfig {
     return this.getConfig().get('minBracketScopeLines', 3);
   }
 
+  static get enablePerformanceFilters(): boolean {
+    return this.getConfig().get('enablePerformanceFilters', true);
+  }
+
+  static get maxFileSize(): number {
+    return this.getConfig().get('maxFileSize', 10 * 1024 * 1024); // 10MB default
+  }
+
+  static get maxDecorationsPerFile(): number {
+    return this.getConfig().get('maxDecorationsPerFile', 500);
+  }
+
   static get languageConfiguration(): LanguageConfiguration {
     return this.getConfig().get(
       'languageConfiguration',
@@ -1005,6 +1017,7 @@ export class BracketDecorationGenerator {
     const prefix = BracketLynxConfig.prefix;
     const unmatchBracketsPrefix = BracketLynxConfig.unmatchBracketsPrefix;
     const minBracketScopeLines = BracketLynxConfig.minBracketScopeLines;
+    const maxDecorationsPerFile = BracketLynxConfig.maxDecorationsPerFile;
     const result: BracketDecorationSource[] = [];
 
     const getLineNumbers = (entry: BracketEntry): string => {
@@ -1068,6 +1081,44 @@ export class BracketDecorationGenerator {
         nextEntry: array[index + 1],
       })
     );
+
+    // Apply final decoration limit if performance filters are enabled
+    if (
+      BracketLynxConfig.enablePerformanceFilters &&
+      result.length > maxDecorationsPerFile
+    ) {
+      if (BracketLynxConfig.debug) {
+        console.log(
+          `Bracket Lynx: Limiting decorations from ${result.length} to ${maxDecorationsPerFile}`
+        );
+      }
+
+      // Prioritize unmatched brackets and larger brackets
+      const prioritized = result.sort((a, b) => {
+        // Extract line numbers from bracket headers
+        const aMatch = a.bracketHeader.match(/#(\d+)-(\d+)/);
+        const bMatch = b.bracketHeader.match(/#(\d+)-(\d+)/);
+
+        if (aMatch && bMatch) {
+          const aSpan = parseInt(bMatch[2]) - parseInt(bMatch[1]);
+          const bSpan = parseInt(bMatch[2]) - parseInt(bMatch[1]);
+
+          // Prioritize unmatched brackets
+          const aIsUnmatched = a.bracketHeader.includes('❌');
+          const bIsUnmatched = b.bracketHeader.includes('❌');
+
+          if (aIsUnmatched && !bIsUnmatched) {return -1;}
+          if (!aIsUnmatched && bIsUnmatched) {return 1;}
+
+          // Then by size
+          return bSpan - aSpan;
+        }
+
+        return 0;
+      });
+
+      return prioritized.slice(0, maxDecorationsPerFile);
+    }
 
     return result;
   }
@@ -1322,6 +1373,15 @@ export class BracketLynx {
       cache: CacheManager.getCacheMetrics(),
       hitRatio: CacheManager.getCacheHitRatio(),
       parser: optimizedParser.getCacheStats(),
+      performanceFilters: optimizedParser.getPerformanceStats(),
+      config: {
+        enablePerformanceFilters: BracketLynxConfig.enablePerformanceFilters,
+        maxFileSize: `${Math.round(
+          BracketLynxConfig.maxFileSize / 1024 / 1024
+        )}MB`,
+        maxDecorationsPerFile: BracketLynxConfig.maxDecorationsPerFile,
+        minBracketScopeLines: BracketLynxConfig.minBracketScopeLines,
+      },
     };
   }
 

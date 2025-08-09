@@ -67,6 +67,17 @@ export class OptimizedBracketParser {
   private readonly CACHE_MAX_SIZE = 30; // Maximum 30 files in cache
   private readonly MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB limit
   
+  // Performance filter configuration
+  private readonly PERFORMANCE_FILTERS = {
+    MAX_SAFE_FILE_SIZE: 5 * 1024 * 1024, // 5MB - switch to performance mode
+    MAX_EXTREME_FILE_SIZE: 20 * 1024 * 1024, // 20MB - disable completely
+    MIN_BRACKET_LINES: 3, // Minimum lines to show decoration
+    MAX_DECORATIONS_PER_FILE: 500, // Maximum decorations per file
+    MIN_BRACKET_CONTENT_LENGTH: 10, // Minimum content length to show
+    SKIP_LARGE_BRACKETS: 1000, // Skip brackets with >1000 lines
+    MAX_NESTED_DEPTH: 20, // Maximum nesting depth to process
+  };
+  
   private constructor() {}
   
   static getInstance(): OptimizedBracketParser {
@@ -81,16 +92,19 @@ export class OptimizedBracketParser {
   // ============================================================================
   
   /**
-   * Parse brackets with optimizations
+   * Parse brackets with optimizations and performance filters
    */
   parseBrackets(document: vscode.TextDocument): BracketEntry[] {
     const text = document.getText();
     const fileUri = document.uri.toString();
     
-    // Check file size limit
-    if (text.length > this.MAX_FILE_SIZE) {
-      console.warn(`Bracket Lynx: File too large for optimized parsing (${text.length} bytes)`);
-      return this.fallbackParsing(document);
+    // Apply performance filters
+    const filterResult = this.applyPerformanceFilters(document, text);
+    if (filterResult.shouldSkip) {
+      if (BracketLynxConfig.debug) {
+        console.log(`Bracket Lynx: Skipping file due to performance filters: ${filterResult.reason}`);
+      }
+      return [];
     }
     
     const startTime = Date.now();
@@ -103,12 +117,15 @@ export class OptimizedBracketParser {
       const tokens = this.getOrCreateTokenCache(document, text);
       
       // Parse with optimized state detection
-      const brackets = this.parseTokensOptimized(document, tokens, parseCache);
+      let brackets = this.parseTokensOptimized(document, tokens, parseCache);
+      
+      // Apply post-parsing filters
+      brackets = this.applyPostParsingFilters(brackets, document, filterResult.performanceMode);
       
       const parseTime = Date.now() - startTime;
       
       if (BracketLynxConfig.debug) {
-        console.log(`Bracket Lynx: Optimized parsing completed in ${parseTime}ms`);
+        console.log(`Bracket Lynx: Optimized parsing completed in ${parseTime}ms, ${brackets.length} brackets found`);
       }
       
       return brackets;
@@ -773,6 +790,231 @@ export class OptimizedBracketParser {
   }
 
   // ============================================================================
+  // PERFORMANCE FILTERS
+  // ============================================================================
+  
+  /**
+   * Apply performance filters to determine if file should be processed
+   */
+  private applyPerformanceFilters(document: vscode.TextDocument, text: string): {
+    shouldSkip: boolean;
+    reason?: string;
+    performanceMode: 'normal' | 'performance' | 'minimal';
+  } {
+    const fileSize = text.length;
+    const lineCount = document.lineCount;
+    const languageId = document.languageId;
+    
+    // Check extreme file size - completely skip
+    if (fileSize > this.PERFORMANCE_FILTERS.MAX_EXTREME_FILE_SIZE) {
+      return {
+        shouldSkip: true,
+        reason: `File too large (${Math.round(fileSize / 1024 / 1024)}MB > ${Math.round(this.PERFORMANCE_FILTERS.MAX_EXTREME_FILE_SIZE / 1024 / 1024)}MB)`,
+        performanceMode: 'minimal'
+      };
+    }
+    
+    // Check if file is likely problematic (very long lines, minified, etc.)
+    const avgLineLength = fileSize / lineCount;
+    if (avgLineLength > 500) {
+      return {
+        shouldSkip: true,
+        reason: `Likely minified file (avg line length: ${Math.round(avgLineLength)} chars)`,
+        performanceMode: 'minimal'
+      };
+    }
+    
+    // Check for known problematic file types
+    const problematicExtensions = ['.min.js', '.min.css', '.bundle.js', '.chunk.js'];
+    const fileName = document.fileName.toLowerCase();
+    if (problematicExtensions.some(ext => fileName.endsWith(ext))) {
+      return {
+        shouldSkip: true,
+        reason: `Problematic file type detected: ${fileName}`,
+        performanceMode: 'minimal'
+      };
+    }
+    
+    // Determine performance mode
+    let performanceMode: 'normal' | 'performance' | 'minimal' = 'normal';
+    
+    if (fileSize > this.PERFORMANCE_FILTERS.MAX_SAFE_FILE_SIZE) {
+      performanceMode = 'performance';
+    }
+    
+    // Special handling for certain languages
+    const heavyLanguages = ['json', 'xml', 'html', 'svg'];
+    if (heavyLanguages.includes(languageId) && fileSize > 1024 * 1024) { // 1MB
+      performanceMode = 'performance';
+    }
+    
+    return {
+      shouldSkip: false,
+      performanceMode
+    };
+  }
+  
+  /**
+   * Apply filters after parsing to reduce decorations
+   */
+  private applyPostParsingFilters(
+    brackets: BracketEntry[], 
+    document: vscode.TextDocument,
+    performanceMode: 'normal' | 'performance' | 'minimal'
+  ): BracketEntry[] {
+    if (performanceMode === 'normal') {
+      return this.applyNormalFilters(brackets, document);
+    } else if (performanceMode === 'performance') {
+      return this.applyPerformanceModeFilters(brackets, document);
+    } else {
+      return this.applyMinimalFilters(brackets, document);
+    }
+  }
+  
+  /**
+   * Apply normal filters (standard behavior)
+   */
+  private applyNormalFilters(brackets: BracketEntry[], document: vscode.TextDocument): BracketEntry[] {
+    const minBracketScopeLines = BracketLynxConfig.minBracketScopeLines;
+    
+    return brackets.filter(bracket => {
+      // Apply minimum line requirement
+      const lineSpan = bracket.end.position.line - bracket.start.position.line + 1;
+      if (lineSpan < minBracketScopeLines && !bracket.isUnmatchBrackets) {
+        return false;
+      }
+      
+      // Skip brackets with very little content
+      const content = this.getBracketContent(bracket, document);
+      if (content.trim().length < this.PERFORMANCE_FILTERS.MIN_BRACKET_CONTENT_LENGTH) {
+        return false;
+      }
+      
+      // Skip if decoration would be in middle of line with content
+      if (this.hasContentAfterClosingBracket(bracket, document)) {
+        return false;
+      }
+      
+      return true;
+    });
+  }
+  
+  /**
+   * Apply performance mode filters (more aggressive)
+   */
+  private applyPerformanceModeFilters(brackets: BracketEntry[], document: vscode.TextDocument): BracketEntry[] {
+    const filtered = brackets.filter(bracket => {
+      // More strict line requirement
+      const lineSpan = bracket.end.position.line - bracket.start.position.line + 1;
+      if (lineSpan < Math.max(5, BracketLynxConfig.minBracketScopeLines) && !bracket.isUnmatchBrackets) {
+        return false;
+      }
+      
+      // Skip very large brackets
+      if (lineSpan > this.PERFORMANCE_FILTERS.SKIP_LARGE_BRACKETS) {
+        return false;
+      }
+      
+      // Skip deeply nested brackets
+      const depth = this.calculateNestingDepth(bracket);
+      if (depth > this.PERFORMANCE_FILTERS.MAX_NESTED_DEPTH) {
+        return false;
+      }
+      
+      // Skip brackets with minimal content
+      const content = this.getBracketContent(bracket, document);
+      if (content.trim().length < this.PERFORMANCE_FILTERS.MIN_BRACKET_CONTENT_LENGTH * 2) {
+        return false;
+      }
+      
+      return true;
+    });
+    
+    // Limit total number of decorations
+    if (filtered.length > this.PERFORMANCE_FILTERS.MAX_DECORATIONS_PER_FILE) {
+      // Keep only the most significant brackets (largest ones)
+      return filtered
+        .sort((a, b) => {
+          const aSpan = a.end.position.line - a.start.position.line;
+          const bSpan = b.end.position.line - b.start.position.line;
+          return bSpan - aSpan;
+        })
+        .slice(0, this.PERFORMANCE_FILTERS.MAX_DECORATIONS_PER_FILE);
+    }
+    
+    return filtered;
+  }
+  
+  /**
+   * Apply minimal filters (most aggressive)
+   */
+  private applyMinimalFilters(brackets: BracketEntry[], document: vscode.TextDocument): BracketEntry[] {
+    // Only show unmatched brackets and very large brackets
+    return brackets.filter(bracket => {
+      if (bracket.isUnmatchBrackets) {
+        return true;
+      }
+      
+      const lineSpan = bracket.end.position.line - bracket.start.position.line + 1;
+      return lineSpan > 50; // Only very large brackets
+    }).slice(0, 50); // Maximum 50 decorations
+  }
+  
+  /**
+   * Get content inside bracket
+   */
+  private getBracketContent(bracket: BracketEntry, document: vscode.TextDocument): string {
+    try {
+      const startPos = bracket.start.position;
+      const endPos = bracket.end.position;
+      
+      // Limit content extraction to avoid performance issues
+      const maxLines = 10;
+      const actualEndPos = startPos.line + maxLines < endPos.line 
+        ? new vscode.Position(startPos.line + maxLines, 0)
+        : endPos;
+      
+      return document.getText(new vscode.Range(startPos, actualEndPos));
+    } catch (error) {
+      return '';
+    }
+  }
+  
+  /**
+   * Check if there's content after closing bracket on same line
+   */
+  private hasContentAfterClosingBracket(bracket: BracketEntry, document: vscode.TextDocument): boolean {
+    try {
+      const endLine = document.lineAt(bracket.end.position.line);
+      const afterBracket = endLine.text.substring(bracket.end.position.character);
+      
+      // Remove whitespace and common trailing characters
+      const cleaned = afterBracket.replace(/^\s*[,;]?\s*$/, '');
+      return cleaned.length > 0;
+    } catch (error) {
+      return false;
+    }
+  }
+  
+  /**
+   * Calculate nesting depth of bracket
+   */
+  private calculateNestingDepth(bracket: BracketEntry): number {
+    let maxDepth = 0;
+    
+    const calculateDepth = (items: BracketEntry[], currentDepth: number): void => {
+      maxDepth = Math.max(maxDepth, currentDepth);
+      
+      for (const item of items) {
+        calculateDepth(item.items, currentDepth + 1);
+      }
+    };
+    
+    calculateDepth(bracket.items, 1);
+    return maxDepth;
+  }
+
+  // ============================================================================
   // CACHE MANAGEMENT
   // ============================================================================
   
@@ -799,7 +1041,21 @@ export class OptimizedBracketParser {
     return {
       parseStateCacheSize: this.parseStateCache.size,
       tokenCacheSize: this.tokenCache.size,
-      maxCacheSize: this.CACHE_MAX_SIZE
+      maxCacheSize: this.CACHE_MAX_SIZE,
+      performanceFilters: this.PERFORMANCE_FILTERS
+    };
+  }
+  
+  /**
+   * Get performance filter statistics
+   */
+  getPerformanceStats() {
+    return {
+      maxSafeFileSize: `${Math.round(this.PERFORMANCE_FILTERS.MAX_SAFE_FILE_SIZE / 1024 / 1024)}MB`,
+      maxExtremeFileSize: `${Math.round(this.PERFORMANCE_FILTERS.MAX_EXTREME_FILE_SIZE / 1024 / 1024)}MB`,
+      maxDecorationsPerFile: this.PERFORMANCE_FILTERS.MAX_DECORATIONS_PER_FILE,
+      minBracketLines: this.PERFORMANCE_FILTERS.MIN_BRACKET_LINES,
+      maxNestedDepth: this.PERFORMANCE_FILTERS.MAX_NESTED_DEPTH
     };
   }
   
