@@ -1,4 +1,3 @@
-
 // ============================================================================
 // LANGUAGE FORMATTER - TSX Focus with Future Scalability
 // ============================================================================
@@ -91,9 +90,10 @@ export class LanguageFormatter {
 
   /**
    * TSX/JSX Formatter: Simplifies React component context
-   * "Github: { ...props } ()=>" → "Github()=>"
+   * "GitHub: ({ ...props }) => (" → "GitHub ()=>"
    * "export const Icon = " → "export Icon"
    * "export interface TokenEntry" → "export TokenEntry"
+   * "static get mode(): string" → "static mode"
    */
   private formatTSX(context: string): string {
     if (!context) {
@@ -102,12 +102,41 @@ export class LanguageFormatter {
 
     let result = context;
 
+    // Handle static methods first - this is the key improvement
+    // Pattern: "static get methodName(): returnType" → "static methodName"
+    result = result.replace(
+      /static\s+get\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\(\s*\)\s*:\s*[a-zA-Z_$][a-zA-Z0-9_$<>|\[\]]*\s*/g,
+      'static $1'
+    );
+
+    // Pattern: "static set methodName(param): void" → "static methodName"
+    result = result.replace(
+      /static\s+set\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\([^)]*\)\s*:\s*[a-zA-Z_$][a-zA-Z0-9_$<>|\[\]]*\s*/g,
+      'static $1'
+    );
+
+    // Pattern: "static methodName(): returnType" → "static methodName"
+    result = result.replace(
+      /static\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\([^)]*\)\s*:\s*[a-zA-Z_$][a-zA-Z0-9_$<>|\[\]]*\s*/g,
+      'static $1'
+    );
+
     // Remove complex props: "{ ...props }", "{ prop1, prop2 }", etc.
     result = result.replace(/:\s*\{[^}]*\}/g, '');
     result = result.replace(/\{[^}]*\}/g, '').trim();
 
     // Clean up extra spaces
     result = result.replace(/\s+/g, ' ').trim();
+
+    // Handle arrow functions with various patterns:
+    // "ComponentName: ( ) =>" → "ComponentName ()=>"
+    // "ComponentName: =>" → "ComponentName ()=>"
+    // "ComponentName: (...) =>" → "ComponentName ()=>"
+    result = result.replace(
+      /([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:\s*\([^)]*\)\s*=>/g,
+      '$1 ()=>'
+    );
+    result = result.replace(/([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:\s*=>/g, '$1 ()=>');
 
     // Handle export cases more intelligently
     // Keep "export" when it's followed by a meaningful identifier
