@@ -12,15 +12,18 @@ export interface FilterRules {
  * Symbols that should be excluded from DECORATION
  */
 export const EXCLUDED_SYMBOLS = [
-  '//', // Line comments
-  '?', // Ternary operator
-  ':', // Colon (object properties, ternary)
+  'const',
+  '//',
+  '?', 
+  ':', 
   '=',
   '>',
   '{',
   '}',
   ')',
   '(',
+  '[',
+  ']'
 ];
 
 /**
