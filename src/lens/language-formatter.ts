@@ -95,6 +95,7 @@ export class LanguageFormatter {
    * TSX/JSX Formatter: Simplifies React component context
    * "Github: { ...props } ()=>" → "Github()=>"
    * "export const Icon = " → "export Icon"
+   * "export interface VersionTech" → "export VersionTech"
    */
   private formatTSX(context: string): string {
     if (!context) {
@@ -119,11 +120,14 @@ export class LanguageFormatter {
       // Pattern: "export function ComponentName" → "export ComponentName" 
       result = result.replace(/export\s+function\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/i, 'export $1');
       
+      // Pattern: "export interface InterfaceName" → "export InterfaceName"
+      result = result.replace(/export\s+interface\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/i, 'export $1');
+      
       // Pattern: "export default ComponentName" → "export ComponentName"
       result = result.replace(/export\s+default\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/i, 'export $1');
     } else {
       // Only remove export keywords if there's no meaningful content after
-      result = result.replace(/^export\s+(const\s+|function\s+|default\s+)?/i, '');
+      result = result.replace(/^export\s+(const\s+|function\s+|interface\s+|default\s+)?/i, '');
     }
 
     // Clean up again after replacements
