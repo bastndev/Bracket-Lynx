@@ -8,7 +8,7 @@ export interface FilterRules {
 // ============================================================================
 
 export const EXCLUDED_SYMBOLS = [
-  '!', '"', '$', '%', '&', "'", '(', ')', '*', ',', '.', '/', ':', ';', '=', '>', '?', '@', '[', '\\', ']', '^', '_', '`', '{', '|', '}','//', 'const','---','--','...', 'MARK', 'props'
+  '!', '"', '$', '%', '&', "'", ')', '*', ',', '.', '/', ':', ';', '=', '>', '?', '@', '[', '\\', ']', '^', '_', '`', '{', '|', '}','//', 'const','---','--','...', 'MARK', 'props'
 ];
 
 /**
@@ -17,6 +17,11 @@ export const EXCLUDED_SYMBOLS = [
 export const SUPPORTED_LANGUAGES = [
   'astro', 'c', 'cpp', 'csharp', 'css', 'dart', 'go', 'html', 'java', 'javascript', 'javascriptreact', 'json', 'jsonc', 'less', 'php', 'python', 'rust', 'sass', 'scss', 'svelte', 'typescript', 'typescriptreact', 'vue', 'xml',
 ];
+
+/**
+ * Maximum number of words allowed in bracket headers
+ */
+export const MAX_HEADER_WORDS = 1;
 
 /**
  * Main rules configuration
@@ -52,6 +57,17 @@ export function filterContent(content: string): string {
   }
 
   return filtered.trim();
+}
+
+/**
+ * Apply word limit to header text
+ */
+export function applyWordLimit(text: string): string {
+  const words = text.split(/\s+/).filter(word => word.length > 0);
+  if (words.length > MAX_HEADER_WORDS) {
+    return words.slice(0, MAX_HEADER_WORDS).join(' ') + '...';
+  }
+  return words.join(' ');
 }
 
 /**

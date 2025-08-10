@@ -9,9 +9,19 @@ import { shouldUseOriginalParser } from '../core/parser-exceptions';
 // NEW: Import language formatter
 import { LanguageFormatter } from './language-formatter';
 // NEW: Import rules system
-import { FILTER_RULES, shouldExcludeSymbol, filterContent, isLanguageSupported } from './lens-rules';
+import {
+  FILTER_RULES,
+  shouldExcludeSymbol,
+  filterContent,
+  isLanguageSupported,
+  applyWordLimit,
+} from './lens-rules';
 // Import toggle system functions
-import { isExtensionEnabled, isEditorEnabled, isDocumentEnabled } from '../actions/toggle';
+import {
+  isExtensionEnabled,
+  isEditorEnabled,
+  isDocumentEnabled,
+} from '../actions/toggle';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -930,21 +940,19 @@ export class BracketHeaderGenerator {
     const maxBracketHeaderLength = BracketLynxConfig.maxBracketHeaderLength;
     const regulateHeader = (text: string) => {
       let result = text.replace(/\s+/gu, ' ').trim();
-      
+
       // NEW: Apply rules filtering first to remove excluded symbols
       result = filterContent(result);
-      
+
       // NEW: Apply language-specific formatting before length truncation
-      result = this.languageFormatter.formatContext(result, document.languageId);
-      
-      // NEW: Limit to maximum 2 words
-      const words = result.split(/\s+/).filter(word => word.length > 0);
-      if (words.length > 2) {
-        result = words.slice(0, 2).join(' ') + '...';
-      } else {
-        result = words.join(' ');
-      }
-      
+      result = this.languageFormatter.formatContext(
+        result,
+        document.languageId
+      );
+
+      // NEW: Apply word limit using rules system
+      result = applyWordLimit(result);
+
       // Apply length truncation if still too long after word limit
       if (maxBracketHeaderLength < result.length) {
         return result.substring(0, maxBracketHeaderLength - 3) + '...';
@@ -1246,7 +1254,7 @@ export class BracketLynx {
         ).decorationSource.forEach((i) => {
           // NEW: Apply content filtering to remove excluded symbols
           const filteredContent = filterContent(i.bracketHeader);
-          
+
           // Only add decoration if content is not empty after filtering
           if (filteredContent.trim().length > 0) {
             options.push({
@@ -1414,13 +1422,23 @@ export class BracketLynx {
 
   static onDidOpenTextDocument(document: vscode.TextDocument): void {
     const mode = BracketLynxConfig.mode;
-    if (isExtensionEnabled() && isDocumentEnabled(document) && isLanguageSupported(document.languageId) && ('auto' === mode || 'on-save' === mode)) {
+    if (
+      isExtensionEnabled() &&
+      isDocumentEnabled(document) &&
+      isLanguageSupported(document.languageId) &&
+      ('auto' === mode || 'on-save' === mode)
+    ) {
       this.delayUpdateDecorationByDocument(document);
     }
   }
 
   static onDidSaveTextDocument(document: vscode.TextDocument): void {
-    if (isExtensionEnabled() && isDocumentEnabled(document) && isLanguageSupported(document.languageId) && 'on-save' === BracketLynxConfig.mode) {
+    if (
+      isExtensionEnabled() &&
+      isDocumentEnabled(document) &&
+      isLanguageSupported(document.languageId) &&
+      'on-save' === BracketLynxConfig.mode
+    ) {
       this.updateDecorationByDocument(document);
     }
   }
@@ -1631,10 +1649,10 @@ export class BracketLynx {
    */
   static forceColorRefresh(): void {
     console.log('🎨 Force refreshing colors for all decorations');
-    
+
     // Clear all caches to force recreation with new color
     CacheManager.clearAllDecorationCache();
-    
+
     // Update all visible editors
     this.updateAllDecoration();
   }
