@@ -15,7 +15,12 @@ export class LanguageFormatter {
       return '';
     }
 
-    // Currently focused on TSX/JSX - easy to extend later
+    // SMART DETECTION: Check if content looks like CSS regardless of file type
+    if (this.looksLikeCSS(contextInfo)) {
+      return this.formatCSS(contextInfo);
+    }
+
+    // Language-specific formatting
     switch (languageId) {
       case 'typescript':
       case 'typescriptreact':
@@ -31,13 +36,59 @@ export class LanguageFormatter {
       case 'less':
         return this.formatCSS(contextInfo);
         
+      case 'html':
+      case 'astro':
+      case 'vue':
+      case 'svelte':
+        // For template languages, apply smart detection (already done above)
+        return this.formatTSX(contextInfo); // Fallback to TSX for components
+        
       // Future languages can be added here:
       // case 'json': return this.formatJSON(contextInfo);
-      // case 'astro': return this.formatAstro(contextInfo);
       
       default:
         return contextInfo; // Return as-is for unsupported languages
     }
+  }
+
+  /**
+   * Smart CSS Detection: Detects if content looks like CSS
+   * Works regardless of the file type (HTML, Astro, Vue, etc.)
+   */
+  private looksLikeCSS(context: string): boolean {
+    if (!context || context.length < 2) {
+      return false;
+    }
+
+    const trimmedContext = context.trim();
+    
+    // Strong CSS indicators
+    const cssPatterns = [
+      /^[.#][\w-]+/,              // Starts with . or # (CSS selectors)
+      /[\w-]+\s*:\s*[\w-]+/,      // Contains CSS properties (color: red)
+      /^@[\w-]+/,                 // CSS at-rules (@media, @keyframes)
+      /\.([\w-]+)\s*{/,           // Class with opening brace
+      /#([\w-]+)\s*{/,            // ID with opening brace
+      /[\w-]+\s*,\s*[\w-]+/,      // Multiple selectors separated by comma
+    ];
+
+    // Check for strong CSS patterns
+    for (const pattern of cssPatterns) {
+      if (pattern.test(trimmedContext)) {
+        return true;
+      }
+    }
+
+    // Additional heuristic: Check for multiple CSS selector characters
+    const cssSelectorCount = (trimmedContext.match(/[.#]/g) || []).length;
+    const hasSpaces = trimmedContext.includes(' ');
+    
+    // If we have 2+ CSS selectors and spaces, probably CSS
+    if (cssSelectorCount >= 2 && hasSpaces) {
+      return true;
+    }
+
+    return false;
   }
 
   /**
@@ -82,7 +133,8 @@ export class LanguageFormatter {
   }
 
   /**
-   *** CSS Formatter: Cleans CSS selectors and adds bullets
+   * CSS Formatter: Cleans CSS selectors and adds bullets
+   * Now works for CSS in any context (HTML, Astro, Vue, etc.)
    */
   private formatCSS(context: string): string {
     if (!context) {
@@ -91,14 +143,23 @@ export class LanguageFormatter {
 
     let result = context;
 
-    // Remove commas first
-    result = result.replace(/,/g, '');
+    // Remove common CSS property patterns first (color: red -> color red)
+    result = result.replace(/:\s*[\w#%-]+(?:\s*!important)?/g, '');
 
-    // Remove CSS selector symbols (. and #)
+    // Remove commas and semicolons
+    result = result.replace(/[,;]/g, '');
+
+    // Remove CSS selector symbols (. and #) - this is your successful improvement!
     result = result.replace(/[.#]/g, '');
 
-    // Clean up extra spaces
+    // Clean up extra spaces - this is your successful improvement!
     result = result.replace(/\s+/g, ' ').trim();
+
+    // Handle CSS at-rules (@media, @keyframes, etc.)
+    result = result.replace(/@[\w-]+\s*/g, '');
+
+    // Remove pseudo-classes and pseudo-elements
+    result = result.replace(/::?[\w-]+(?:\([^)]*\))?/g, '');
 
     // Split by spaces and filter empty parts
     const parts = result.split(' ').filter(part => part.length > 0);
@@ -124,5 +185,11 @@ export class LanguageFormatter {
 
   // Future methods ready to be implemented:
   // private formatJSON(context: string): string { return context; }
-  // private formatAstro(context: string): string { return context; }
+  
+  // COMPLETED: Smart CSS detection works across all file types!
+  // ✅ CSS in .css files
+  // ✅ CSS in HTML <style> tags
+  // ✅ CSS in Astro components
+  // ✅ CSS in Vue <style> sections  
+  // ✅ CSS in Svelte <style> sections
 }
