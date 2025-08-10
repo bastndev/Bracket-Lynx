@@ -80,6 +80,16 @@ export const SUPPORTED_LANGUAGES = [
 export const MAX_HEADER_WORDS = 1;
 
 /**
+ * Maximum number of words allowed for exception words
+ */
+export const MAX_EXCEPTION_WORDS = 2;
+
+/**
+ * Words that require exception treatment (show more words)
+ */
+export const EXCEPTION_WORDS = ['export'];
+
+/**
  * Main rules configuration
  */
 export const FILTER_RULES: FilterRules = {
@@ -102,6 +112,13 @@ export function isLanguageSupported(languageId: string): boolean {
 }
 
 /**
+ * Check if text contains exception words that require more words to be shown
+ */
+export function containsExceptionWord(text: string): boolean {
+  return EXCEPTION_WORDS.some(word => text.toLowerCase().includes(word.toLowerCase()));
+}
+
+/**
  * Filter text content to remove excluded symbols
  */
 export function filterContent(content: string): string {
@@ -121,8 +138,13 @@ export function filterContent(content: string): string {
  */
 export function applyWordLimit(text: string): string {
   const words = text.split(/\s+/).filter((word) => word.length > 0);
-  if (words.length > MAX_HEADER_WORDS) {
-    return words.slice(0, MAX_HEADER_WORDS).join(' ') + '...';
+  
+  // Check if text contains exception words that need more words shown
+  const hasExceptionWord = containsExceptionWord(text);
+  const maxWords = hasExceptionWord ? MAX_EXCEPTION_WORDS : MAX_HEADER_WORDS;
+  
+  if (words.length > maxWords) {
+    return words.slice(0, maxWords).join(' ') + '...';
   }
   return words.join(' ');
 }
