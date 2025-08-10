@@ -2,6 +2,8 @@
 // LANGUAGE FORMATTER - TSX Focus with Future Scalability
 // ============================================================================
 
+import { shouldExcludeSymbol, filterContent } from './rules';
+
 export class LanguageFormatter {
   /**
    * Main method: Format context based on language
@@ -12,9 +14,15 @@ export class LanguageFormatter {
       return '';
     }
 
+    // NEW: Apply rules filtering first to remove excluded symbols
+    let filteredContext = filterContent(contextInfo);
+    if (!filteredContext.trim()) {
+      return '';
+    }
+
     // SMART DETECTION: Check if content looks like CSS regardless of file type
-    if (this.looksLikeCSS(contextInfo)) {
-      return this.formatCSS(contextInfo);
+    if (this.looksLikeCSS(filteredContext)) {
+      return this.formatCSS(filteredContext);
     }
 
     // Language-specific formatting
@@ -25,26 +33,26 @@ export class LanguageFormatter {
       case 'javascript':
       case 'javascriptreact':
       case 'jsx':
-        return this.formatTSX(contextInfo);
+        return this.formatTSX(filteredContext);
 
       case 'css':
       case 'scss':
       case 'sass':
       case 'less':
-        return this.formatCSS(contextInfo);
+        return this.formatCSS(filteredContext);
 
       case 'html':
       case 'astro':
       case 'vue':
       case 'svelte':
         // For template languages, apply smart detection (already done above)
-        return this.formatTSX(contextInfo); // Fallback to TSX for components
+        return this.formatTSX(filteredContext); // Fallback to TSX for components
 
       // Future languages can be added here:
-      // case 'json': return this.formatJSON(contextInfo);
+      // case 'json': return this.formatJSON(filteredContext);
 
       default:
-        return contextInfo; // Return as-is for unsupported languages
+        return filteredContext; // Return filtered content for unsupported languages
     }
   }
 

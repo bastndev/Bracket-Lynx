@@ -8,6 +8,8 @@ import { OptimizedBracketParser } from '../core/performance-parser';
 import { shouldUseOriginalParser } from '../core/parser-exceptions';
 // NEW: Import language formatter
 import { LanguageFormatter } from './language-formatter';
+// NEW: Import rules system
+import { FILTER_RULES, shouldExcludeSymbol, filterContent, isLanguageSupported } from './rules';
 // Import toggle system functions
 import { isExtensionEnabled, isEditorEnabled, isDocumentEnabled } from '../actions/toggle';
 
@@ -929,6 +931,9 @@ export class BracketHeaderGenerator {
     const regulateHeader = (text: string) => {
       let result = text.replace(/\s+/gu, ' ').trim();
       
+      // NEW: Apply rules filtering first to remove excluded symbols
+      result = filterContent(result);
+      
       // NEW: Apply language-specific formatting before length truncation
       result = this.languageFormatter.formatContext(result, document.languageId);
       
@@ -1200,6 +1205,14 @@ export class BracketLynx {
       return;
     }
 
+    // NEW: Check if language is supported by rules
+    if (!isLanguageSupported(textEditor.document.languageId)) {
+      const editorCache = CacheManager.editorCache.get(textEditor);
+      editorCache?.dispose();
+      CacheManager.editorCache.delete(textEditor);
+      return;
+    }
+
     const editorCache = CacheManager.editorCache.get(textEditor);
     if ('none' !== BracketLynxConfig.mode) {
       const isMuted =
@@ -1221,17 +1234,23 @@ export class BracketLynx {
 
         CacheManager.getDocumentCache(
           textEditor.document
-        ).decorationSource.forEach((i) =>
-          options.push({
-            range: i.range,
-            renderOptions: {
-              after: {
-                contentText: i.bracketHeader,
-                color,
+        ).decorationSource.forEach((i) => {
+          // NEW: Apply content filtering to remove excluded symbols
+          const filteredContent = filterContent(i.bracketHeader);
+          
+          // Only add decoration if content is not empty after filtering
+          if (filteredContent.trim().length > 0) {
+            options.push({
+              range: i.range,
+              renderOptions: {
+                after: {
+                  contentText: filteredContent,
+                  color,
+                },
               },
-            },
-          })
-        );
+            });
+          }
+        });
 
         CacheManager.getEditorCache(
           textEditor
@@ -1315,6 +1334,11 @@ export class BracketLynx {
       return;
     }
 
+    // NEW: Check if language is supported by rules
+    if (!isLanguageSupported(document.languageId)) {
+      return;
+    }
+
     vscode.window.visibleTextEditors
       .filter((i) => i.document === document)
       .forEach((i) => this.updateDecoration(i));
@@ -1323,6 +1347,11 @@ export class BracketLynx {
   static delayUpdateDecorationByDocument(document: vscode.TextDocument): void {
     // Check if extension is enabled for this document
     if (!isExtensionEnabled() || !isDocumentEnabled(document)) {
+      return;
+    }
+
+    // NEW: Check if language is supported by rules
+    if (!isLanguageSupported(document.languageId)) {
       return;
     }
 
@@ -1376,13 +1405,13 @@ export class BracketLynx {
 
   static onDidOpenTextDocument(document: vscode.TextDocument): void {
     const mode = BracketLynxConfig.mode;
-    if (isExtensionEnabled() && isDocumentEnabled(document) && ('auto' === mode || 'on-save' === mode)) {
+    if (isExtensionEnabled() && isDocumentEnabled(document) && isLanguageSupported(document.languageId) && ('auto' === mode || 'on-save' === mode)) {
       this.delayUpdateDecorationByDocument(document);
     }
   }
 
   static onDidSaveTextDocument(document: vscode.TextDocument): void {
-    if (isExtensionEnabled() && isDocumentEnabled(document) && 'on-save' === BracketLynxConfig.mode) {
+    if (isExtensionEnabled() && isDocumentEnabled(document) && isLanguageSupported(document.languageId) && 'on-save' === BracketLynxConfig.mode) {
       this.updateDecorationByDocument(document);
     }
   }
@@ -1393,6 +1422,11 @@ export class BracketLynx {
   ): void {
     // Check if extension is enabled for this document
     if (!isExtensionEnabled() || !isDocumentEnabled(document)) {
+      return;
+    }
+
+    // NEW: Check if language is supported by rules
+    if (!isLanguageSupported(document.languageId)) {
       return;
     }
 
