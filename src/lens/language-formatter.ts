@@ -82,8 +82,7 @@ export class LanguageFormatter {
   }
 
   /**
-   * CSS Formatter: Cleans CSS selectors and adds bullets
-   * ".card-animation #lucas #maria, #lucas" → "card-animation •lucas"
+   *** CSS Formatter: Cleans CSS selectors and adds bullets
    */
   private formatCSS(context: string): string {
     if (!context) {
