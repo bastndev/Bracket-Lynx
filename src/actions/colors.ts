@@ -197,15 +197,14 @@ async function recreateAllBracketLynxDecorations(overrideColor?: string): Promis
 // ============================================================================
 // CONFIGURATION MANAGEMENT
 // ============================================================================
-
 async function saveColorToConfiguration(color: string): Promise<void> {
     try {
-        // Primero intentamos guardar en Global para que persista después de git reset
+        // First, try saving to Global to ensure persistence after git reset
         const config = vscode.workspace.getConfiguration('bracketLynx');
         await config.update('color', color, vscode.ConfigurationTarget.Global);
     } catch (error) {
         try {
-            // Si falla Global, usamos Workspace como respaldo
+            // If Global fails, use Workspace as a fallback
             const config = vscode.workspace.getConfiguration('bracketLynx');
             await config.update('color', color, vscode.ConfigurationTarget.Workspace);
         } catch (workspaceError) {
@@ -245,7 +244,7 @@ export async function setColor(color: string): Promise<void> {
 export function initializeColorSystem(): void {
     currentColor = loadColorFromConfiguration();
     
-    // Registrar listener para cambios en la configuración
+    // Register listener for configuration changes
     const configListener = vscode.workspace.onDidChangeConfiguration(async (e) => {
         if (e.affectsConfiguration('bracketLynx.color')) {
             await onConfigurationChanged();
@@ -308,11 +307,11 @@ export async function onConfigurationChanged(): Promise<void> {
             }
         }
     } else {
-        // Si el color no es válido, mantener el color actual y guardar uno válido
+        // If the color is invalid, keep the current color and save a valid one
         const fallbackColor = isValidHexColor(currentColor) ? currentColor : '#515151';
         currentColor = fallbackColor;
         
-        // Guardar el color válido de vuelta a la configuración
+        // Save the valid color back to the configuration
         try {
             await saveColorToConfiguration(fallbackColor);
         } catch (error) {
@@ -330,8 +329,8 @@ export async function onConfigurationChanged(): Promise<void> {
 }
 
 /**
- * Restaura el color personalizado desde la configuración global
- * Útil después de un git reset que pueda haber afectado la configuración del workspace
+ * Restores the custom color from global configuration
+ * Useful after a git reset that may have affected workspace settings
  */
 export async function restoreColorFromGlobal(): Promise<void> {
     try {
