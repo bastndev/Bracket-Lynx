@@ -11,16 +11,32 @@
 
 ## Toggle System
 
-Bracket Lynx includes a powerful **toggle system** that allows you to control bracket decorations with granular precision. Access the toggle menu with the command `Bracket Lynx: Toggle & Refresh 🛠️` or through your configured keyboard shortcut.
+Bracket Lynx includes a powerful **toggle system** that lets you control bracket decorations with great precision. Access the toggle menu by pressing `Ctrl+Shift+P` to open the command palette, using your configured keyboard shortcut, or running the `Bracket Lynx: Toggle & Refresh 🛠️` command.
 
 ### 🛠️ Toggle Options
 
-| Option                     | Description                                                          | Scope        | Persistence     |
-| -------------------------- | -------------------------------------------------------------------- | ------------ | --------------- |
-| **🌐 Toggle Global**       | Activate/deactivate Bracket Lynx for all files across your workspace | Global       | Session-wide    |
-| **📄 Toggle Current File** | Activate/deactivate only for the currently active file               | Per-file     | File-persistent |
-| **♻️ Refresh**             | Force update decorations for the current file                        | Current file | Immediate       |
-| **🔍 Debug Info**          | Show detailed toggle states for debugging purposes                   | Information  | Diagnostic      |
+| Option               | Description                                                | Scope        | Persistence         |
+| -------------------- | ---------------------------------------------------------- | ------------ | ------------------- |
+| **🌐 Toggle Global** | Enable/disable Bracket Lynx for all files in the workspace | Global       | Per session         |
+| **📄 Toggle File**   | Enable/disable only for the active file                    | Per file     | Persistent per file |
+| **🎨 Change Color**  | Instantly change bracket color for decorations             | Current file | Workspace-wide      |
+| **♻️ Refresh**       | Updates decorations for the current file                   | Current file | Immediate           |
+
+</br>
+
+### 🎨 Color System
+
+Bracket Lynx features an advanced **color customization system** for bracket decorations. Easily change colors using the `Bracket Lynx: Change Decoration Color 🎨` command or from the toggle menu.
+
+| 🎨 **Feature**          | 📝 **Description**                                                       | ⚡ **How to Use**                                            | 💾 **Persistence** |
+| ----------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------ | ------------------ |
+| **🌈 Built-in Colors**  | Choose from several integrated colors to highlight brackets              | Select from the color picker menu                            | 🗂️ Workspace-wide  |
+| **#️⃣ Custom Hex Color** | Enter any valid hex color for personalized decoration                    | Use "✏️ Write Custom" in the picker and enter your hex value | 🗂️ Workspace-wide  |
+| **👀 Live Preview**     | Instantly preview color changes before applying                          | Hover or select colors in the picker                         | ⏳ Temporary       |
+| **🔗 Settings Sync**    | Save your chosen color in workspace settings for a consistent experience | Automatically saved after selection                          | 🔒 Persistent      |
+
+**Tip:** You can reset to the default color (`#515151 ⚫`) or update your choice anytime.  
+Explore, experiment, and make your editor look the way you want! 🌟
 
 </br>
 

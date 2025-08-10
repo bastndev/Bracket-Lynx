@@ -8,6 +8,8 @@ import { OptimizedBracketParser } from '../core/performance-parser';
 import { shouldUseOriginalParser } from '../core/parser-exceptions';
 // NEW: Import language formatter
 import { LanguageFormatter } from './language-formatter';
+// NEW: Import rules system
+import { FILTER_RULES, shouldExcludeSymbol, filterContent, isLanguageSupported } from './rules';
 // Import toggle system functions
 import { isExtensionEnabled, isEditorEnabled, isDocumentEnabled } from '../actions/toggle';
 
@@ -79,7 +81,7 @@ export interface BracketDecorationSource {
 // ============================================================================
 export class BracketLynxConfig {
   private static getConfig() {
-    return vscode.workspace.getConfiguration('bracketLens');
+    return vscode.workspace.getConfiguration('bracketLynx');
   }
 
   static get mode(): string {
@@ -91,7 +93,23 @@ export class BracketLynxConfig {
   }
 
   static get color(): string {
-    return this.getConfig().get('color', '#515151');
+    // First try to get color from the color system
+    try {
+      const { getEffectiveColor } = require('../actions/colors');
+      const effectiveColor = getEffectiveColor();
+      if (effectiveColor) {
+        return effectiveColor; // Always use color system color if available
+      }
+    } catch (error) {
+      // Fallback silently if color system is not available
+    }
+
+    // Fallback to configuration or default
+    try {
+      return this.getConfig().get('color', '#515151');
+    } catch {
+      return '#515151';
+    }
   }
 
   static get fontStyle(): string {
@@ -913,6 +931,9 @@ export class BracketHeaderGenerator {
     const regulateHeader = (text: string) => {
       let result = text.replace(/\s+/gu, ' ').trim();
       
+      // NEW: Apply rules filtering first to remove excluded symbols
+      result = filterContent(result);
+      
       // NEW: Apply language-specific formatting before length truncation
       result = this.languageFormatter.formatContext(result, document.languageId);
       
@@ -1167,7 +1188,7 @@ export class BracketDecorationGenerator {
 }
 
 // ============================================================================
-// MAIN BRACKET LENS CLASS
+// MAIN BRACKET LYNX CLASS
 // ============================================================================
 
 export class BracketLynx {
@@ -1178,6 +1199,14 @@ export class BracketLynx {
   static updateDecoration(textEditor: vscode.TextEditor) {
     // Check if extension is enabled globally and for this specific editor
     if (!isExtensionEnabled() || !isEditorEnabled(textEditor)) {
+      const editorCache = CacheManager.editorCache.get(textEditor);
+      editorCache?.dispose();
+      CacheManager.editorCache.delete(textEditor);
+      return;
+    }
+
+    // NEW: Check if language is supported by rules
+    if (!isLanguageSupported(textEditor.document.languageId)) {
       const editorCache = CacheManager.editorCache.get(textEditor);
       editorCache?.dispose();
       CacheManager.editorCache.delete(textEditor);
@@ -1205,17 +1234,23 @@ export class BracketLynx {
 
         CacheManager.getDocumentCache(
           textEditor.document
-        ).decorationSource.forEach((i) =>
-          options.push({
-            range: i.range,
-            renderOptions: {
-              after: {
-                contentText: i.bracketHeader,
-                color,
+        ).decorationSource.forEach((i) => {
+          // NEW: Apply content filtering to remove excluded symbols
+          const filteredContent = filterContent(i.bracketHeader);
+          
+          // Only add decoration if content is not empty after filtering
+          if (filteredContent.trim().length > 0) {
+            options.push({
+              range: i.range,
+              renderOptions: {
+                after: {
+                  contentText: filteredContent,
+                  color,
+                },
               },
-            },
-          })
-        );
+            });
+          }
+        });
 
         CacheManager.getEditorCache(
           textEditor
@@ -1299,6 +1334,11 @@ export class BracketLynx {
       return;
     }
 
+    // NEW: Check if language is supported by rules
+    if (!isLanguageSupported(document.languageId)) {
+      return;
+    }
+
     vscode.window.visibleTextEditors
       .filter((i) => i.document === document)
       .forEach((i) => this.updateDecoration(i));
@@ -1307,6 +1347,11 @@ export class BracketLynx {
   static delayUpdateDecorationByDocument(document: vscode.TextDocument): void {
     // Check if extension is enabled for this document
     if (!isExtensionEnabled() || !isDocumentEnabled(document)) {
+      return;
+    }
+
+    // NEW: Check if language is supported by rules
+    if (!isLanguageSupported(document.languageId)) {
       return;
     }
 
@@ -1326,6 +1371,16 @@ export class BracketLynx {
   }
 
   static onDidChangeConfiguration(): void {
+    // Sync color system with configuration changes
+    try {
+      const { onConfigurationChanged } = require('../actions/colors');
+      onConfigurationChanged().catch((error: any) => {
+        console.error('Error syncing color configuration:', error);
+      });
+    } catch (error) {
+      console.warn('Color system not available during configuration change');
+    }
+
     CacheManager.clearAllDecorationCache();
     this.updateAllDecoration();
 
@@ -1350,13 +1405,13 @@ export class BracketLynx {
 
   static onDidOpenTextDocument(document: vscode.TextDocument): void {
     const mode = BracketLynxConfig.mode;
-    if (isExtensionEnabled() && isDocumentEnabled(document) && ('auto' === mode || 'on-save' === mode)) {
+    if (isExtensionEnabled() && isDocumentEnabled(document) && isLanguageSupported(document.languageId) && ('auto' === mode || 'on-save' === mode)) {
       this.delayUpdateDecorationByDocument(document);
     }
   }
 
   static onDidSaveTextDocument(document: vscode.TextDocument): void {
-    if (isExtensionEnabled() && isDocumentEnabled(document) && 'on-save' === BracketLynxConfig.mode) {
+    if (isExtensionEnabled() && isDocumentEnabled(document) && isLanguageSupported(document.languageId) && 'on-save' === BracketLynxConfig.mode) {
       this.updateDecorationByDocument(document);
     }
   }
@@ -1367,6 +1422,11 @@ export class BracketLynx {
   ): void {
     // Check if extension is enabled for this document
     if (!isExtensionEnabled() || !isDocumentEnabled(document)) {
+      return;
+    }
+
+    // NEW: Check if language is supported by rules
+    if (!isLanguageSupported(document.languageId)) {
       return;
     }
 
@@ -1555,5 +1615,18 @@ export class BracketLynx {
     optimizedParser.dispose();
 
     // Advanced cache cleanup is handled automatically
+  }
+
+  /**
+   * Force refresh color for all decorations - called by color system
+   */
+  static forceColorRefresh(): void {
+    console.log('🎨 Force refreshing colors for all decorations');
+    
+    // Clear all caches to force recreation with new color
+    CacheManager.clearAllDecorationCache();
+    
+    // Update all visible editors
+    this.updateAllDecoration();
   }
 }
