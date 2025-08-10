@@ -8,14 +8,70 @@ export interface FilterRules {
 // ============================================================================
 
 export const EXCLUDED_SYMBOLS = [
-  '!', '"', '$', '%', '&', "'", ')', '*', ',', '.', '/', ':', ';', '=', '>', '?', '@', '[', '\\', ']', '^', '_', '`', '{', '|', '}','//', 'const','---','--','...', 'MARK', 'props'
+  '!',
+  '"',
+  '$',
+  '%',
+  '&',
+  "'",
+  "(",
+  ')',
+  '*',
+  ',',
+  '.',
+  '/',
+  ':',
+  ';',
+  '=',
+  '>',
+  '?',
+  '@',
+  '[',
+  '\\',
+  ']',
+  '^',
+  '_',
+  '`',
+  '{',
+  '|',
+  '}',
+  '//',
+  'const',
+  '---',
+  '--',
+  '...',
+  'MARK',
+  'props',
 ];
 
 /**
  * All supported languages for the extension
  */
 export const SUPPORTED_LANGUAGES = [
-  'astro', 'c', 'cpp', 'csharp', 'css', 'dart', 'go', 'html', 'java', 'javascript', 'javascriptreact', 'json', 'jsonc', 'less', 'php', 'python', 'rust', 'sass', 'scss', 'svelte', 'typescript', 'typescriptreact', 'vue', 'xml',
+  'astro',
+  'c',
+  'cpp',
+  'csharp',
+  'css',
+  'dart',
+  'go',
+  'html',
+  'java',
+  'javascript',
+  'javascriptreact',
+  'json',
+  'jsonc',
+  'less',
+  'php',
+  'python',
+  'rust',
+  'sass',
+  'scss',
+  'svelte',
+  'typescript',
+  'typescriptreact',
+  'vue',
+  'xml',
 ];
 
 /**
@@ -52,18 +108,19 @@ export function filterContent(content: string): string {
   let filtered = content;
 
   for (const symbol of EXCLUDED_SYMBOLS) {
-    // Remove the excluded symbols from the content
-    filtered = filtered.replace(new RegExp(escapeRegExp(symbol), 'g'), '');
+    // Replace excluded symbols with spaces to avoid word concatenation
+    filtered = filtered.replace(new RegExp(escapeRegExp(symbol), 'g'), ' ');
   }
 
-  return filtered.trim();
+  // Clean up multiple spaces and trim
+  return filtered.replace(/\s+/g, ' ').trim();
 }
 
 /**
  * Apply word limit to header text
  */
 export function applyWordLimit(text: string): string {
-  const words = text.split(/\s+/).filter(word => word.length > 0);
+  const words = text.split(/\s+/).filter((word) => word.length > 0);
   if (words.length > MAX_HEADER_WORDS) {
     return words.slice(0, MAX_HEADER_WORDS).join(' ') + '...';
   }
