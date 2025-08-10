@@ -9,7 +9,7 @@ import { shouldUseOriginalParser } from '../core/parser-exceptions';
 // NEW: Import language formatter
 import { LanguageFormatter } from './language-formatter';
 // NEW: Import rules system
-import { FILTER_RULES, shouldExcludeSymbol, filterContent, isLanguageSupported } from './rules';
+import { FILTER_RULES, shouldExcludeSymbol, filterContent, isLanguageSupported } from './lens-rules';
 // Import toggle system functions
 import { isExtensionEnabled, isEditorEnabled, isDocumentEnabled } from '../actions/toggle';
 

@@ -2,7 +2,7 @@
 // LANGUAGE FORMATTER - TSX Focus with Future Scalability
 // ============================================================================
 
-import { shouldExcludeSymbol, filterContent } from './rules';
+import { shouldExcludeSymbol, filterContent } from './lens-rules';
 
 export class LanguageFormatter {
   /**
