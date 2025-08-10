@@ -1,16 +1,12 @@
-/**
- * Rules Configuration for Bracket Lynx
- * Defines filtering rules and language-specific configurations
- */
-
 export interface FilterRules {
   excludedSymbols: string[];
   supportedLanguages: string[];
 }
 
-/**
- * Symbols that should be excluded from DECORATION
- */
+// ============================================================================
+// RULES -  DECORATION
+// ============================================================================
+
 export const EXCLUDED_SYMBOLS = [
   '!', '"', '$', '%', '&', "'", '(', ')', '*', '+', ',', '.', '/', ':', ';', '=', '>', '?', '@', '[', '\\', ']', '^', '_', '`', '{', '|', '}',
   '//', 'const',
@@ -20,30 +16,7 @@ export const EXCLUDED_SYMBOLS = [
  * All supported languages for the extension
  */
 export const SUPPORTED_LANGUAGES = [
-  'javascript',
-  'typescript',
-  'javascriptreact',
-  'typescriptreact',
-  'css',
-  'scss',
-  'sass',
-  'less',
-  'html',
-  'astro',
-  'vue',
-  'svelte',
-  'xml',
-  'php',
-  'json',
-  'jsonc',
-  'dart',
-  'python',
-  'go',
-  'rust',
-  'java',
-  'c',
-  'cpp',
-  'csharp',
+  'astro', 'c', 'cpp', 'csharp', 'css', 'dart', 'go', 'html', 'java', 'javascript', 'javascriptreact', 'json', 'jsonc', 'less', 'php', 'python', 'rust', 'sass', 'scss', 'svelte', 'typescript', 'typescriptreact', 'vue', 'xml',
 ];
 
 /**
