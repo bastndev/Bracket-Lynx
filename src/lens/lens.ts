@@ -1,14 +1,8 @@
 import * as vscode from 'vscode';
-import {
-  AdvancedCacheManager,
-  SmartDebouncer,
-} from '../core/performance-cache';
+import { AdvancedCacheManager, SmartDebouncer } from '../core/performance-cache';
 import { OptimizedBracketParser } from '../core/performance-parser';
-// NEW: Import parser exceptions
 import { shouldUseOriginalParser } from '../core/parser-exceptions';
-// NEW: Import language formatter
 import { LanguageFormatter } from './language-formatter';
-// NEW: Import rules system
 import {
   FILTER_RULES,
   shouldExcludeSymbol,
@@ -16,7 +10,6 @@ import {
   isLanguageSupported,
   applyWordLimit,
 } from './lens-rules';
-// Import toggle system functions
 import {
   isExtensionEnabled,
   isEditorEnabled,
@@ -24,7 +17,7 @@ import {
 } from '../actions/toggle';
 
 // ============================================================================
-// TYPES & INTERFACES
+// TYPE DEFINITIONS
 // ============================================================================
 
 export interface ScopeTerms {
@@ -103,18 +96,16 @@ export class BracketLynxConfig {
   }
 
   static get color(): string {
-    // First try to get color from the color system
     try {
       const { getEffectiveColor } = require('../actions/colors');
       const effectiveColor = getEffectiveColor();
       if (effectiveColor) {
-        return effectiveColor; // Always use color system color if available
+        return effectiveColor;
       }
     } catch (error) {
-      // Fallback silently if color system is not available
+      // Fallback silently
     }
 
-    // Fallback to configuration or default
     try {
       return this.getConfig().get('color', '#515151');
     } catch {

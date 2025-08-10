@@ -1,16 +1,8 @@
 import * as vscode from 'vscode';
 
-// ============================================================================
-// STATE MANAGEMENT
-// ============================================================================
-
 let isEnabled = true;
 let bracketLynxProvider: any = undefined;
 const disabledEditors = new Map<string, boolean>();
-
-// ============================================================================
-// CORE TOGGLE FUNCTIONS
-// ============================================================================
 
 export function toggleBracketLynx(): void {
   isEnabled = !isEnabled;
@@ -77,7 +69,6 @@ export function refreshBrackets(): void {
   }
 
   if (bracketLynxProvider && isEditorEnabled(activeEditor)) {
-    // Force sync color configuration before refreshing
     const { forceSyncColorWithConfiguration } = require('./colors');
     forceSyncColorWithConfiguration().then(() => {
       bracketLynxProvider.clearDecorationCache?.(activeEditor.document);
@@ -85,7 +76,6 @@ export function refreshBrackets(): void {
       vscode.window.showInformationMessage('♻️ Bracket Lynx: Refreshed');
     }).catch((error: any) => {
       console.error('♻️ Error during refresh:', error);
-      // Still try to refresh even if color sync fails
       bracketLynxProvider.clearDecorationCache?.(activeEditor.document);
       bracketLynxProvider.forceUpdateEditor?.(activeEditor);
       vscode.window.showInformationMessage('♻️ Bracket Lynx: Refreshed (with warnings)');
@@ -95,10 +85,6 @@ export function refreshBrackets(): void {
   }
 }
 
-// ============================================================================
-// PROVIDER & INITIALIZATION
-// ============================================================================
-
 export function setBracketLynxProvider(provider: any): void {
   bracketLynxProvider = provider;
   
@@ -106,10 +92,6 @@ export function setBracketLynxProvider(provider: any): void {
   setBracketLynxProviderForColors(provider);
   initializeColorSystem();
 }
-
-// ============================================================================
-// MENU INTERFACE
-// ============================================================================
 
 export function showBracketLynxMenu(): void {
   const options = [
@@ -162,10 +144,6 @@ export function showBracketLynxMenu(): void {
     });
 }
 
-// ============================================================================
-// INTERNAL UTILITIES
-// ============================================================================
-
 function reactivateExtension(): void {
   if (bracketLynxProvider) {
     bracketLynxProvider.updateAllDecoration?.();
@@ -182,13 +160,8 @@ function getEditorKey(editor: vscode.TextEditor): string {
   return editor.document.uri.toString();
 }
 
-// ============================================================================
-// CLEANUP FUNCTIONS
-// ============================================================================
-
 /**
  * Clean up disabled editor state when a document is closed
- * NOTE: Disabled state persists when files are reopened
  */
 export function cleanupClosedEditor(document: vscode.TextDocument): void {
   const documentUri = document.uri.toString();
