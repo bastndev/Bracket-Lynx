@@ -2,7 +2,7 @@
 
 ## Overview
 
-**Bracket Lynx** is a sophisticated Visual Studio Code extension that provides intelligent bracket and code structure visualization through decorations. The extension enhances code readability by displaying contextual headers next to closing brackets, helping developers quickly understand code structure and navigate complex nested blocks.
+**Bracket Lynx** enhances the development experience by displaying a decoration next to each closing parenthesis. This decoration indicates the name of the corresponding block or function, along with its start and end line numbers, providing developers with a clear and immediate understanding of the code's structure and scope.
 
 ## How it Works
 
