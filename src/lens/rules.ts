@@ -12,21 +12,8 @@ export interface FilterRules {
  * Symbols that should be excluded from DECORATION
  */
 export const EXCLUDED_SYMBOLS = [
-  'const',
-  '//',
-  '?',
-  ':',
-  '=',
-  '>',
-  '{',
-  '}',
-  ')',
-  '(',
-  '[',
-  ']',
-  ';',
-  '.',
-  '#',
+  '!', '"', '$', '%', '&', "'", '(', ')', '*', '+', ',', '.', '/', ':', ';', '=', '>', '?', '@', '[', '\\', ']', '^', '_', '`', '{', '|', '}',
+  '//', 'const',
 ];
 
 /**
