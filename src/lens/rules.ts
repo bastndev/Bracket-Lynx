@@ -9,7 +9,7 @@ export interface FilterRules {
 }
 
 /**
- * Symbols that should be excluded from decorations
+ * Symbols that should be excluded from DECORATION
  */
 export const EXCLUDED_SYMBOLS = [
   '//', // Line comments
