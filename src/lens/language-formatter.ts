@@ -1,11 +1,9 @@
-import * as vscode from 'vscode';
 
 // ============================================================================
 // LANGUAGE FORMATTER - TSX Focus with Future Scalability
 // ============================================================================
 
 export class LanguageFormatter {
-  
   /**
    * Main method: Format context based on language
    * Currently optimized for TSX, structure ready for other languages
@@ -29,23 +27,23 @@ export class LanguageFormatter {
       case 'javascriptreact':
       case 'jsx':
         return this.formatTSX(contextInfo);
-        
+
       case 'css':
       case 'scss':
       case 'sass':
       case 'less':
         return this.formatCSS(contextInfo);
-        
+
       case 'html':
       case 'astro':
       case 'vue':
       case 'svelte':
         // For template languages, apply smart detection (already done above)
         return this.formatTSX(contextInfo); // Fallback to TSX for components
-        
+
       // Future languages can be added here:
       // case 'json': return this.formatJSON(contextInfo);
-      
+
       default:
         return contextInfo; // Return as-is for unsupported languages
     }
@@ -61,15 +59,15 @@ export class LanguageFormatter {
     }
 
     const trimmedContext = context.trim();
-    
+
     // Strong CSS indicators
     const cssPatterns = [
-      /^[.#][\w-]+/,              // Starts with . or # (CSS selectors)
-      /[\w-]+\s*:\s*[\w-]+/,      // Contains CSS properties (color: red)
-      /^@[\w-]+/,                 // CSS at-rules (@media, @keyframes)
-      /\.([\w-]+)\s*{/,           // Class with opening brace
-      /#([\w-]+)\s*{/,            // ID with opening brace
-      /[\w-]+\s*,\s*[\w-]+/,      // Multiple selectors separated by comma
+      /^[.#][\w-]+/, // Starts with . or # (CSS selectors)
+      /[\w-]+\s*:\s*[\w-]+/, // Contains CSS properties (color: red)
+      /^@[\w-]+/, // CSS at-rules (@media, @keyframes)
+      /\.([\w-]+)\s*{/, // Class with opening brace
+      /#([\w-]+)\s*{/, // ID with opening brace
+      /[\w-]+\s*,\s*[\w-]+/, // Multiple selectors separated by comma
     ];
 
     // Check for strong CSS patterns
@@ -82,7 +80,7 @@ export class LanguageFormatter {
     // Additional heuristic: Check for multiple CSS selector characters
     const cssSelectorCount = (trimmedContext.match(/[.#]/g) || []).length;
     const hasSpaces = trimmedContext.includes(' ');
-    
+
     // If we have 2+ CSS selectors and spaces, probably CSS
     if (cssSelectorCount >= 2 && hasSpaces) {
       return true;
@@ -95,7 +93,7 @@ export class LanguageFormatter {
    * TSX/JSX Formatter: Simplifies React component context
    * "Github: { ...props } ()=>" → "Github()=>"
    * "export const Icon = " → "export Icon"
-   * "export interface VersionTech" → "export VersionTech"
+   * "export interface TokenEntry" → "export TokenEntry"
    */
   private formatTSX(context: string): string {
     if (!context) {
@@ -115,19 +113,52 @@ export class LanguageFormatter {
     // Keep "export" when it's followed by a meaningful identifier
     if (result.includes('export')) {
       // Pattern: "export const ComponentName = " → "export ComponentName"
-      result = result.replace(/export\s+const\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*/i, 'export $1');
-      
-      // Pattern: "export function ComponentName" → "export ComponentName" 
-      result = result.replace(/export\s+function\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/i, 'export $1');
-      
+      result = result.replace(
+        /export\s+const\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*/i,
+        'export $1'
+      );
+
+      // Pattern: "export function ComponentName" → "export ComponentName"
+      result = result.replace(
+        /export\s+function\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/i,
+        'export $1'
+      );
+
       // Pattern: "export interface InterfaceName" → "export InterfaceName"
-      result = result.replace(/export\s+interface\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/i, 'export $1');
-      
+      result = result.replace(
+        /export\s+interface\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/i,
+        'export $1'
+      );
+
+      // Pattern: "export type TypeName" → "export TypeName"
+      result = result.replace(
+        /export\s+type\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/i,
+        'export $1'
+      );
+
+      // Pattern: "export class ClassName" → "export ClassName"
+      result = result.replace(
+        /export\s+class\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/i,
+        'export $1'
+      );
+
+      // Pattern: "export enum EnumName" → "export EnumName"
+      result = result.replace(
+        /export\s+enum\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/i,
+        'export $1'
+      );
+
       // Pattern: "export default ComponentName" → "export ComponentName"
-      result = result.replace(/export\s+default\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/i, 'export $1');
+      result = result.replace(
+        /export\s+default\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/i,
+        'export $1'
+      );
     } else {
       // Only remove export keywords if there's no meaningful content after
-      result = result.replace(/^export\s+(const\s+|function\s+|interface\s+|default\s+)?/i, '');
+      result = result.replace(
+        /^export\s+(const\s+|function\s+|interface\s+|type\s+|class\s+|enum\s+|default\s+)?/i,
+        ''
+      );
     }
 
     // Clean up again after replacements
@@ -166,22 +197,22 @@ export class LanguageFormatter {
     result = result.replace(/::?[\w-]+(?:\([^)]*\))?/g, '');
 
     // Split by spaces and filter empty parts
-    const parts = result.split(' ').filter(part => part.length > 0);
-    
+    const parts = result.split(' ').filter((part) => part.length > 0);
+
     if (parts.length === 0) {
       return '';
     }
-    
+
     if (parts.length === 1) {
       // Single selector: "card-animation" → "card-animation"
       return parts[0];
     }
-    
+
     if (parts.length === 2) {
       // Two selectors: "card-animation lucas" → "card-animation •lucas"
       return `${parts[0]} •${parts[1]}`;
     }
-    
+
     // Multiple selectors: take first and last
     // "card-animation lucas maria jose" → "card-animation •jose"
     return `${parts[0]} •${parts[parts.length - 1]}`;
@@ -189,11 +220,11 @@ export class LanguageFormatter {
 
   // Future methods ready to be implemented:
   // private formatJSON(context: string): string { return context; }
-  
+
   // COMPLETED: Smart CSS detection works across all file types!
   // ✅ CSS in .css files
   // ✅ CSS in HTML <style> tags
   // ✅ CSS in Astro components
-  // ✅ CSS in Vue <style> sections  
+  // ✅ CSS in Vue <style> sections
   // ✅ CSS in Svelte <style> sections
 }
