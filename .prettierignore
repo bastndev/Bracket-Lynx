@@ -3,4 +3,4 @@ package.json
 tsconfig.json
 
 src/extension.ts
-src/lens/rules.ts
+src/lens/lens-rules.ts
