@@ -15,7 +15,10 @@ export const EXCLUDED_SYMBOLS = [
   '//', // Line comments
   '?', // Ternary operator
   ':', // Colon (object properties, ternary)
-  '='
+  '=',
+  '>',
+  '{',
+  '}',
 ];
 
 /**
