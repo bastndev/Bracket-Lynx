@@ -102,6 +102,7 @@ export class LanguageFormatter {
    * "export const Icon = " → "export Icon"
    * "export interface TokenEntry" → "export TokenEntry"
    * "static get mode(): string" → "static mode"
+   * "<image className="list-item-image" src={" → "img"
    */
   private formatTSX(context: string): string {
     if (!context) {
@@ -109,6 +110,56 @@ export class LanguageFormatter {
     }
 
     let result = context;
+
+    // NEW: Handle JSX/HTML elements - extract tag name for simpler display
+    // Pattern: "<tagname ..." → "tagname" or "<tagname>" → "tagname"
+    const jsxTagMatch = result.match(/<\s*([a-zA-Z][a-zA-Z0-9-]*)[^>]*/);
+    if (jsxTagMatch) {
+      const tagName = jsxTagMatch[1].toLowerCase();
+      // For common HTML elements, use shorter names
+      if (tagName === 'image' || tagName === 'image') {
+        return 'image';
+      }
+      if (tagName === 'div') {
+        return 'div';
+      }
+      if (tagName === 'span') {
+        return 'span';
+      }
+      if (tagName === 'button') {
+        return 'btn';
+      }
+      if (tagName === 'input') {
+        return 'input';
+      }
+      // For other elements, return the tag name
+      return tagName;
+    }
+
+    // Handle closing JSX tags
+    // Pattern: "</tagname>" → "tagname"
+    const jsxClosingTagMatch = result.match(/<\/\s*([a-zA-Z][a-zA-Z0-9-]*)\s*>/);
+    if (jsxClosingTagMatch) {
+      const tagName = jsxClosingTagMatch[1].toLowerCase();
+      if (tagName === 'image' || tagName === 'img') {
+        return 'img';
+      }
+      return tagName;
+    }
+
+    // Handle self-closing JSX tags
+    // Pattern: "} />" or "/>" → extract from previous context
+    if (result.trim().endsWith('/>') || result.trim().endsWith('} />')) {
+      // Try to find tag name in the context
+      const tagMatch = result.match(/([a-zA-Z][a-zA-Z0-9-]*)[^<>]*\/?>?\s*$/);
+      if (tagMatch) {
+        const tagName = tagMatch[1].toLowerCase();
+        if (tagName === 'image' || tagName === 'img') {
+          return 'img';
+        }
+        return tagName;
+      }
+    }
 
     // Handle static methods first - this is the key improvement
     // Pattern: "static get methodName(): returnType" → "static methodName"
