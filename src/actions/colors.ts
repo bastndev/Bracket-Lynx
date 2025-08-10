@@ -200,14 +200,16 @@ async function recreateAllBracketLynxDecorations(overrideColor?: string): Promis
 
 async function saveColorToConfiguration(color: string): Promise<void> {
     try {
+        // Primero intentamos guardar en Global para que persista después de git reset
         const config = vscode.workspace.getConfiguration('bracketLynx');
-        await config.update('color', color, vscode.ConfigurationTarget.Workspace);
+        await config.update('color', color, vscode.ConfigurationTarget.Global);
     } catch (error) {
         try {
+            // Si falla Global, usamos Workspace como respaldo
             const config = vscode.workspace.getConfiguration('bracketLynx');
-            await config.update('color', color, vscode.ConfigurationTarget.Global);
-        } catch (globalError) {
-            console.warn(`🎨 Failed to save color to configuration:`, globalError);
+            await config.update('color', color, vscode.ConfigurationTarget.Workspace);
+        } catch (workspaceError) {
+            console.warn(`🎨 Failed to save color to configuration:`, workspaceError);
         }
     }
 }
@@ -242,6 +244,13 @@ export async function setColor(color: string): Promise<void> {
 
 export function initializeColorSystem(): void {
     currentColor = loadColorFromConfiguration();
+    
+    // Registrar listener para cambios en la configuración
+    const configListener = vscode.workspace.onDidChangeConfiguration(async (e) => {
+        if (e.affectsConfiguration('bracketLynx.color')) {
+            await onConfigurationChanged();
+        }
+    });
     
     if (bracketLynxProvider) {
         setTimeout(async () => {
@@ -291,7 +300,7 @@ export async function onConfigurationChanged(): Promise<void> {
         const wasColorChanged = newColor !== currentColor;
         currentColor = newColor;
         
-        if (bracketLynxProvider) {
+        if (bracketLynxProvider && wasColorChanged) {
             try {
                 await recreateAllBracketLynxDecorations(newColor);
             } catch (error) {
@@ -299,13 +308,48 @@ export async function onConfigurationChanged(): Promise<void> {
             }
         }
     } else {
-        currentColor = '#515151';
+        // Si el color no es válido, mantener el color actual y guardar uno válido
+        const fallbackColor = isValidHexColor(currentColor) ? currentColor : '#515151';
+        currentColor = fallbackColor;
+        
+        // Guardar el color válido de vuelta a la configuración
+        try {
+            await saveColorToConfiguration(fallbackColor);
+        } catch (error) {
+            console.error('🎨 Error saving fallback color:', error);
+        }
+        
         if (bracketLynxProvider) {
             try {
-                await recreateAllBracketLynxDecorations('#515151');
+                await recreateAllBracketLynxDecorations(fallbackColor);
             } catch (error) {
-                console.error('🎨 Error resetting to default color:', error);
+                console.error('🎨 Error resetting to fallback color:', error);
             }
         }
+    }
+}
+
+/**
+ * Restaura el color personalizado desde la configuración global
+ * Útil después de un git reset que pueda haber afectado la configuración del workspace
+ */
+export async function restoreColorFromGlobal(): Promise<void> {
+    try {
+        const globalConfig = vscode.workspace.getConfiguration('bracketLynx');
+        const globalColor = globalConfig.inspect<string>('color')?.globalValue;
+        
+        if (globalColor && isValidHexColor(globalColor)) {
+            currentColor = globalColor;
+            
+            if (bracketLynxProvider) {
+                await recreateAllBracketLynxDecorations(globalColor);
+                vscode.window.showInformationMessage(`🎨 Bracket Lynx: Color restored from global settings: ${globalColor}`);
+            }
+        } else {
+            vscode.window.showWarningMessage('🎨 No valid global color configuration found');
+        }
+    } catch (error) {
+        console.error('🎨 Error restoring color from global:', error);
+        vscode.window.showErrorMessage('🎨 Failed to restore color from global settings');
     }
 }

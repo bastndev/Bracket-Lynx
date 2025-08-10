@@ -10,7 +10,11 @@ export const activate = async (context: vscode.ExtensionContext) => {
     setBracketLynxProvider(BracketLynx);
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('bracketLynx.menu', showBracketLynxMenu)
+        vscode.commands.registerCommand('bracketLynx.menu', showBracketLynxMenu),
+        vscode.commands.registerCommand('bracketLynx.restoreColor', async () => {
+            const { restoreColorFromGlobal } = await import('./actions/colors.js');
+            await restoreColorFromGlobal();
+        })
     );
 
     const handleConfigurationChange = async (event: vscode.ConfigurationChangeEvent) => {
