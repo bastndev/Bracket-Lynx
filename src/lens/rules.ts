@@ -23,7 +23,10 @@ export const EXCLUDED_SYMBOLS = [
   ')',
   '(',
   '[',
-  ']'
+  ']',
+  ';',
+  '.',
+  '#',
 ];
 
 /**
