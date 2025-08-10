@@ -127,11 +127,11 @@ export class BracketLynxConfig {
   }
 
   static get prefix(): string {
-    return this.getConfig().get('prefix', '<~ ');
+    return this.getConfig().get('prefix', '‹~ ');
   }
 
   static get unmatchBracketsPrefix(): string {
-    return this.getConfig().get('unmatchBracketsPrefix', '<~ ❌ ');
+    return this.getConfig().get('unmatchBracketsPrefix', '❌ ');
   }
 
   static get maxBracketHeaderLength(): number {

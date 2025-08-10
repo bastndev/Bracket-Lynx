@@ -102,12 +102,12 @@
         },
         "bracketLynx.prefix": {
           "type": "string",
-          "default": "<~ ",
+          "default": "‹~ ",
           "description": "Prefix shown before bracket headers"
         },
         "bracketLynx.unmatchBracketsPrefix": {
           "type": "string",
-          "default": "<~ ❌ ",
+          "default": "❌ ",
           "description": "Prefix shown for unmatched brackets"
         },
         "bracketLynx.maxBracketHeaderLength": {
