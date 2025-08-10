@@ -28,6 +28,8 @@ const DEFAULT_CONFIG: ParserExceptionConfig = {
     'vue',        // Vue files
     'svelte',     // Svelte files
     'php',        // PHP files
+    'javascriptreact', // JSX files
+    'typescriptreact', // TSX files
   ],
   
   problematicExtensions: [
@@ -37,6 +39,8 @@ const DEFAULT_CONFIG: ParserExceptionConfig = {
     '.vue',
     '.svelte',
     '.php',
+    '.jsx',       // JSX files
+    '.tsx',       // TSX files
   ],
   
   enableContentDetection: true,

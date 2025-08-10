@@ -9,7 +9,7 @@ import { shouldUseOriginalParser } from '../core/parser-exceptions';
 // NEW: Import language formatter
 import { LanguageFormatter } from './language-formatter';
 // NEW: Import rules system
-import { FILTER_RULES, shouldExcludeSymbol, filterContent, isLanguageSupported } from './rules';
+import { FILTER_RULES, shouldExcludeSymbol, filterContent, isLanguageSupported } from './lens-rules';
 // Import toggle system functions
 import { isExtensionEnabled, isEditorEnabled, isDocumentEnabled } from '../actions/toggle';
 
@@ -937,6 +937,15 @@ export class BracketHeaderGenerator {
       // NEW: Apply language-specific formatting before length truncation
       result = this.languageFormatter.formatContext(result, document.languageId);
       
+      // NEW: Limit to maximum 2 words
+      const words = result.split(/\s+/).filter(word => word.length > 0);
+      if (words.length > 2) {
+        result = words.slice(0, 2).join(' ') + '...';
+      } else {
+        result = words.join(' ');
+      }
+      
+      // Apply length truncation if still too long after word limit
       if (maxBracketHeaderLength < result.length) {
         return result.substring(0, maxBracketHeaderLength - 3) + '...';
       }
