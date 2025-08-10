@@ -14,8 +14,8 @@ export interface FilterRules {
 export const EXCLUDED_SYMBOLS = [
   'const',
   '//',
-  '?', 
-  ':', 
+  '?',
+  ':',
   '=',
   '>',
   '{',
