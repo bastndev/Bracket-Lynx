@@ -942,7 +942,7 @@ export class BracketHeaderGenerator {
       );
 
       // NEW: Apply word limit using rules system
-      result = applyWordLimit(result);
+      result = applyWordLimit(result, document.languageId);
 
       // Apply length truncation if still too long after word limit
       if (maxBracketHeaderLength < result.length) {

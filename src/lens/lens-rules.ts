@@ -18,7 +18,9 @@ export const SUPPORTED_LANGUAGES = [
 
 export const MAX_HEADER_WORDS = 1;
 export const MAX_EXCEPTION_WORDS = 2;
+export const MAX_CSS_WORDS = 2;
 export const EXCEPTION_WORDS = ['export'];
+export const CSS_RELATED_WORDS = ['style', 'styles', 'css'];
 
 export const FILTER_RULES: FilterRules = {
   excludedSymbols: EXCLUDED_SYMBOLS,
@@ -36,6 +38,10 @@ export function containsExceptionWord(text: string): boolean {
   return EXCEPTION_WORDS.some(word => text.toLowerCase().includes(word.toLowerCase()));
 }
 
+export function containsCssContent(text: string): boolean {
+  return CSS_RELATED_WORDS.some(word => text.toLowerCase().includes(word.toLowerCase()));
+}
+
 export function filterContent(content: string): string {
   let filtered = content;
 
@@ -46,11 +52,20 @@ export function filterContent(content: string): string {
   return filtered.replace(/\s+/g, ' ').trim();
 }
 
-export function applyWordLimit(text: string): string {
+export function applyWordLimit(text: string, languageId?: string): string {
   const words = text.split(/\s+/).filter((word) => word.length > 0);
   
   const hasExceptionWord = containsExceptionWord(text);
-  const maxWords = hasExceptionWord ? MAX_EXCEPTION_WORDS : MAX_HEADER_WORDS;
+  const hasCssContent = containsCssContent(text);
+  const isCssFile = languageId === 'css' || languageId === 'scss' || languageId === 'sass' || languageId === 'less';
+  
+  // Determine max words based on context
+  let maxWords = MAX_HEADER_WORDS;
+  if (hasExceptionWord) {
+    maxWords = MAX_EXCEPTION_WORDS;
+  } else if (hasCssContent || isCssFile) {
+    maxWords = MAX_CSS_WORDS;
+  }
   
   if (words.length > maxWords) {
     return words.slice(0, maxWords).join(' ') + '...';
