@@ -77,9 +77,19 @@ export function refreshBrackets(): void {
   }
 
   if (bracketLynxProvider && isEditorEnabled(activeEditor)) {
-    bracketLynxProvider.clearDecorationCache?.(activeEditor.document);
-    bracketLynxProvider.forceUpdateEditor?.(activeEditor);
-    vscode.window.showInformationMessage('♻️ Bracket Lynx: Refreshed');
+    // Force sync color configuration before refreshing
+    const { forceSyncColorWithConfiguration } = require('./colors');
+    forceSyncColorWithConfiguration().then(() => {
+      bracketLynxProvider.clearDecorationCache?.(activeEditor.document);
+      bracketLynxProvider.forceUpdateEditor?.(activeEditor);
+      vscode.window.showInformationMessage('♻️ Bracket Lynx: Refreshed');
+    }).catch((error: any) => {
+      console.error('♻️ Error during refresh:', error);
+      // Still try to refresh even if color sync fails
+      bracketLynxProvider.clearDecorationCache?.(activeEditor.document);
+      bracketLynxProvider.forceUpdateEditor?.(activeEditor);
+      vscode.window.showInformationMessage('♻️ Bracket Lynx: Refreshed (with warnings)');
+    });
   } else {
     vscode.window.showInformationMessage('♻️ Bracket Lynx: Cannot refresh (disabled)');
   }

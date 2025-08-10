@@ -138,7 +138,9 @@ export class LanguageFormatter {
 
     // Handle closing JSX tags
     // Pattern: "</tagname>" → "tagname"
-    const jsxClosingTagMatch = result.match(/<\/\s*([a-zA-Z][a-zA-Z0-9-]*)\s*>/);
+    const jsxClosingTagMatch = result.match(
+      /<\/\s*([a-zA-Z][a-zA-Z0-9-]*)\s*>/
+    );
     if (jsxClosingTagMatch) {
       const tagName = jsxClosingTagMatch[1].toLowerCase();
       if (tagName === 'image' || tagName === 'img') {

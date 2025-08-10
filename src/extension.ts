@@ -33,7 +33,12 @@ export const activate = async (context: vscode.ExtensionContext) => {
         vscode.workspace.onDidChangeConfiguration(
             async (event) => {
                 if (event.affectsConfiguration('bracketLynx')) {
+                    // Handle configuration changes for both the main provider and color system
                     BracketLynx.onDidChangeConfiguration();
+                    
+                    // Import and call color system configuration handler
+                    const { onConfigurationChanged } = await import('./actions/colors.js');
+                    await onConfigurationChanged();
                 }
             }
         ),
@@ -45,7 +50,18 @@ export const activate = async (context: vscode.ExtensionContext) => {
             BracketLynx.onDidChangeTextDocument(document);
             cleanupClosedEditor(document);
         }),
-        vscode.window.onDidChangeActiveTextEditor(() => BracketLynx.onDidChangeActiveTextEditor())
+        vscode.window.onDidChangeActiveTextEditor(() => BracketLynx.onDidChangeActiveTextEditor()),
+        
+        // Listen for file system changes that might affect configuration
+        vscode.workspace.onDidSaveTextDocument(async (document) => {
+            // Check if a settings file was saved that might affect our configuration
+            if (document.fileName.includes('.vscode/settings.json') || 
+                document.fileName.includes('settings.json')) {
+                console.log('🎨 Settings file changed, syncing color configuration');
+                const { forceSyncColorWithConfiguration } = await import('./actions/colors.js');
+                await forceSyncColorWithConfiguration();
+            }
+        })
     );
     
     // Initialize decorations for visible editors

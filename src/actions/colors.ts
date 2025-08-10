@@ -247,12 +247,18 @@ function loadColorFromConfiguration(): string {
     try {
         const config = vscode.workspace.getConfiguration('bracketLynx');
         const savedColor = config.get<string>('color');
+        
         if (savedColor && isValidHexColor(savedColor)) {
+            console.log(`🎨 Loaded color from configuration: ${savedColor}`);
             return savedColor;
+        } else if (savedColor) {
+            console.warn(`🎨 Invalid color in configuration: ${savedColor}, using default`);
         }
     } catch (error) {
         console.warn('🎨 Could not load color from configuration:', error);
     }
+    
+    console.log('🎨 Using default color: #515151');
     return '#515151';
 }
 
@@ -272,6 +278,18 @@ export async function setColor(color: string): Promise<void> {
 export function initializeColorSystem(): void {
     currentColor = loadColorFromConfiguration();
     console.log(`🎨 Color system initialized with color: ${currentColor}`);
+    
+    // Ensure decorations are updated with the correct color on initialization
+    if (bracketLynxProvider) {
+        setTimeout(async () => {
+            try {
+                await recreateAllBracketLynxDecorations(currentColor);
+                console.log(`🎨 Initial decorations applied with color: ${currentColor}`);
+            } catch (error) {
+                console.error('🎨 Error applying initial color decorations:', error);
+            }
+        }, 100);
+    }
 }
 
 export function getEffectiveColor(): string {
@@ -282,20 +300,62 @@ export function getCurrentColor(): string {
     return currentColor;
 }
 
+/**
+ * Force synchronization of color state with configuration
+ * Useful after external changes like git reset
+ */
+export async function forceSyncColorWithConfiguration(): Promise<void> {
+    const configColor = loadColorFromConfiguration();
+    if (configColor !== currentColor) {
+        console.log(`🎨 Force syncing color: ${currentColor} -> ${configColor}`);
+        currentColor = configColor;
+        
+        if (bracketLynxProvider) {
+            try {
+                await recreateAllBracketLynxDecorations(configColor);
+            } catch (error) {
+                console.error('🎨 Error during force sync:', error);
+            }
+        }
+    }
+}
+
 export function isValidHexColor(color: string): boolean {
     return /^#[0-9a-fA-F]{6}$/.test(color);
 }
 
 export async function onConfigurationChanged(): Promise<void> {
     const newColor = loadColorFromConfiguration();
-    if (newColor !== currentColor && isValidHexColor(newColor)) {
-        console.log(`🎨 Configuration changed, updating color from ${currentColor} to ${newColor}`);
+    
+    // Always sync the current color with configuration, even if it seems the same
+    // This handles cases where git reset or other external changes occur
+    if (isValidHexColor(newColor)) {
+        const wasColorChanged = newColor !== currentColor;
         currentColor = newColor;
+        
         if (bracketLynxProvider) {
             try {
+                // Force refresh decorations to ensure they use the correct color
                 await recreateAllBracketLynxDecorations(newColor);
+                
+                if (wasColorChanged) {
+                    console.log(`🎨 Configuration changed, color updated from previous to ${newColor}`);
+                } else {
+                    console.log(`🎨 Configuration resynced, color confirmed as ${newColor}`);
+                }
             } catch (error) {
                 console.error('🎨 Error updating decorations after configuration change:', error);
+            }
+        }
+    } else {
+        // If configuration has invalid color, reset to default
+        console.warn(`🎨 Invalid color in configuration: ${newColor}, resetting to default`);
+        currentColor = '#515151';
+        if (bracketLynxProvider) {
+            try {
+                await recreateAllBracketLynxDecorations('#515151');
+            } catch (error) {
+                console.error('🎨 Error resetting to default color:', error);
             }
         }
     }
