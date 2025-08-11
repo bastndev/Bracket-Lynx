@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 
 let isEnabled = true;
 let bracketLynxProvider: any = undefined;
+let astroDecorator: any = undefined;
 const disabledEditors = new Map<string, boolean>();
 
 export function toggleBracketLynx(): void {
@@ -51,11 +52,19 @@ export function toggleCurrentEditor(): void {
     if (bracketLynxProvider && isEnabled) {
       bracketLynxProvider.forceUpdateEditor?.(activeEditor);
     }
+    // Update Astro decorations if it's an Astro file
+    if (astroDecorator && isEnabled) {
+      astroDecorator.forceUpdateEditor?.(activeEditor);
+    }
     vscode.window.showInformationMessage('📄 Bracket Lynx: Enabled for current file');
   } else {
     disabledEditors.set(editorKey, true);
     if (bracketLynxProvider) {
       bracketLynxProvider.clearEditorDecorations?.(activeEditor);
+    }
+    // Clear Astro decorations if it's an Astro file
+    if (astroDecorator) {
+      astroDecorator.clearDecorations?.(activeEditor);
     }
     vscode.window.showInformationMessage('📄 Bracket Lynx: Disabled for current file');
   }
@@ -73,11 +82,23 @@ export function refreshBrackets(): void {
     forceSyncColorWithConfiguration().then(() => {
       bracketLynxProvider.clearDecorationCache?.(activeEditor.document);
       bracketLynxProvider.forceUpdateEditor?.(activeEditor);
+      
+      // Refresh Astro decorations if it's an Astro file
+      if (astroDecorator) {
+        astroDecorator.forceUpdateEditor?.(activeEditor);
+      }
+      
       vscode.window.showInformationMessage('♻️ Bracket Lynx: Refreshed');
     }).catch((error: any) => {
       console.error('♻️ Error during refresh:', error);
       bracketLynxProvider.clearDecorationCache?.(activeEditor.document);
       bracketLynxProvider.forceUpdateEditor?.(activeEditor);
+      
+      // Refresh Astro decorations even with errors
+      if (astroDecorator) {
+        astroDecorator.forceUpdateEditor?.(activeEditor);
+      }
+      
       vscode.window.showInformationMessage('♻️ Bracket Lynx: Refreshed (with warnings)');
     });
   } else {
@@ -91,6 +112,10 @@ export function setBracketLynxProvider(provider: any): void {
   const { setBracketLynxProviderForColors, initializeColorSystem } = require('./colors');
   setBracketLynxProviderForColors(provider);
   initializeColorSystem();
+}
+
+export function setAstroDecorator(decorator: any): void {
+  astroDecorator = decorator;
 }
 
 export function showBracketLynxMenu(): void {
@@ -148,11 +173,21 @@ function reactivateExtension(): void {
   if (bracketLynxProvider) {
     bracketLynxProvider.updateAllDecoration?.();
   }
+  
+  // Reactivate Astro decorations
+  if (astroDecorator) {
+    astroDecorator.forceRefresh?.();
+  }
 }
 
 function deactivateExtension(): void {
   if (bracketLynxProvider) {
     bracketLynxProvider.clearAllDecorations?.();
+  }
+  
+  // Deactivate Astro decorations
+  if (astroDecorator) {
+    astroDecorator.clearAllDecorations?.();
   }
 }
 

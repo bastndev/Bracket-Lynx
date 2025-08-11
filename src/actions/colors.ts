@@ -16,6 +16,7 @@ export interface IBracketLynxProvider {
 }
 
 let bracketLynxProvider: IBracketLynxProvider | undefined = undefined;
+let astroDecorator: any = undefined;
 let currentColor: string = '#515151';
 /**
  * Available color presets
@@ -34,6 +35,10 @@ function getAvailableColors(): ColorOption[] {
 
 export function setBracketLynxProviderForColors(provider: IBracketLynxProvider): void {
     bracketLynxProvider = provider;
+}
+
+export function setAstroDecoratorForColors(decorator: any): void {
+    astroDecorator = decorator;
 }
 
 export function changeDecorationColor(): void {
@@ -187,6 +192,11 @@ async function recreateAllBracketLynxDecorations(overrideColor?: string): Promis
             if (activeEditor && isEditorEnabled(activeEditor)) {
                 bracketLynxProvider.forceUpdateEditor(activeEditor);
             }
+        }
+        
+        // Also refresh Astro decorations
+        if (astroDecorator && typeof astroDecorator.forceColorRefresh === 'function') {
+            astroDecorator.forceColorRefresh();
         }
     } catch (error) {
         console.error('🎨 Error recreating decorations:', error);
