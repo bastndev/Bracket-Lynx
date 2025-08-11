@@ -6,7 +6,7 @@ import {
   BracketLynxConfig,
   HeaderMode,
 } from '../lens/lens';
-import { containsTryCatchKeyword } from '../lens/lens-rules';
+import { containsControlFlowKeyword } from '../lens/lens-rules';
 
 // ============================================================================
 // PARSING STATE INTERFACES
@@ -1048,12 +1048,12 @@ export class OptimizedBracketParser {
       // Get bracket content once for efficiency
       const content = this.getBracketContent(bracket, document);
 
-      // Apply minimum line requirement with try-catch exception
+      // Apply minimum line requirement with control flow exception (try-catch, if-else)
       const lineSpan =
         bracket.end.position.line - bracket.start.position.line + 1;
       if (lineSpan < minBracketScopeLines && !bracket.isUnmatchBrackets) {
-        // Check if this bracket contains try-catch keywords - if so, allow it
-        if (!containsTryCatchKeyword(content)) {
+        // Check if this bracket contains control flow keywords - if so, allow it
+        if (!containsControlFlowKeyword(content)) {
           return false;
         }
       }
@@ -1088,13 +1088,13 @@ export class OptimizedBracketParser {
       const lineSpan =
         bracket.end.position.line - bracket.start.position.line + 1;
 
-      // More strict line requirement with try-catch exception
+      // More strict line requirement with control flow exception (try-catch, if-else)
       if (
         lineSpan < Math.max(5, BracketLynxConfig.minBracketScopeLines) &&
         !bracket.isUnmatchBrackets
       ) {
-        // Check if this bracket contains try-catch keywords - if so, allow it
-        if (!containsTryCatchKeyword(content)) {
+        // Check if this bracket contains control flow keywords - if so, allow it
+        if (!containsControlFlowKeyword(content)) {
           return false;
         }
       }
