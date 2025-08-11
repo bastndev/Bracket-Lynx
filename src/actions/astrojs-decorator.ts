@@ -4,7 +4,7 @@ import { isEditorEnabled, isExtensionEnabled } from './toggle';
 import { BracketLynxConfig } from '../lens/lens';
 import { AdvancedCacheManager } from '../core/performance-cache';
 
-export interface AstroComponentRange {
+export interface ComponentRange {
   name: string;
   startLine: number;
   endLine: number;
@@ -12,10 +12,11 @@ export interface AstroComponentRange {
   hasContent: boolean;
 }
 
-export class AstroDecorator {
+export class UniversalDecorator {
   private static decorationType: vscode.TextEditorDecorationType | undefined;
   private static cache = AdvancedCacheManager.getInstance();
-  private static readonly ASTRO_EXTENSION = '.astro';
+  private static readonly SUPPORTED_EXTENSIONS = ['.astro', '.html'];
+  private static readonly SUPPORTED_LANGUAGE_IDS = ['astro', 'html'];
   
   /**
    * Ensure decoration type is created with current configuration
@@ -37,11 +38,10 @@ export class AstroDecorator {
   }
 
   /**
-   * Main method to update Astro decorations for an editor
+   * Main method to update decorations for an editor
    */
-  public static updateAstroDecorations(editor: vscode.TextEditor): void {
-    // Early returns for invalid states
-    if (!editor || !this.isAstroFile(editor.document)) {
+  public static updateDecorations(editor: vscode.TextEditor): void {
+    if (!editor || !this.isSupportedFile(editor.document)) {
       return;
     }
 
@@ -50,7 +50,6 @@ export class AstroDecorator {
       return;
     }
 
-    // Performance check
     if (!this.shouldProcessFile(editor.document)) {
       this.clearDecorations(editor);
       return;
@@ -58,22 +57,23 @@ export class AstroDecorator {
 
     try {
       const decorationType = this.ensureDecorationType();
-      const decorations = this.generateAstroDecorations(editor.document);
+      const decorations = this.generateDecorations(editor.document);
       editor.setDecorations(decorationType, decorations);
       
       if (BracketLynxConfig.debug) {
-        console.log(`Astro Decorator: Applied ${decorations.length} decorations to ${editor.document.fileName}`);
+        const fileType = this.getFileType(editor.document);
+        console.log(`Universal Decorator: Applied ${decorations.length} decorations to ${fileType} file: ${editor.document.fileName}`);
       }
     } catch (error) {
-      console.error('Astro Decorator: Error updating decorations:', error);
+      console.error('Universal Decorator: Error updating decorations:', error);
       this.clearDecorations(editor);
     }
   }
 
   /**
-   * Generate decoration options for Astro components
+   * Generate decoration options for components
    */
-  private static generateAstroDecorations(document: vscode.TextDocument): vscode.DecorationOptions[] {
+  private static generateDecorations(document: vscode.TextDocument): vscode.DecorationOptions[] {
     const decorations: vscode.DecorationOptions[] = [];
     const text = document.getText();
     const lines = text.split('\n');
@@ -99,11 +99,10 @@ export class AstroDecorator {
       }
     }
 
-    // Apply performance limits
     const maxDecorations = BracketLynxConfig.maxDecorationsPerFile;
     if (decorations.length > maxDecorations) {
       if (BracketLynxConfig.debug) {
-        console.log(`Astro Decorator: Limiting decorations from ${decorations.length} to ${maxDecorations}`);
+        console.log(`Universal Decorator: Limiting decorations from ${decorations.length} to ${maxDecorations}`);
       }
       return decorations.slice(0, maxDecorations);
     }
@@ -112,31 +111,28 @@ export class AstroDecorator {
   }
 
   /**
-   * Find Astro component ranges in the document
+   * Find component ranges in the document
    */
-  private static findComponentRanges(lines: string[]): AstroComponentRange[] {
+  private static findComponentRanges(lines: string[]): ComponentRange[] {
     const componentStack: { name: string, startLine: number }[] = [];
-    const componentRanges: AstroComponentRange[] = [];
+    const componentRanges: ComponentRange[] = [];
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       const trimmedLine = line.trim();
 
-      // Find opening tags
       const openTagMatch = trimmedLine.match(/<(\w+)(?:\s+[^>]*)?(?<!\/)\s*>/);
       if (openTagMatch) {
         const componentName = openTagMatch[1];
-        if (this.isAstroComponent(componentName)) {
+        if (this.isTargetElement(componentName)) {
           componentStack.push({ name: componentName, startLine: i + 1 });
         }
       }
 
-      // Find closing tags
       const closeTagMatch = trimmedLine.match(/<\/(\w+)\s*>/);
       if (closeTagMatch) {
         const componentName = closeTagMatch[1];
         
-        // Find matching opening tag (LIFO - Last In, First Out)
         for (let j = componentStack.length - 1; j >= 0; j--) {
           if (componentStack[j].name === componentName) {
             const openComponent = componentStack[j];
@@ -168,15 +164,20 @@ export class AstroDecorator {
   }
 
   /**
+   * Check if a tag name represents a target element (Astro component or HTML element)
+   */
+  private static isTargetElement(tagName: string): boolean {
+    return this.isAstroComponent(tagName) || this.isTargetHtmlElement(tagName);
+  }
+
+  /**
    * Check if a tag name represents an Astro component
    */
   private static isAstroComponent(tagName: string): boolean {
-    // Component names start with uppercase letter
     if (tagName[0] === tagName[0].toUpperCase()) {
       return true;
     }
 
-    // Built-in Astro elements
     const astroElements = [
       'Fragment', 'Astro', 'Code', 'Markdown', 'Debug',
       'slot', 'Fragment', 'Component'
@@ -186,26 +187,48 @@ export class AstroDecorator {
   }
 
   /**
+   * Check if a tag name is one of the target HTML elements we want to decorate
+   */
+  private static isTargetHtmlElement(tagName: string): boolean {
+    const targetHtmlElements = [
+      'style', 'script', 'section', 'article',
+      'main', 'header', 'footer', 'aside', 'nav',
+      'html', 'body'
+    ];
+    
+    return targetHtmlElements.includes(tagName.toLowerCase());
+  }
+
+  /**
    * Check if there's significant content between component tags
-   * Improved to detect content with only 1 significant line
+   * Improved to detect content with only 1 significant line, with special handling for style tags
    */
   private static hasSignificantContent(lines: string[], startIndex: number, endIndex: number): boolean {
     let significantLines = 0;
     
+    const openingLine = lines[startIndex]?.trim() || '';
+    const tagMatch = openingLine.match(/<(\w+)/);
+    const tagName = tagMatch ? tagMatch[1].toLowerCase() : '';
+    
     for (let i = startIndex + 1; i < endIndex; i++) {
       const contentLine = lines[i].trim();
       
-      // Skip empty lines and comments
-      if (contentLine && 
-          !contentLine.startsWith('<!--') && 
-          !contentLine.endsWith('-->')) {
-        
-        // Count any non-empty, non-comment line as significant content
-        // This includes HTML tags, text content, and JSX expressions
+      if (!contentLine) {
+        continue;
+      }
+      
+      if (contentLine.startsWith('<!--') || contentLine.endsWith('-->')) {
+        continue;
+      }
+      
+      if (tagName === 'style') {
+        if (contentLine && contentLine !== '{' && contentLine !== '}') {
+          significantLines++;
+          return true;
+        }
+      } else {
         if (contentLine !== '{' && contentLine !== '}') {
           significantLines++;
-          
-          // Return true as soon as we find at least 1 significant line
           if (significantLines >= 1) {
             return true;
           }
@@ -217,11 +240,28 @@ export class AstroDecorator {
   }
 
   /**
-   * Check if file is an Astro file
+   * Check if file is a supported file (Astro or HTML)
    */
-  private static isAstroFile(document: vscode.TextDocument): boolean {
-    return document.fileName.endsWith(this.ASTRO_EXTENSION) || 
-           document.languageId === 'astro';
+  private static isSupportedFile(document: vscode.TextDocument): boolean {
+    const hasValidExtension = this.SUPPORTED_EXTENSIONS.some(ext => 
+      document.fileName.endsWith(ext)
+    );
+    const hasValidLanguageId = this.SUPPORTED_LANGUAGE_IDS.includes(document.languageId);
+    
+    return hasValidExtension || hasValidLanguageId;
+  }
+
+  /**
+   * Get file type for debugging purposes
+   */
+  private static getFileType(document: vscode.TextDocument): string {
+    if (document.fileName.endsWith('.astro') || document.languageId === 'astro') {
+      return 'Astro';
+    }
+    if (document.fileName.endsWith('.html') || document.languageId === 'html') {
+      return 'HTML';
+    }
+    return 'Unknown';
   }
 
   /**
@@ -237,7 +277,8 @@ export class AstroDecorator {
 
     if (fileSize > maxFileSize) {
       if (BracketLynxConfig.debug) {
-        console.log(`Astro Decorator: Skipping large file: ${document.fileName} (${fileSize} bytes)`);
+        const fileType = this.getFileType(document);
+        console.log(`Universal Decorator: Skipping large ${fileType} file: ${document.fileName} (${fileSize} bytes)`);
       }
       return false;
     }
@@ -248,7 +289,7 @@ export class AstroDecorator {
   /**
    * Check if decoration should be shown for this component
    */
-  private static shouldShowDecoration(component: AstroComponentRange): boolean {
+  private static shouldShowDecoration(component: ComponentRange): boolean {
     const lineSpan = component.endLine - component.startLine;
     const minLines = Math.max(1, BracketLynxConfig.minBracketScopeLines - 2);
     
@@ -270,13 +311,13 @@ export class AstroDecorator {
   public static clearAllDecorations(): void {
     if (this.decorationType) {
       vscode.window.visibleTextEditors
-        .filter(editor => this.isAstroFile(editor.document))
+        .filter(editor => this.isSupportedFile(editor.document))
         .forEach(editor => this.clearDecorations(editor));
     }
   }
 
   /**
-   * Force refresh all Astro decorations
+   * Force refresh all decorations
    */
   public static forceRefresh(): void {
     if (this.decorationType) {
@@ -286,8 +327,8 @@ export class AstroDecorator {
 
     if (isExtensionEnabled()) {
       vscode.window.visibleTextEditors
-        .filter(editor => this.isAstroFile(editor.document))
-        .forEach(editor => this.updateAstroDecorations(editor));
+        .filter(editor => this.isSupportedFile(editor.document))
+        .forEach(editor => this.updateDecorations(editor));
     }
   }
 
@@ -295,8 +336,8 @@ export class AstroDecorator {
    * Force update decorations for a specific editor
    */
   public static forceUpdateEditor(editor: vscode.TextEditor): void {
-    if (this.isAstroFile(editor.document)) {
-      this.updateAstroDecorations(editor);
+    if (this.isSupportedFile(editor.document)) {
+      this.updateDecorations(editor);
     }
   }
 
@@ -304,13 +345,11 @@ export class AstroDecorator {
    * Handle configuration changes
    */
   public static onDidChangeConfiguration(): void {
-    // Recreate decoration type with new configuration
     if (this.decorationType) {
       this.decorationType.dispose();
       this.decorationType = undefined;
     }
     
-    // Refresh all visible Astro editors
     this.forceRefresh();
   }
 
@@ -330,4 +369,13 @@ export class AstroDecorator {
       this.decorationType = undefined;
     }
   }
+
+  /**
+   * @deprecated Use updateDecorations instead
+   */
+  public static updateAstroDecorations(editor: vscode.TextEditor): void {
+    this.updateDecorations(editor);
+  }
 }
+
+export const AstroDecorator = UniversalDecorator;
