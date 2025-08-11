@@ -131,7 +131,7 @@ export class BracketLynxConfig {
   }
 
   static get minBracketScopeLines(): number {
-    return this.getConfig().get('minBracketScopeLines', 3);
+    return this.getConfig().get('minBracketScopeLines', 4);
   }
 
   static get enablePerformanceFilters(): boolean {

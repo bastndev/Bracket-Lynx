@@ -22,7 +22,7 @@ suite('Extension Test Suite', () => {
 			assert.strictEqual(BracketLynxConfig.prefix, '‹~ ');
 			assert.strictEqual(BracketLynxConfig.unmatchBracketsPrefix, '❌ ');
 			assert.strictEqual(BracketLynxConfig.maxBracketHeaderLength, 50);
-			assert.strictEqual(BracketLynxConfig.minBracketScopeLines, 3);
+			assert.strictEqual(BracketLynxConfig.minBracketScopeLines, 4);
 			assert.strictEqual(BracketLynxConfig.enablePerformanceFilters, true);
 			assert.strictEqual(BracketLynxConfig.maxDecorationsPerFile, 500);
 		});
