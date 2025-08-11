@@ -41,7 +41,6 @@ export class UniversalDecorator {
    * Main method to update decorations for an editor
    */
   public static updateDecorations(editor: vscode.TextEditor): void {
-    // Early returns for invalid states
     if (!editor || !this.isSupportedFile(editor.document)) {
       return;
     }
@@ -51,7 +50,6 @@ export class UniversalDecorator {
       return;
     }
 
-    // Performance check
     if (!this.shouldProcessFile(editor.document)) {
       this.clearDecorations(editor);
       return;
@@ -101,7 +99,6 @@ export class UniversalDecorator {
       }
     }
 
-    // Apply performance limits
     const maxDecorations = BracketLynxConfig.maxDecorationsPerFile;
     if (decorations.length > maxDecorations) {
       if (BracketLynxConfig.debug) {
@@ -124,7 +121,6 @@ export class UniversalDecorator {
       const line = lines[i];
       const trimmedLine = line.trim();
 
-      // Find opening tags (including self-closing tags check)
       const openTagMatch = trimmedLine.match(/<(\w+)(?:\s+[^>]*)?(?<!\/)\s*>/);
       if (openTagMatch) {
         const componentName = openTagMatch[1];
@@ -133,12 +129,10 @@ export class UniversalDecorator {
         }
       }
 
-      // Find closing tags
       const closeTagMatch = trimmedLine.match(/<\/(\w+)\s*>/);
       if (closeTagMatch) {
         const componentName = closeTagMatch[1];
         
-        // Find matching opening tag (LIFO - Last In, First Out)
         for (let j = componentStack.length - 1; j >= 0; j--) {
           if (componentStack[j].name === componentName) {
             const openComponent = componentStack[j];
@@ -180,12 +174,10 @@ export class UniversalDecorator {
    * Check if a tag name represents an Astro component
    */
   private static isAstroComponent(tagName: string): boolean {
-    // Component names start with uppercase letter
     if (tagName[0] === tagName[0].toUpperCase()) {
       return true;
     }
 
-    // Built-in Astro elements
     const astroElements = [
       'Fragment', 'Astro', 'Code', 'Markdown', 'Debug',
       'slot', 'Fragment', 'Component'
@@ -201,7 +193,7 @@ export class UniversalDecorator {
     const targetHtmlElements = [
       'style', 'script', 'section', 'article',
       'main', 'header', 'footer', 'aside', 'nav',
-      'html', 'body'  // Added html and body support, removed div
+      'html', 'body'
     ];
     
     return targetHtmlElements.includes(tagName.toLowerCase());
@@ -214,7 +206,6 @@ export class UniversalDecorator {
   private static hasSignificantContent(lines: string[], startIndex: number, endIndex: number): boolean {
     let significantLines = 0;
     
-    // Get the tag name from the opening tag to apply special rules
     const openingLine = lines[startIndex]?.trim() || '';
     const tagMatch = openingLine.match(/<(\w+)/);
     const tagName = tagMatch ? tagMatch[1].toLowerCase() : '';
@@ -222,30 +213,22 @@ export class UniversalDecorator {
     for (let i = startIndex + 1; i < endIndex; i++) {
       const contentLine = lines[i].trim();
       
-      // Skip empty lines
       if (!contentLine) {
         continue;
       }
       
-      // Skip HTML comments
       if (contentLine.startsWith('<!--') || contentLine.endsWith('-->')) {
         continue;
       }
       
-      // For style tags, be more permissive with CSS content
       if (tagName === 'style') {
-        // CSS selectors, properties, or any non-empty content in style tags counts
         if (contentLine && contentLine !== '{' && contentLine !== '}') {
           significantLines++;
-          return true; // Return immediately for style tags with any content
+          return true;
         }
       } else {
-        // For other tags, use the original logic
-        // Count any non-empty, non-comment line as significant content
         if (contentLine !== '{' && contentLine !== '}') {
           significantLines++;
-          
-          // Return true as soon as we find at least 1 significant line
           if (significantLines >= 1) {
             return true;
           }
@@ -362,13 +345,11 @@ export class UniversalDecorator {
    * Handle configuration changes
    */
   public static onDidChangeConfiguration(): void {
-    // Recreate decoration type with new configuration
     if (this.decorationType) {
       this.decorationType.dispose();
       this.decorationType = undefined;
     }
     
-    // Refresh all visible Astro editors
     this.forceRefresh();
   }
 
@@ -389,7 +370,6 @@ export class UniversalDecorator {
     }
   }
 
-  // Backward compatibility methods (maintain the original methods if other files use them)
   /**
    * @deprecated Use updateDecorations instead
    */
@@ -398,5 +378,4 @@ export class UniversalDecorator {
   }
 }
 
-// Export the class with both names for backward compatibility
 export const AstroDecorator = UniversalDecorator;
