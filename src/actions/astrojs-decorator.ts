@@ -37,7 +37,6 @@ export class AstroDecorator {
       after: {
         color: getCurrentColor(),
         fontStyle: BracketLynxConfig.fontStyle,
-        margin: '0 0 0 1em',
       },
       rangeBehavior: vscode.DecorationRangeBehavior.ClosedClosed
     });
@@ -152,7 +151,7 @@ export class AstroDecorator {
             componentStack.splice(j, 1);
 
             const lineSpan = (i + 1) - openComponent.startLine;
-            const minLines = BracketLynxConfig.minBracketScopeLines;
+            const minLines = Math.max(1, BracketLynxConfig.minBracketScopeLines - 2); // Reducir el mínimo requerido
             
             if (lineSpan >= minLines) {
               const hasContent = this.hasSignificantContent(lines, openComponent.startLine - 1, i);
@@ -196,22 +195,33 @@ export class AstroDecorator {
 
   /**
    * Check if there's significant content between component tags
+   * Mejorado para detectar contenido con solo 1 línea significativa
    */
   private static hasSignificantContent(lines: string[], startIndex: number, endIndex: number): boolean {
+    let significantLines = 0;
+    
     for (let i = startIndex + 1; i < endIndex; i++) {
       const contentLine = lines[i].trim();
       
-      // Skip empty lines, comments, and simple brackets
+      // Skip empty lines and comments
       if (contentLine && 
           !contentLine.startsWith('<!--') && 
-          !contentLine.endsWith('-->') &&
-          contentLine !== '{' && 
-          contentLine !== '}' &&
-          contentLine !== '') {
-        return true;
+          !contentLine.endsWith('-->')) {
+        
+        // Count any non-empty, non-comment line as significant content
+        // This includes HTML tags, text content, and JSX expressions
+        if (contentLine !== '{' && contentLine !== '}') {
+          significantLines++;
+          
+          // Return true as soon as we find at least 1 significant line
+          if (significantLines >= 1) {
+            return true;
+          }
+        }
       }
     }
-    return false;
+    
+    return significantLines >= 1;
   }
 
   /**
@@ -245,10 +255,12 @@ export class AstroDecorator {
 
   /**
    * Check if decoration should be shown for this component
+   * Mejorado para mostrar decoración con menos líneas requeridas
    */
   private static shouldShowDecoration(component: AstroComponentRange): boolean {
     const lineSpan = component.endLine - component.startLine;
-    const minLines = BracketLynxConfig.minBracketScopeLines;
+    // Reducir el mínimo de líneas requeridas para mostrar la decoración
+    const minLines = Math.max(1, BracketLynxConfig.minBracketScopeLines - 2);
     
     return lineSpan >= minLines;
   }
