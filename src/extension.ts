@@ -38,10 +38,15 @@ export const activate = async (context: vscode.ExtensionContext) => {
         }
     };
 
-    // Helper function to update Astro decorations
-    const updateAstroDecorations = (editor?: vscode.TextEditor) => {
-        if (editor && (editor.document.fileName.endsWith('.astro') || editor.document.languageId === 'astro')) {
-            AstroDecorator.updateAstroDecorations(editor);
+    // Helper function to update Universal decorations (Astro and HTML)
+    const updateUniversalDecorations = (editor?: vscode.TextEditor) => {
+        if (editor && (
+            editor.document.fileName.endsWith('.astro') || 
+            editor.document.fileName.endsWith('.html') ||
+            editor.document.languageId === 'astro' || 
+            editor.document.languageId === 'html'
+        )) {
+            AstroDecorator.updateDecorations(editor);
         }
     };
 
@@ -53,26 +58,26 @@ export const activate = async (context: vscode.ExtensionContext) => {
         }),
         vscode.workspace.onDidChangeTextDocument(event => {
             BracketLynx.onDidChangeTextDocument(event.document);
-            // Update Astro decorations on text changes
+            // Update Universal decorations on text changes
             const editor = vscode.window.visibleTextEditors.find(e => e.document === event.document);
             if (editor) {
-                updateAstroDecorations(editor);
+                updateUniversalDecorations(editor);
             }
         }),
         vscode.workspace.onDidOpenTextDocument((document) => {
             BracketLynx.onDidOpenTextDocument(document);
-            // Update Astro decorations when opening files
+            // Update Universal decorations when opening files
             const editor = vscode.window.visibleTextEditors.find(e => e.document === document);
             if (editor) {
-                updateAstroDecorations(editor);
+                updateUniversalDecorations(editor);
             }
         }),
         vscode.workspace.onDidSaveTextDocument((document) => {
             BracketLynx.onDidSaveTextDocument(document);
-            // Update Astro decorations on save
+            // Update Universal decorations on save
             const editor = vscode.window.visibleTextEditors.find(e => e.document === document);
             if (editor) {
-                updateAstroDecorations(editor);
+                updateUniversalDecorations(editor);
             }
         }),
         vscode.workspace.onDidCloseTextDocument((document) => {
@@ -81,21 +86,21 @@ export const activate = async (context: vscode.ExtensionContext) => {
         }),
         vscode.window.onDidChangeActiveTextEditor((editor) => {
             BracketLynx.onDidChangeActiveTextEditor();
-            // Update Astro decorations when switching editors
-            updateAstroDecorations(editor);
+            // Update Universal decorations when switching editors
+            updateUniversalDecorations(editor);
         }),
         vscode.workspace.onDidSaveTextDocument(handleSettingsFileSave)
     );
     
     vscode.window.visibleTextEditors.forEach(editor => {
         BracketLynx.delayUpdateDecoration(editor);
-        // Initialize Astro decorations for visible editors
-        updateAstroDecorations(editor);
+        // Initialize Universal decorations for visible editors
+        updateUniversalDecorations(editor);
     });
 };
 
 export const deactivate = () => {
-    // Cleanup Astro decorations
+    // Cleanup Universal decorations
     AstroDecorator.dispose();
     // Other cleanup handled automatically by VSCode
 };
