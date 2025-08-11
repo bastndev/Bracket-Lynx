@@ -200,8 +200,8 @@ export class UniversalDecorator {
   private static isTargetHtmlElement(tagName: string): boolean {
     const targetHtmlElements = [
       'style', 'script', 'section', 'article',
-      // You can add more tags here if you want to decorate others in HTML files
-      'main', 'header', 'footer', 'aside', 'nav', 'div'
+      'main', 'header', 'footer', 'aside', 'nav',
+      'html', 'body'  // Added html and body support, removed div
     ];
     
     return targetHtmlElements.includes(tagName.toLowerCase());
