@@ -4,10 +4,6 @@ import { isEditorEnabled, isExtensionEnabled } from './toggle';
 import { BracketLynxConfig } from '../lens/lens';
 import { AdvancedCacheManager } from '../core/performance-cache';
 
-// ============================================================================
-// INTERFACES
-// ============================================================================
-
 export interface AstroComponentRange {
   name: string;
   startLine: number;
@@ -15,10 +11,6 @@ export interface AstroComponentRange {
   range: vscode.Range;
   hasContent: boolean;
 }
-
-// ============================================================================
-// ASTRO DECORATOR CLASS
-// ============================================================================
 
 export class AstroDecorator {
   private static decorationType: vscode.TextEditorDecorationType | undefined;
@@ -151,7 +143,7 @@ export class AstroDecorator {
             componentStack.splice(j, 1);
 
             const lineSpan = (i + 1) - openComponent.startLine;
-            const minLines = Math.max(1, BracketLynxConfig.minBracketScopeLines - 2); // Reducir el mínimo requerido
+            const minLines = Math.max(1, BracketLynxConfig.minBracketScopeLines - 2); 
             
             if (lineSpan >= minLines) {
               const hasContent = this.hasSignificantContent(lines, openComponent.startLine - 1, i);
@@ -195,7 +187,7 @@ export class AstroDecorator {
 
   /**
    * Check if there's significant content between component tags
-   * Mejorado para detectar contenido con solo 1 línea significativa
+   * Improved to detect content with only 1 significant line
    */
   private static hasSignificantContent(lines: string[], startIndex: number, endIndex: number): boolean {
     let significantLines = 0;
@@ -255,11 +247,9 @@ export class AstroDecorator {
 
   /**
    * Check if decoration should be shown for this component
-   * Mejorado para mostrar decoración con menos líneas requeridas
    */
   private static shouldShowDecoration(component: AstroComponentRange): boolean {
     const lineSpan = component.endLine - component.startLine;
-    // Reducir el mínimo de líneas requeridas para mostrar la decoración
     const minLines = Math.max(1, BracketLynxConfig.minBracketScopeLines - 2);
     
     return lineSpan >= minLines;
