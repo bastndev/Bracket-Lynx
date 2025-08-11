@@ -118,7 +118,7 @@
         },
         "bracketLynx.minBracketScopeLines": {
           "type": "number",
-          "default": 3,
+          "default": 4,
           "minimum": 1,
           "maximum": 50,
           "description": "Minimum number of lines for bracket scope to show decoration"
