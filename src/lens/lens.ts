@@ -10,6 +10,7 @@ import {
   isLanguageSupported,
   shouldProcessFile,
   applyWordLimit,
+  containsTryCatchKeyword,
 } from './lens-rules';
 import {
   isExtensionEnabled,
@@ -1095,10 +1096,19 @@ export class BracketDecorationGenerator {
     };
 
     const scanner = (context: BracketContext) => {
-      if (
-        minBracketScopeLines <=
-        context.entry.end.position.line - context.entry.start.position.line + 1
-      ) {
+      const lineSpan = context.entry.end.position.line - context.entry.start.position.line + 1;
+      const meetsMinLines = minBracketScopeLines <= lineSpan;
+      
+      // Check if it's a try-catch block (exception to minimum lines rule)
+      let isTryCatchException = false;
+      if (!meetsMinLines) {
+        const startLine = context.entry.start.position.line;
+        const endLine = context.entry.end.position.line;
+        const content = document.getText(new vscode.Range(startLine, 0, endLine + 1, 0));
+        isTryCatchException = containsTryCatchKeyword(content);
+      }
+      
+      if (meetsMinLines || isTryCatchException) {
         if (
           // Skip if next block starts on same line as closing
           context.entry.end.position.line <
