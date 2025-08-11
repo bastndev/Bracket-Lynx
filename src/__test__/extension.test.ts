@@ -8,6 +8,7 @@ import { BracketLynx, BracketLynxConfig, PositionUtils, regExpExecToArray } from
 import { toggleBracketLynx, isExtensionEnabled, isEditorEnabled } from '../actions/toggle';
 import { LanguageFormatter } from '../lens/language-formatter';
 import { shouldExcludeSymbol, isLanguageSupported, filterContent } from '../lens/lens-rules';
+import { UniversalDecorator, AstroDecorator } from '../actions/astrojs-decorator';
 
 suite('Extension Test Suite', () => {
 	vscode.window.showInformationMessage('🧪 Starting Bracket Lynx tests...');
@@ -184,6 +185,30 @@ suite('Extension Test Suite', () => {
 		});
 	});
 
+	suite('UniversalDecorator Tests', () => {
+		test('✅ UniversalDecorator class exists and has required methods', () => {
+			assert.ok(typeof UniversalDecorator.updateDecorations === 'function', 'updateDecorations method should exist');
+			assert.ok(typeof UniversalDecorator.clearDecorations === 'function', 'clearDecorations method should exist');
+			assert.ok(typeof UniversalDecorator.clearAllDecorations === 'function', 'clearAllDecorations method should exist');
+			assert.ok(typeof UniversalDecorator.forceRefresh === 'function', 'forceRefresh method should exist');
+			assert.ok(typeof UniversalDecorator.forceUpdateEditor === 'function', 'forceUpdateEditor method should exist');
+			assert.ok(typeof UniversalDecorator.dispose === 'function', 'dispose method should exist');
+		});
+
+		test('✅ Backward compatibility with AstroDecorator', () => {
+			assert.ok(typeof AstroDecorator.updateAstroDecorations === 'function', 'updateAstroDecorations method should exist for backward compatibility');
+			assert.ok(typeof AstroDecorator.updateDecorations === 'function', 'updateDecorations method should exist');
+			
+			// Test that AstroDecorator is the same as UniversalDecorator
+			assert.strictEqual(AstroDecorator, UniversalDecorator, 'AstroDecorator should be an alias for UniversalDecorator');
+		});
+
+		test('✅ Configuration methods exist', () => {
+			assert.ok(typeof UniversalDecorator.onDidChangeConfiguration === 'function', 'onDidChangeConfiguration method should exist');
+			assert.ok(typeof UniversalDecorator.forceColorRefresh === 'function', 'forceColorRefresh method should exist');
+		});
+	});
+
 	// Integration test that simulates real usage
 	suite('Integration Tests', () => {
 		test('✅ Complete workflow simulation', async () => {
@@ -199,6 +224,21 @@ suite('Extension Test Suite', () => {
 			// Test language support
 			assert.ok(isLanguageSupported('typescript'), 'TypeScript should be supported');
 			assert.ok(isLanguageSupported('javascript'), 'JavaScript should be supported');
+		});
+
+		test('✅ UniversalDecorator integration', () => {
+			// Test that UniversalDecorator methods can be called without errors
+			assert.doesNotThrow(() => {
+				UniversalDecorator.clearAllDecorations();
+			}, 'clearAllDecorations should not throw');
+
+			assert.doesNotThrow(() => {
+				UniversalDecorator.forceRefresh();
+			}, 'forceRefresh should not throw');
+
+			assert.doesNotThrow(() => {
+				UniversalDecorator.dispose();
+			}, 'dispose should not throw');
 		});
 	});
 });

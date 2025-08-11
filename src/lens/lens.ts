@@ -8,6 +8,7 @@ import {
   shouldExcludeSymbol,
   filterContent,
   isLanguageSupported,
+  shouldProcessFile,
   applyWordLimit,
 } from './lens-rules';
 import {
@@ -1214,7 +1215,7 @@ export class BracketLynx {
     }
 
     // NEW: Check if language is supported by rules
-    if (!isLanguageSupported(textEditor.document.languageId)) {
+    if (!shouldProcessFile(textEditor.document.languageId, textEditor.document.fileName)) {
       const editorCache = CacheManager.editorCache.get(textEditor);
       editorCache?.dispose();
       CacheManager.editorCache.delete(textEditor);
@@ -1343,7 +1344,7 @@ export class BracketLynx {
     }
 
     // NEW: Check if language is supported by rules
-    if (!isLanguageSupported(document.languageId)) {
+    if (!shouldProcessFile(document.languageId, document.fileName)) {
       return;
     }
 
@@ -1359,7 +1360,7 @@ export class BracketLynx {
     }
 
     // NEW: Check if language is supported by rules
-    if (!isLanguageSupported(document.languageId)) {
+    if (!shouldProcessFile(document.languageId, document.fileName)) {
       return;
     }
 
@@ -1416,7 +1417,7 @@ export class BracketLynx {
     if (
       isExtensionEnabled() &&
       isDocumentEnabled(document) &&
-      isLanguageSupported(document.languageId) &&
+      shouldProcessFile(document.languageId, document.fileName) &&
       ('auto' === mode || 'on-save' === mode)
     ) {
       this.delayUpdateDecorationByDocument(document);
@@ -1427,7 +1428,7 @@ export class BracketLynx {
     if (
       isExtensionEnabled() &&
       isDocumentEnabled(document) &&
-      isLanguageSupported(document.languageId) &&
+      shouldProcessFile(document.languageId, document.fileName) &&
       'on-save' === BracketLynxConfig.mode
     ) {
       this.updateDecorationByDocument(document);
@@ -1444,7 +1445,7 @@ export class BracketLynx {
     }
 
     // NEW: Check if language is supported by rules
-    if (!isLanguageSupported(document.languageId)) {
+    if (!shouldProcessFile(document.languageId, document.fileName)) {
       return;
     }
 
