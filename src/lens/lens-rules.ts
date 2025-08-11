@@ -16,6 +16,11 @@ export const SUPPORTED_LANGUAGES = [
   'typescriptreact', 'vue', 'xml',
 ];
 
+// Only package.json should have decorations among JSON files
+export const ALLOWED_JSON_FILES = [
+  'package.json'
+];
+
 export const MAX_HEADER_WORDS = 1;
 export const MAX_EXCEPTION_WORDS = 2;
 export const MAX_CSS_WORDS = 2;
@@ -32,6 +37,21 @@ export function shouldExcludeSymbol(symbol: string): boolean {
 
 export function isLanguageSupported(languageId: string): boolean {
   return SUPPORTED_LANGUAGES.includes(languageId);
+}
+
+export function isJsonFileAllowed(fileName: string): boolean {
+  const baseName = fileName.split('/').pop() || fileName;
+  return ALLOWED_JSON_FILES.includes(baseName);
+}
+
+export function shouldProcessFile(languageId: string, fileName: string): boolean {
+  // For JSON files, check if it's in the allowed list
+  if (languageId === 'json' || languageId === 'jsonc') {
+    return isJsonFileAllowed(fileName);
+  }
+  
+  // For other languages, use the standard check
+  return isLanguageSupported(languageId);
 }
 
 export function containsExceptionWord(text: string): boolean {
