@@ -26,6 +26,8 @@ export const MAX_EXCEPTION_WORDS = 2;
 export const MAX_CSS_WORDS = 2;
 export const EXCEPTION_WORDS = ['export'];
 export const CSS_RELATED_WORDS = ['style', 'styles', 'css'];
+export const TRY_CATCH_KEYWORDS = ['try', 'catch', 'finally', 'except', 'rescue', 'ensure'];
+export const IF_ELSE_KEYWORDS = ['if', 'else', 'elif', 'elsif', 'elseif', 'switch', 'case', 'when'];
 
 export const FILTER_RULES: FilterRules = {
   excludedSymbols: EXCLUDED_SYMBOLS,
@@ -60,6 +62,18 @@ export function containsExceptionWord(text: string): boolean {
 
 export function containsCssContent(text: string): boolean {
   return CSS_RELATED_WORDS.some(word => text.toLowerCase().includes(word.toLowerCase()));
+}
+
+export function containsTryCatchKeyword(text: string): boolean {
+  return TRY_CATCH_KEYWORDS.some(keyword => text.toLowerCase().includes(keyword.toLowerCase()));
+}
+
+export function containsIfElseKeyword(text: string): boolean {
+  return IF_ELSE_KEYWORDS.some(keyword => text.toLowerCase().includes(keyword.toLowerCase()));
+}
+
+export function containsControlFlowKeyword(text: string): boolean {
+  return containsTryCatchKeyword(text) || containsIfElseKeyword(text);
 }
 
 export function filterContent(content: string): string {
