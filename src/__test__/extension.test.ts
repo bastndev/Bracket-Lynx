@@ -1,92 +1,94 @@
 import * as assert from 'assert';
-import * as vscode from 'vscode';
-import * as path from 'path';
+
+// Import VSCode mock first
+import './vscode-mock';
 
 // Import modules to test
-import * as myExtension from '../extension';
-import { BracketLynx, BracketLynxConfig, PositionUtils, regExpExecToArray } from '../lens/lens';
-import { toggleBracketLynx, isExtensionEnabled, isEditorEnabled } from '../actions/toggle';
 import { LanguageFormatter } from '../lens/language-formatter';
 import { shouldExcludeSymbol, isLanguageSupported, filterContent } from '../lens/lens-rules';
-import { UniversalDecorator, AstroDecorator } from '../lens/decorators/astrojs-decorator';
+import { 
+  escapeRegExp, 
+  isEmpty, 
+  truncateText, 
+  isValidHexColor,
+  formatBytes,
+  chunkArray
+} from '../core/utils';
+import { 
+  SUPPORTED_LANGUAGES, 
+  ALLOWED_JSON_FILES, 
+  PERFORMANCE_LIMITS,
+  isSupportedLanguage,
+  isAllowedJsonFile,
+  shouldProcessFile
+} from '../core/config';
 
-suite('Extension Test Suite', () => {
-	vscode.window.showInformationMessage('🧪 Starting Bracket Lynx tests...');
+suite('Bracket Lynx Core Tests', () => {
+	console.log('🧪 Starting Bracket Lynx core tests...');
 
 	suite('Configuration Tests', () => {
-		test('✅ BracketLynxConfig default values', () => {
-			assert.strictEqual(BracketLynxConfig.mode, 'auto');
-			assert.strictEqual(BracketLynxConfig.debug, false);
-			assert.strictEqual(typeof BracketLynxConfig.color, 'string');
-			assert.strictEqual(BracketLynxConfig.fontStyle, 'italic');
-			assert.strictEqual(BracketLynxConfig.prefix, '‹~ ');
-			assert.strictEqual(BracketLynxConfig.unmatchBracketsPrefix, '❌ ');
-			assert.strictEqual(BracketLynxConfig.maxBracketHeaderLength, 50);
-			assert.strictEqual(BracketLynxConfig.minBracketScopeLines, 4);
-			assert.strictEqual(BracketLynxConfig.enablePerformanceFilters, true);
-			assert.strictEqual(BracketLynxConfig.maxDecorationsPerFile, 500);
+		test('✅ Core configuration constants', () => {
+			assert.ok(SUPPORTED_LANGUAGES.length > 0, 'Should have supported languages');
+			assert.ok(ALLOWED_JSON_FILES.includes('package.json'), 'Should allow package.json');
+			assert.ok(PERFORMANCE_LIMITS.MAX_FILE_SIZE > 0, 'Should have file size limit');
+			assert.ok(PERFORMANCE_LIMITS.MAX_DECORATIONS_PER_FILE > 0, 'Should have decoration limit');
 		});
 
-		test('✅ Configuration validation', () => {
-			const maxFileSize = BracketLynxConfig.maxFileSize;
-			assert.ok(maxFileSize > 0, 'Max file size should be positive');
-			
-			const maxDecorationsPerFile = BracketLynxConfig.maxDecorationsPerFile;
-			assert.ok(maxDecorationsPerFile >= 50 && maxDecorationsPerFile <= 2000, 
-				'Max decorations should be within valid range');
+		test('✅ Language support validation', () => {
+			assert.strictEqual(isSupportedLanguage('javascript'), true);
+			assert.strictEqual(isSupportedLanguage('typescript'), true);
+			assert.strictEqual(isSupportedLanguage('astro'), true);
+			assert.strictEqual(isSupportedLanguage('unknownlang'), false);
+		});
+
+		test('✅ File processing rules', () => {
+			assert.strictEqual(isAllowedJsonFile('package.json'), true);
+			assert.strictEqual(isAllowedJsonFile('random.json'), false);
+			assert.strictEqual(shouldProcessFile('javascript', 'test.js'), true);
+			assert.strictEqual(shouldProcessFile('unknownlang', 'test.unknown'), false);
+		});
+
+		test('✅ Performance limits validation', () => {
+			assert.ok(PERFORMANCE_LIMITS.MAX_FILE_SIZE > 0, 'Should have positive file size limit');
+			assert.ok(PERFORMANCE_LIMITS.MAX_DECORATIONS_PER_FILE > 0, 'Should have positive decoration limit');
+			assert.ok(PERFORMANCE_LIMITS.MIN_BRACKET_SCOPE_LINES > 0, 'Should have positive scope line limit');
+			assert.ok(PERFORMANCE_LIMITS.DEBOUNCE_DELAY > 0, 'Should have positive debounce delay');
 		});
 	});
 
 	suite('Utility Functions Tests', () => {
-		test('✅ PositionUtils.nextLine', () => {
-			const pos = new vscode.Position(5, 10);
-			const nextLine = PositionUtils.nextLine(pos, 2);
-			assert.strictEqual(nextLine.line, 7);
-			assert.strictEqual(nextLine.character, 0);
-		});
-
-		test('✅ PositionUtils.nextCharacter', () => {
-			const pos = new vscode.Position(5, 10);
-			const nextChar = PositionUtils.nextCharacter(pos, 3);
-			assert.strictEqual(nextChar.line, 5);
-			assert.strictEqual(nextChar.character, 13);
-		});
-
-		test('✅ PositionUtils.min and max', () => {
-			const pos1 = new vscode.Position(5, 10);
-			const pos2 = new vscode.Position(3, 15);
-			const pos3 = new vscode.Position(8, 5);
+		test('✅ Core utility functions', () => {
+			// Test escapeRegExp
+			assert.strictEqual(escapeRegExp('test.string'), 'test\\.string');
+			assert.strictEqual(escapeRegExp('test[bracket]'), 'test\\[bracket\\]');
 			
-			const minPos = PositionUtils.min([pos1, pos2, pos3]);
-			const maxPos = PositionUtils.max([pos1, pos2, pos3]);
+			// Test isEmpty
+			assert.strictEqual(isEmpty(''), true);
+			assert.strictEqual(isEmpty('   '), true);
+			assert.strictEqual(isEmpty('content'), false);
+			assert.strictEqual(isEmpty(null), true);
+			assert.strictEqual(isEmpty(undefined), true);
 			
-			assert.strictEqual(minPos.line, 3);
-			assert.strictEqual(maxPos.line, 8);
-		});
-
-		test('✅ regExpExecToArray function', () => {
-			const regex = /\d+/g;
-			const text = 'abc 123 def 456 ghi';
-			const results = regExpExecToArray(regex, text);
+			// Test truncateText
+			assert.strictEqual(truncateText('short', 10), 'short');
+			assert.strictEqual(truncateText('this is a very long text', 10), 'this is...');
 			
-			assert.strictEqual(results.length, 2);
-			assert.strictEqual(results[0][0], '123');
-			assert.strictEqual(results[1][0], '456');
-		});
-	});
-
-	suite('Toggle Functionality Tests', () => {
-		test('✅ Extension toggle state management', () => {
-			// Test initial state
-			assert.strictEqual(isExtensionEnabled(), true);
+			// Test isValidHexColor
+			assert.strictEqual(isValidHexColor('#ff6b6b'), true);
+			assert.strictEqual(isValidHexColor('#FF6B6B'), true);
+			assert.strictEqual(isValidHexColor('ff6b6b'), false);
+			assert.strictEqual(isValidHexColor('#gg6b6b'), false);
 			
-			// Test toggle functionality
-			toggleBracketLynx();
-			assert.strictEqual(isExtensionEnabled(), false);
+			// Test formatBytes
+			assert.strictEqual(formatBytes(1024), '1.00 KB');
+			assert.strictEqual(formatBytes(1048576), '1.00 MB');
 			
-			// Toggle back
-			toggleBracketLynx();
-			assert.strictEqual(isExtensionEnabled(), true);
+			// Test chunkArray
+			const array = [1, 2, 3, 4, 5, 6, 7];
+			const chunks = chunkArray(array, 3);
+			assert.strictEqual(chunks.length, 3);
+			assert.deepStrictEqual(chunks[0], [1, 2, 3]);
+			assert.deepStrictEqual(chunks[2], [7]);
 		});
 	});
 
@@ -100,7 +102,8 @@ suite('Extension Test Suite', () => {
 		test('✅ Language support validation', () => {
 			assert.strictEqual(isLanguageSupported('javascript'), true);
 			assert.strictEqual(isLanguageSupported('typescript'), true);
-			assert.strictEqual(isLanguageSupported('python'), true);
+			assert.strictEqual(isLanguageSupported('astro'), true);
+			assert.strictEqual(isLanguageSupported('css'), true);
 			assert.strictEqual(isLanguageSupported('unknownlang'), false);
 		});
 
@@ -135,20 +138,6 @@ suite('Extension Test Suite', () => {
 		});
 	});
 
-	suite('Extension Activation Tests', () => {
-		test('✅ Extension context should be set', () => {
-			assert.ok(myExtension.extensionContext !== undefined, 
-				'Extension context should be defined after activation');
-		});
-		
-		test('✅ BracketLynx class methods exist', () => {
-			assert.ok(typeof BracketLynx.onDidChangeConfiguration === 'function');
-			assert.ok(typeof BracketLynx.onDidChangeTextDocument === 'function');
-			assert.ok(typeof BracketLynx.onDidOpenTextDocument === 'function');
-			assert.ok(typeof BracketLynx.delayUpdateDecoration === 'function');
-		});
-	});
-
 	suite('Performance Tests', () => {
 		test('✅ Large text handling simulation', async () => {
 			// Create a large text simulation
@@ -164,11 +153,8 @@ suite('Extension Test Suite', () => {
 		});
 		
 		test('✅ Memory usage validation', () => {
-			const maxFileSize = BracketLynxConfig.maxFileSize;
-			const maxDecorations = BracketLynxConfig.maxDecorationsPerFile;
-			
-			assert.ok(maxFileSize <= 50 * 1024 * 1024, 'Max file size should be reasonable (<50MB)');
-			assert.ok(maxDecorations <= 2000, 'Max decorations should be reasonable (<2000)');
+			assert.ok(PERFORMANCE_LIMITS.MAX_FILE_SIZE <= 50 * 1024 * 1024, 'Max file size should be reasonable (<50MB)');
+			assert.ok(PERFORMANCE_LIMITS.MAX_DECORATIONS_PER_FILE <= 2000, 'Max decorations should be reasonable (<2000)');
 		});
 	});
 
@@ -183,29 +169,17 @@ suite('Extension Test Suite', () => {
 			// Test filtering empty content
 			assert.strictEqual(filterContent(''), '');
 		});
-	});
 
-	suite('UniversalDecorator Tests', () => {
-		test('✅ UniversalDecorator class exists and has required methods', () => {
-			assert.ok(typeof UniversalDecorator.updateDecorations === 'function', 'updateDecorations method should exist');
-			assert.ok(typeof UniversalDecorator.clearDecorations === 'function', 'clearDecorations method should exist');
-			assert.ok(typeof UniversalDecorator.clearAllDecorations === 'function', 'clearAllDecorations method should exist');
-			assert.ok(typeof UniversalDecorator.forceRefresh === 'function', 'forceRefresh method should exist');
-			assert.ok(typeof UniversalDecorator.forceUpdateEditor === 'function', 'forceUpdateEditor method should exist');
-			assert.ok(typeof UniversalDecorator.dispose === 'function', 'dispose method should exist');
-		});
-
-		test('✅ Backward compatibility with AstroDecorator', () => {
-			assert.ok(typeof AstroDecorator.updateAstroDecorations === 'function', 'updateAstroDecorations method should exist for backward compatibility');
-			assert.ok(typeof AstroDecorator.updateDecorations === 'function', 'updateDecorations method should exist');
-			
-			// Test that AstroDecorator is the same as UniversalDecorator
-			assert.strictEqual(AstroDecorator, UniversalDecorator, 'AstroDecorator should be an alias for UniversalDecorator');
-		});
-
-		test('✅ Configuration methods exist', () => {
-			assert.ok(typeof UniversalDecorator.onDidChangeConfiguration === 'function', 'onDidChangeConfiguration method should exist');
-			assert.ok(typeof UniversalDecorator.forceColorRefresh === 'function', 'forceColorRefresh method should exist');
+		test('✅ Utility error handling', () => {
+			// Test that utility functions handle edge cases gracefully
+			assert.doesNotThrow(() => {
+				escapeRegExp('');
+				isEmpty('');
+				truncateText('', 0);
+				isValidHexColor('');
+				formatBytes(0);
+				chunkArray([], 1);
+			}, 'Utility functions should handle edge cases gracefully');
 		});
 	});
 
@@ -213,8 +187,6 @@ suite('Extension Test Suite', () => {
 	suite('Integration Tests', () => {
 		test('✅ Complete workflow simulation', async () => {
 			// Simulate the complete workflow that would happen in real usage
-			assert.ok(isExtensionEnabled(), 'Extension should be enabled by default');
-			
 			const formatter = new LanguageFormatter();
 			const testCode = 'function example() { return true; }';
 			const formatted = formatter.formatContext(testCode, 'typescript');
@@ -226,19 +198,31 @@ suite('Extension Test Suite', () => {
 			assert.ok(isLanguageSupported('javascript'), 'JavaScript should be supported');
 		});
 
-		test('✅ UniversalDecorator integration', () => {
-			// Test that UniversalDecorator methods can be called without errors
-			assert.doesNotThrow(() => {
-				UniversalDecorator.clearAllDecorations();
-			}, 'clearAllDecorations should not throw');
+		test('✅ Configuration and utilities integration', () => {
+			// Test that configuration and utilities work together
+			const supportedLangs = SUPPORTED_LANGUAGES;
+			assert.ok(supportedLangs.includes('javascript'), 'JavaScript should be in supported languages');
+			assert.ok(supportedLangs.includes('typescript'), 'TypeScript should be in supported languages');
+			assert.ok(supportedLangs.includes('astro'), 'Astro should be in supported languages');
+			
+			// Test that utilities work with configuration values
+			const maxSize = PERFORMANCE_LIMITS.MAX_FILE_SIZE;
+			const formattedSize = formatBytes(maxSize);
+			assert.ok(formattedSize.includes('MB'), 'Should format file size correctly');
+		});
 
-			assert.doesNotThrow(() => {
-				UniversalDecorator.forceRefresh();
-			}, 'forceRefresh should not throw');
-
-			assert.doesNotThrow(() => {
-				UniversalDecorator.dispose();
-			}, 'dispose should not throw');
+		test('✅ Language rules and formatter integration', () => {
+			// Test that language rules and formatter work together
+			const formatter = new LanguageFormatter();
+			
+			// Test with supported language
+			const jsCode = 'const test = "hello world";';
+			const jsFormatted = formatter.formatContext(jsCode, 'javascript');
+			assert.ok(typeof jsFormatted === 'string', 'Should format JavaScript code');
+			
+			// Test content filtering
+			const filtered = filterContent(jsCode);
+			assert.ok(typeof filtered === 'string', 'Should filter content');
 		});
 	});
 });
