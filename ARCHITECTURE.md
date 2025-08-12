@@ -260,20 +260,44 @@ bracket-lynx/
 ├── src/
 │   ├── extension.ts                 # 🚀 Main entry point
 │   ├── core/                        # ⚡ Performance systems
+│   │   ├── config.ts                # ⚙️ Extension config manager
 │   │   ├── performance-cache.ts     # 💾 Advanced caching
 │   │   ├── performance-parser.ts    # 🏃 Optimized parsing
-│   │   └── parser-exceptions.ts     # 🛡️ Exception handling
+│   │   ├── parser-exceptions.ts     # 🛡️ Exception handling
+│   │   └── utils.ts                 # 🛠️ Core utilities
 │   ├── lens/                        # 👁️ Core lens system
 │   │   ├── lens.ts                  # 🎯 Main lens logic
 │   │   ├── language-formatter.ts    # 🌐 Language support
-│   │   └── lens-rules.ts           # 📋 Filtering rules
+│   │   ├── lens-rules.ts            # 📋 Filtering rules
+│   │   └── decorators/
+│   │       └── astrojs-decorator.ts # 🌟 AstroJS specific decorator
 │   ├── actions/                     # 🎛️ Control systems
-│   │   ├── toggle.ts               # 🔄 Toggle management
-│   │   └── colors.ts               # 🎨 Color system
+│   │   ├── toggle.ts                # 🔄 Toggle management
+│   │   └── colors.ts                # 🎨 Color system
 │   └── __test__/                    # 🧪 Test suite
+│       ├── extension.test.ts        # 🧪 Extension tests
+│       ├── test-feature_astro.md    # 🧪 Astro feature test
+│       ├── test-refactor.md         # 🧪 Refactor test
+│       ├── test-v0.4.0.md           # 🧪 v0.4.0 test
+│       ├── test-v0.5.0.md           # 🧪 v0.5.0 test
+│       ├── test-v0.6.0.md           # 🧪 v0.6.0 test
+│       └── TESTING_GUIDE.md         # 📖 Testing guide
 ├── assets/                          # 🖼️ Resources
+│   ├── icon.png                     # 🖼️ Extension icon
+│   └── images/
+│       ├── screenshot.jpg           # 🖼️ Screenshot
+│       └── star.png                 # 🖼️ Star icon
 ├── package.json                     # 📋 Extension config
-└── README.md                        # 📖 Documentation
+├── README.md                        # 📖 Documentation
+├── ARCHITECTURE.md                  # 🏗️ Architecture overview
+├── CHANGELOG.md                     # 📝 Changelog
+├── CODE_OF_CONDUCT.md               # 📜 Code of conduct
+├── CONTRIBUTING.md                  # 🤝 Contribution guide
+├── esbuild.js                       # ⚡ Esbuild config
+├── eslint.config.mjs                # 🧹 ESLint config
+├── LICENSE                          # 📄 License
+├── tsconfig.json                    # 🛠️ TypeScript config
+├── vsc-extension-quickstart.md      # 🚀 VS Code quickstart
 ```
 
 ## 🎹 Key Features
