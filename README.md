@@ -15,27 +15,32 @@ Bracket Lynx includes a powerful **toggle system** that lets you control bracket
 
 ### 🛠️ Toggle Options
 
-| Option               | Description                                                | Scope        | Persistence         |
-| -------------------- | ---------------------------------------------------------- | ------------ | ------------------- |
-| **🌐 Toggle Global** | Enable/disable Bracket Lynx for all files in the workspace | Global       | Per session         |
-| **📄 Toggle File**   | Enable/disable only for the active file                    | Per file     | Persistent per file |
-| **🎨 Change Color**  | Instantly change bracket color for decorations             | Current file | Workspace-wide      |
-| **♻️ Refresh**       | Updates decorations for the current file                   | Current file | Immediate           |
+| Option                  | Description                                                      | Scope          | Persistence         |
+| ----------------------- | ---------------------------------------------------------------- | -------------- | ------------------- |
+| **🌐 Toggle Global**    | Enable/disable for all files, state saved across sessions        | Extension-wide | Persistent (Config) |
+| **📝 Toggle File**      | Enable/disable decorations per file, state saved across sessions | Per-file       | Persistent (Config) |
+| **🎨 Change Color**     | Change bracket color with live preview and picker                | Workspace-wide | Persistent (Config) |
+| **🧹 Memory Cleanup**   | Clean up memory for closed/unused editors, auto and manual       | Extension-wide | Immediate           |
+| **♻️ Refresh**          | Force update decorations for current file                        | Current file   | Immediate           |
+| -                       | -                                                                | -              | -                   |
+| **🧠 Memory Stats**     | Show memory usage and health in menu                             | Extension-wide | Immediate           |
+| **🛠️ Interactive Menu** | QuickPick menu for all actions, with live stats                  | Extension-wide | Immediate           |
 
 </br>
 
 ### 🎨 Color System
 
-Bracket Lynx features an advanced **color customization system** for bracket decorations. Easily change colors using the `Bracket Lynx: Change Decoration Color 🎨` command or from the toggle menu.
+Bracket Lynx features an advanced **color customization system** for bracket decorations. Easily change colors using the `Bracket Lynx: Change Decoration Color 🎨` command or from the interactive toggle menu.
 
-| 🎨 **Feature**          | 📝 **Description**                                                       | ⚡ **How to Use**                                            | 💾 **Persistence** |
-| ----------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------ | ------------------ |
-| **🌈 Built-in Colors**  | Choose from several integrated colors to highlight brackets              | Select from the color picker menu                            | 🗂️ Workspace-wide  |
-| **#️⃣ Custom Hex Color** | Enter any valid hex color for personalized decoration                    | Use "✏️ Write Custom" in the picker and enter your hex value | 🗂️ Workspace-wide  |
-| **👀 Live Preview**     | Instantly preview color changes before applying                          | Hover or select colors in the picker                         | ⏳ Temporary       |
-| **🔗 Settings Sync**    | Save your chosen color in workspace settings for a consistent experience | Automatically saved after selection                          | 🔒 Persistent      |
+| 🎨 **Feature**          | 📝 **Description**                      | ⚡ **How to Use**                                            | 💾 **Persistence**      |
+| ----------------------- | --------------------------------------- | ------------------------------------------------------------ | ----------------------- |
+| **🌈 Built-in Colors**  | Predefined color palette                | Select from the color picker menu                            | Workspace-wide (Config) |
+| **#️⃣ Custom Hex Color** | Any valid hex color                     | Use "✏️ Write Custom" in the picker and enter your hex value | Workspace-wide (Config) |
+| **👀 Live Preview**     | Real-time color changes                 | Hover/select colors in the picker                            | Temporary               |
+| **🎨 Color Picker**     | Interactive selection                   | QuickPick menu                                               | Immediate               |
+| **🔗 Settings Sync**    | Save color in workspace/global settings | Automatically saved after selection                          | Persistent (Config)     |
 
-**Tip:** You can reset to the default color (`#515151 ⚫`) or update your choice anytime.  
+**Tip:** You can reset to the default color (`#515151 ⚫`) or update your choice anytime. Color state is automatically restored after git reset or config changes.  
 Explore, experiment, and make your editor look the way you want! 🌟
 
 </br>
