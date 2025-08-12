@@ -11,15 +11,24 @@ let bracketLynxProvider: any = undefined;
 let astroDecorator: any = undefined;
 const disabledEditors = new Map<string, boolean>();
 
+// Configuration keys for persistence
+const CONFIG_SECTION = 'bracketLynx';
+const GLOBAL_ENABLED_KEY = 'globalEnabled';
+const DISABLED_FILES_KEY = 'disabledFiles';
+
 // Memory optimization: Periodic cleanup timer
 let memoryCleanupTimer: NodeJS.Timeout | undefined;
 const MEMORY_CLEANUP_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
-export function toggleBracketLynx(): void {
+export async function toggleBracketLynx(): Promise<void> {
   isEnabled = !isEnabled;
+
+  // Persist global state
+  await saveGlobalEnabledState(isEnabled);
 
   if (isEnabled) {
     disabledEditors.clear();
+    await saveDisabledFilesState();
     reactivateExtension();
     vscode.window.showInformationMessage(
       '🌐 Bracket Lynx: Activated globally (all files enabled)'
@@ -52,7 +61,7 @@ export function isDocumentEnabled(document: vscode.TextDocument): boolean {
   return !disabledEditors.get(documentUri);
 }
 
-export function toggleCurrentEditor(): void {
+export async function toggleCurrentEditor(): Promise<void> {
   const activeEditor = vscode.window.activeTextEditor;
   if (!activeEditor) {
     vscode.window.showWarningMessage('📝 No active editor to toggle');
@@ -71,6 +80,7 @@ export function toggleCurrentEditor(): void {
 
   if (isCurrentlyDisabled) {
     disabledEditors.delete(editorKey);
+    await saveDisabledFilesState();
     if (bracketLynxProvider) {
       bracketLynxProvider.forceUpdateEditor?.(activeEditor);
     }
@@ -83,6 +93,7 @@ export function toggleCurrentEditor(): void {
     );
   } else {
     disabledEditors.set(editorKey, true);
+    await saveDisabledFilesState();
     if (bracketLynxProvider) {
       bracketLynxProvider.clearEditorDecorations?.(activeEditor);
     }
@@ -189,17 +200,17 @@ export function showBracketLynxMenu(): void {
     .showQuickPick(options, {
       placeHolder: 'Choose Bracket Lynx action...',
     })
-    .then((selected) => {
+    .then(async (selected) => {
       if (!selected) {
         return;
       }
 
       switch (selected.action) {
         case 'global':
-          toggleBracketLynx();
+          await toggleBracketLynx();
           break;
         case 'current':
-          toggleCurrentEditor();
+          await toggleCurrentEditor();
           break;
         case 'refresh':
           refreshBrackets();
@@ -208,7 +219,7 @@ export function showBracketLynxMenu(): void {
           changeDecorationColor();
           break;
         case 'cleanup':
-          forceMemoryCleanup();
+          await forceMemoryCleanup();
           vscode.window.showInformationMessage(
             '🧹 Bracket Lynx: Memory cleanup completed!'
           );
@@ -245,13 +256,16 @@ function getEditorKey(editor: vscode.TextEditor): string {
 
 /**
  * Clean up disabled editor state when a document is closed
- * ENHANCED: More thorough cleanup with memory optimization
+ * ENHANCED: More thorough cleanup with memory optimization and persistence
  */
-export function cleanupClosedEditor(document: vscode.TextDocument): void {
+export async function cleanupClosedEditor(document: vscode.TextDocument): Promise<void> {
   const documentUri = document.uri.toString();
+  let hasChanges = false;
 
   // Remove the exact document URI
-  disabledEditors.delete(documentUri);
+  if (disabledEditors.delete(documentUri)) {
+    hasChanges = true;
+  }
 
   // Clean up any legacy keys that might reference this document
   const legacyKeysToDelete: string[] = [];
@@ -260,22 +274,31 @@ export function cleanupClosedEditor(document: vscode.TextDocument): void {
       legacyKeysToDelete.push(key);
     }
   }
-  legacyKeysToDelete.forEach((key) => disabledEditors.delete(key));
+  
+  if (legacyKeysToDelete.length > 0) {
+    legacyKeysToDelete.forEach((key) => disabledEditors.delete(key));
+    hasChanges = true;
+  }
+
+  // Save changes if any were made
+  if (hasChanges) {
+    await saveDisabledFilesState();
+  }
 
   // Trigger a broader cleanup if we have too many entries
   if (disabledEditors.size > 100) {
     console.log(
       `⚠️ Bracket Lynx: Large memory footprint detected (${disabledEditors.size} entries), triggering cleanup`
     );
-    cleanupAllClosedEditors();
+    await cleanupAllClosedEditors();
   }
 }
 
 /**
  * Clean up all closed editors that are no longer visible
- * FIXED: Now cleans ALL closed editors, not just untitled ones
+ * FIXED: Now cleans ALL closed editors, not just untitled ones, with persistence
  */
-export function cleanupAllClosedEditors(): void {
+export async function cleanupAllClosedEditors(): Promise<void> {
   const visibleUris = new Set<string>();
 
   // Get all currently visible editor URIs
@@ -301,10 +324,11 @@ export function cleanupAllClosedEditors(): void {
     disabledEditors.delete(key);
   });
 
-  // Debug logging for memory optimization
+  // Save changes if any were made
   if (keysToDelete.length > 0) {
+    await saveDisabledFilesState();
     console.log(
-      `🧹 Bracket Lynx: Cleaned up ${keysToDelete.length} closed editor(s) from memory`
+      `🧹 Bracket Lynx: Cleaned up ${keysToDelete.length} closed editor(s) from memory and persisted changes`
     );
   }
 }
@@ -319,9 +343,9 @@ function startMemoryCleanupTimer(): void {
   }
 
   // Set up periodic cleanup
-  memoryCleanupTimer = setInterval(() => {
+  memoryCleanupTimer = setInterval(async () => {
     const sizeBefore = disabledEditors.size;
-    cleanupAllClosedEditors();
+    await cleanupAllClosedEditors();
     const sizeAfter = disabledEditors.size;
 
     if (sizeBefore !== sizeAfter) {
@@ -365,11 +389,11 @@ export function getMemoryStats(): {
 /**
  * Force immediate memory cleanup and optimization
  */
-export function forceMemoryCleanup(): void {
+export async function forceMemoryCleanup(): Promise<void> {
   const statsBefore = getMemoryStats();
 
   // Clean up closed editors
-  cleanupAllClosedEditors();
+  await cleanupAllClosedEditors();
 
   // Additional cleanup: remove any invalid entries
   const keysToDelete: string[] = [];
@@ -380,7 +404,10 @@ export function forceMemoryCleanup(): void {
     }
   }
 
-  keysToDelete.forEach((key) => disabledEditors.delete(key));
+  if (keysToDelete.length > 0) {
+    keysToDelete.forEach((key) => disabledEditors.delete(key));
+    await saveDisabledFilesState();
+  }
 
   const statsAfter = getMemoryStats();
 
@@ -396,4 +423,77 @@ export function forceMemoryCleanup(): void {
       statsBefore.disabledEditorsCount - statsAfter.disabledEditorsCount
     } entries`
   );
+}
+
+// ============================================================================
+// PERSISTENCE FUNCTIONS
+// ============================================================================
+
+/**
+ * Save global enabled state to VSCode configuration
+ */
+async function saveGlobalEnabledState(enabled: boolean): Promise<void> {
+  try {
+    const config = vscode.workspace.getConfiguration(CONFIG_SECTION);
+    await config.update(GLOBAL_ENABLED_KEY, enabled, vscode.ConfigurationTarget.Global);
+  } catch (error) {
+    console.error('Failed to save global enabled state:', error);
+  }
+}
+
+/**
+ * Load global enabled state from VSCode configuration
+ */
+function loadGlobalEnabledState(): boolean {
+  try {
+    const config = vscode.workspace.getConfiguration(CONFIG_SECTION);
+    return config.get<boolean>(GLOBAL_ENABLED_KEY, true);
+  } catch (error) {
+    console.error('Failed to load global enabled state:', error);
+    return true; // Default to enabled
+  }
+}
+
+/**
+ * Save disabled files state to VSCode configuration
+ */
+async function saveDisabledFilesState(): Promise<void> {
+  try {
+    const config = vscode.workspace.getConfiguration(CONFIG_SECTION);
+    const disabledFilesArray = Array.from(disabledEditors.keys());
+    await config.update(DISABLED_FILES_KEY, disabledFilesArray, vscode.ConfigurationTarget.Global);
+  } catch (error) {
+    console.error('Failed to save disabled files state:', error);
+  }
+}
+
+/**
+ * Load disabled files state from VSCode configuration
+ */
+function loadDisabledFilesState(): void {
+  try {
+    const config = vscode.workspace.getConfiguration(CONFIG_SECTION);
+    const disabledFilesArray = config.get<string[]>(DISABLED_FILES_KEY, []);
+    
+    disabledEditors.clear();
+    disabledFilesArray.forEach(fileUri => {
+      disabledEditors.set(fileUri, true);
+    });
+  } catch (error) {
+    console.error('Failed to load disabled files state:', error);
+  }
+}
+
+/**
+ * Initialize state from persisted configuration
+ * This should be called when the extension activates
+ */
+export function initializePersistedState(): void {
+  // Load global enabled state
+  isEnabled = loadGlobalEnabledState();
+  
+  // Load disabled files state
+  loadDisabledFilesState();
+  
+  console.log(`🔄 Bracket Lynx: Initialized state - Global: ${isEnabled ? 'enabled' : 'disabled'}, Disabled files: ${disabledEditors.size}`);
 }
