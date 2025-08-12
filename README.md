@@ -11,9 +11,9 @@
 
 ## Toggle System
 
-Bracket Lynx includes a powerful **toggle system** that lets you control bracket decorations with great precision. Access the toggle menu by pressing `Ctrl+Shift+P` to open the command palette, using your configured keyboard shortcut, or running the `Bracket Lynx: Toggle & Refresh 🛠️` command.
+## 🛠️ Toggle System
 
-### 🛠️ Toggle Options
+**Toggle bracket decorations:** Press `Ctrl+Shift+P` → `Bracket Lynx: Toggle & Refresh 🛠️`
 
 | Option                  | Description                                                      | Scope          | Persistence         |
 | ----------------------- | ---------------------------------------------------------------- | -------------- | ------------------- |
@@ -30,7 +30,6 @@ Bracket Lynx includes a powerful **toggle system** that lets you control bracket
 
 ### 🎨 Color System
 
-Bracket Lynx features an advanced **color customization system** for bracket decorations. Easily change colors using the `Bracket Lynx: Change Decoration Color 🎨` command or from the interactive toggle menu.
 
 | 🎨 **Feature**          | 📝 **Description**                      | ⚡ **How to Use**                                            | 💾 **Persistence**      |
 | ----------------------- | --------------------------------------- | ------------------------------------------------------------ | ----------------------- |
@@ -42,6 +41,22 @@ Bracket Lynx features an advanced **color customization system** for bracket dec
 
 **Tip:** You can reset to the default color (`#515151 ⚫`) or update your choice anytime. Color state is automatically restored after git reset or config changes.  
 Explore, experiment, and make your editor look the way you want! 🌟
+
+## 🌐 Language Compatibility
+
+Bracket Lynx can only be used in the following languages:
+
+| 📝 **Language**     |     | 📝 **Language**     |     |
+| ------------------- | --- | ------------------- | --- |
+| ✨ JavaScript       |     | ⚡ TypeScript       |     |
+| ⚛️ JavaScript React |     | ⚛️ TypeScript React |     |
+| 🎨 CSS              |     | 🎨 SCSS             |     |
+| 🎨 SASS             |     | 🎨 LESS             |     |
+| 🌐 HTML             |     | 🟠 Astro            |     |
+| 🟩 Vue              |     | 🟦 Svelte           |     |
+| 🗂️ JSON             |     | 🗂️ JSONC            |     |
+
+> **📌 Note:** Bracket Lynx is automatically activated only for these languages.
 
 </br>
 
