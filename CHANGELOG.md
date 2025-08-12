@@ -10,6 +10,17 @@ Discover more extensions at [bastndev.com/extensions](https://bastndev.com/exten
 
 Following VS Code best practices, Lynx Theme Pro uses semantic versioning for all releases.
 
+## [0.6.1] - 2025-08-12
+
+### Added
+- Support for 14 programming languages and frameworks
+- Automatic language detection and activation
+- Intelligent bracket decoration system
+
+### Changed
+- Expanded language support matrix with modern web technologies
+- Improved automatic activation system for supported file types
+
 ## [0.6.0] - 2025-08-11
 
 ### Added
