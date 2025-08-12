@@ -9,11 +9,16 @@ export function toggleBracketLynx(): void {
   isEnabled = !isEnabled;
 
   if (isEnabled) {
+    disabledEditors.clear();
     reactivateExtension();
-    vscode.window.showInformationMessage('🌐 Bracket Lynx: Activated globally');
+    vscode.window.showInformationMessage(
+      '🌐 Bracket Lynx: Activated globally (all files enabled)'
+    );
   } else {
     deactivateExtension();
-    vscode.window.showInformationMessage('🌐 Bracket Lynx: Deactivated globally');
+    vscode.window.showInformationMessage(
+      '🌐 Bracket Lynx: Deactivated globally'
+    );
   }
 }
 
@@ -44,19 +49,28 @@ export function toggleCurrentEditor(): void {
     return;
   }
 
+  if (!isEnabled) {
+    vscode.window.showWarningMessage(
+      '📄 Cannot toggle individual file: Extension is disabled globally. Enable globally first.'
+    );
+    return;
+  }
+
   const editorKey = getEditorKey(activeEditor);
   const isCurrentlyDisabled = disabledEditors.get(editorKey) || false;
 
   if (isCurrentlyDisabled) {
     disabledEditors.delete(editorKey);
-    if (bracketLynxProvider && isEnabled) {
+    if (bracketLynxProvider) {
       bracketLynxProvider.forceUpdateEditor?.(activeEditor);
     }
     // Update Astro decorations if it's an Astro file
-    if (astroDecorator && isEnabled) {
+    if (astroDecorator) {
       astroDecorator.forceUpdateEditor?.(activeEditor);
     }
-    vscode.window.showInformationMessage('📄 Bracket Lynx: Enabled for current file');
+    vscode.window.showInformationMessage(
+      '📄 Bracket Lynx: Enabled for current file'
+    );
   } else {
     disabledEditors.set(editorKey, true);
     if (bracketLynxProvider) {
@@ -66,7 +80,9 @@ export function toggleCurrentEditor(): void {
     if (astroDecorator) {
       astroDecorator.clearDecorations?.(activeEditor);
     }
-    vscode.window.showInformationMessage('📄 Bracket Lynx: Disabled for current file');
+    vscode.window.showInformationMessage(
+      '📄 Bracket Lynx: Disabled for current file'
+    );
   }
 }
 
@@ -79,37 +95,46 @@ export function refreshBrackets(): void {
 
   if (bracketLynxProvider && isEditorEnabled(activeEditor)) {
     const { forceSyncColorWithConfiguration } = require('./colors');
-    forceSyncColorWithConfiguration().then(() => {
-      bracketLynxProvider.clearDecorationCache?.(activeEditor.document);
-      bracketLynxProvider.forceUpdateEditor?.(activeEditor);
-      
-      // Refresh Astro decorations if it's an Astro file
-      if (astroDecorator) {
-        astroDecorator.forceUpdateEditor?.(activeEditor);
-      }
-      
-      vscode.window.showInformationMessage('♻️ Bracket Lynx: Refreshed');
-    }).catch((error: any) => {
-      console.error('♻️ Error during refresh:', error);
-      bracketLynxProvider.clearDecorationCache?.(activeEditor.document);
-      bracketLynxProvider.forceUpdateEditor?.(activeEditor);
-      
-      // Refresh Astro decorations even with errors
-      if (astroDecorator) {
-        astroDecorator.forceUpdateEditor?.(activeEditor);
-      }
-      
-      vscode.window.showInformationMessage('♻️ Bracket Lynx: Refreshed (with warnings)');
-    });
+    forceSyncColorWithConfiguration()
+      .then(() => {
+        bracketLynxProvider.clearDecorationCache?.(activeEditor.document);
+        bracketLynxProvider.forceUpdateEditor?.(activeEditor);
+
+        // Refresh Astro decorations if it's an Astro file
+        if (astroDecorator) {
+          astroDecorator.forceUpdateEditor?.(activeEditor);
+        }
+
+        vscode.window.showInformationMessage('♻️ Bracket Lynx: Refreshed');
+      })
+      .catch((error: any) => {
+        console.error('♻️ Error during refresh:', error);
+        bracketLynxProvider.clearDecorationCache?.(activeEditor.document);
+        bracketLynxProvider.forceUpdateEditor?.(activeEditor);
+
+        // Refresh Astro decorations even with errors
+        if (astroDecorator) {
+          astroDecorator.forceUpdateEditor?.(activeEditor);
+        }
+
+        vscode.window.showInformationMessage(
+          '♻️ Bracket Lynx: Refreshed (with warnings)'
+        );
+      });
   } else {
-    vscode.window.showInformationMessage('♻️ Bracket Lynx: Cannot refresh (disabled)');
+    vscode.window.showInformationMessage(
+      '♻️ Bracket Lynx: Cannot refresh (disabled)'
+    );
   }
 }
 
 export function setBracketLynxProvider(provider: any): void {
   bracketLynxProvider = provider;
-  
-  const { setBracketLynxProviderForColors, initializeColorSystem } = require('./colors');
+
+  const {
+    setBracketLynxProviderForColors,
+    initializeColorSystem,
+  } = require('./colors');
   setBracketLynxProviderForColors(provider);
   initializeColorSystem();
 }
@@ -173,7 +198,7 @@ function reactivateExtension(): void {
   if (bracketLynxProvider) {
     bracketLynxProvider.updateAllDecoration?.();
   }
-  
+
   // Reactivate Astro decorations
   if (astroDecorator) {
     astroDecorator.forceRefresh?.();
@@ -184,7 +209,7 @@ function deactivateExtension(): void {
   if (bracketLynxProvider) {
     bracketLynxProvider.clearAllDecorations?.();
   }
-  
+
   // Deactivate Astro decorations
   if (astroDecorator) {
     astroDecorator.clearAllDecorations?.();
@@ -200,7 +225,7 @@ function getEditorKey(editor: vscode.TextEditor): string {
  */
 export function cleanupClosedEditor(document: vscode.TextDocument): void {
   const documentUri = document.uri.toString();
-  
+
   const legacyKeysToDelete: string[] = [];
   for (const [key] of disabledEditors) {
     if (key.startsWith(documentUri + ':')) {
@@ -215,14 +240,17 @@ export function cleanupClosedEditor(document: vscode.TextDocument): void {
  */
 export function cleanupAllClosedEditors(): void {
   const visibleUris = new Set<string>();
-  
+
   vscode.window.visibleTextEditors.forEach((editor) => {
     visibleUris.add(editor.document.uri.toString());
   });
 
   const keysToDelete: string[] = [];
   for (const [key] of disabledEditors) {
-    if (!visibleUris.has(key) && (key.startsWith('untitled:') || key.includes('Untitled'))) {
+    if (
+      !visibleUris.has(key) &&
+      (key.startsWith('untitled:') || key.includes('Untitled'))
+    ) {
       keysToDelete.push(key);
     }
   }
