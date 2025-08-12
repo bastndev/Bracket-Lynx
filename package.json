@@ -2,7 +2,7 @@
   "name": "bracket-lynx",
   "displayName": "Bracket Lynx",
   "description": "Available now: VSCode • Cursor • Windsurf • Trae.ai • Kiro & (Firebase Studio)...",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "publisher": "bastndev",
   "license": "MIT",
   "engines": {
@@ -139,6 +139,19 @@
           "minimum": 50,
           "maximum": 2000,
           "description": "Maximum number of decorations per file"
+        },
+        "bracketLynx.globalEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Global enable/disable state for Bracket Lynx (persisted across reloads)"
+        },
+        "bracketLynx.disabledFiles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "List of file URIs where Bracket Lynx is disabled (persisted across reloads)"
         }
       }
     }

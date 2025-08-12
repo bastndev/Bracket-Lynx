@@ -19,6 +19,7 @@ import {
   isEditorEnabled,
   isDocumentEnabled,
 } from '../actions/toggle';
+import { getEffectiveColor, onConfigurationChanged } from '../actions/colors';
 
 // ============================================================================
 // EXPORTED UTILITIES (for backward compatibility)
@@ -107,7 +108,6 @@ export class BracketLynxConfig {
 
   static get color(): string {
     try {
-      const { getEffectiveColor } = require('../actions/colors');
       const effectiveColor = getEffectiveColor();
       if (effectiveColor) {
         return effectiveColor;
@@ -1368,7 +1368,6 @@ export class BracketLynx {
   static onDidChangeConfiguration(): void {
     // Sync color system with configuration changes
     try {
-      const { onConfigurationChanged } = require('../actions/colors');
       onConfigurationChanged().catch((error: any) => {
         console.error('Error syncing color configuration:', error);
       });

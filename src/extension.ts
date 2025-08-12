@@ -1,6 +1,14 @@
 import * as vscode from 'vscode';
 import { BracketLynx } from './lens/lens';
-import { showBracketLynxMenu, setBracketLynxProvider, setAstroDecorator, cleanupClosedEditor } from './actions/toggle';
+import { 
+  showBracketLynxMenu, 
+  setBracketLynxProvider, 
+  setAstroDecorator, 
+  cleanupClosedEditor,
+  stopMemoryCleanupTimer,
+  forceMemoryCleanup,
+  initializePersistedState
+} from './actions/toggle';
 import { AstroDecorator } from './lens/decorators/astrojs-decorator';
 import { setAstroDecoratorForColors } from './actions/colors';
 
@@ -8,6 +16,9 @@ export let extensionContext: vscode.ExtensionContext;
 
 export const activate = async (context: vscode.ExtensionContext) => {
     extensionContext = context;
+    
+    // Initialize persisted state before setting up providers
+    initializePersistedState();
     
     setBracketLynxProvider(BracketLynx);
     setAstroDecorator(AstroDecorator);
@@ -80,9 +91,9 @@ export const activate = async (context: vscode.ExtensionContext) => {
                 updateUniversalDecorations(editor);
             }
         }),
-        vscode.workspace.onDidCloseTextDocument((document) => {
+        vscode.workspace.onDidCloseTextDocument(async (document) => {
             BracketLynx.onDidChangeTextDocument(document);
-            cleanupClosedEditor(document);
+            await cleanupClosedEditor(document);
         }),
         vscode.window.onDidChangeActiveTextEditor((editor) => {
             BracketLynx.onDidChangeActiveTextEditor();
@@ -99,8 +110,13 @@ export const activate = async (context: vscode.ExtensionContext) => {
     });
 };
 
-export const deactivate = () => {
+export const deactivate = async () => {
     // Cleanup Universal decorations
     AstroDecorator.dispose();
-    // Other cleanup handled automatically by VSCode
+    
+    // MEMORY OPTIMIZATION: Stop cleanup timer and clear memory
+    stopMemoryCleanupTimer();
+    await forceMemoryCleanup();
+    
+    console.log('🧹 Bracket Lynx: Extension deactivated and memory cleaned up');
 };
