@@ -178,21 +178,21 @@ export function showBracketLynxMenu(): void {
       label: '📝 Toggle Current File',
       description: 'Activate/deactivate only current file',
       action: 'current',
-    },
+    }, 
     {
       label: '🎨 Change Color',
       description: 'Change decoration color with preview',
       action: 'color',
     },
     {
-      label: '♻️ Refresh',
-      description: 'Update decorations for current file',
-      action: 'refresh',
-    },
-    {
       label: '🧹 Clean Memory',
       description: memoryLabel,
       action: 'cleanup',
+    },
+    {
+      label: '♻️ Refresh',
+      description: 'Update decorations for current file',
+      action: 'refresh',
     },
   ];
 
