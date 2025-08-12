@@ -55,13 +55,13 @@ export function isDocumentEnabled(document: vscode.TextDocument): boolean {
 export function toggleCurrentEditor(): void {
   const activeEditor = vscode.window.activeTextEditor;
   if (!activeEditor) {
-    vscode.window.showWarningMessage('📄 No active editor to toggle');
+    vscode.window.showWarningMessage('📝 No active editor to toggle');
     return;
   }
 
   if (!isEnabled) {
     vscode.window.showWarningMessage(
-      '📄 Cannot toggle individual file: Extension is disabled globally. Enable globally first.'
+      '📝 Cannot toggle individual file: Extension is disabled globally. Enable globally first.'
     );
     return;
   }
@@ -79,7 +79,7 @@ export function toggleCurrentEditor(): void {
       astroDecorator.forceUpdateEditor?.(activeEditor);
     }
     vscode.window.showInformationMessage(
-      '📄 Bracket Lynx: Enabled for current file'
+      '📝 Bracket Lynx: Enabled for current file'
     );
   } else {
     disabledEditors.set(editorKey, true);
@@ -91,7 +91,7 @@ export function toggleCurrentEditor(): void {
       astroDecorator.clearDecorations?.(activeEditor);
     }
     vscode.window.showInformationMessage(
-      '📄 Bracket Lynx: Disabled for current file'
+      '📝 Bracket Lynx: Disabled for current file'
     );
   }
 }
@@ -164,7 +164,7 @@ export function showBracketLynxMenu(): void {
       action: 'global',
     },
     {
-      label: '📄 Toggle Current File',
+      label: '📝 Toggle Current File',
       description: 'Activate/deactivate only current file',
       action: 'current',
     },
