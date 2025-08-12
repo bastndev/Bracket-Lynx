@@ -194,21 +194,38 @@ BracketParser → BracketHeaderGenerator → BracketDecorationGenerator → VS C
 
 ### 🎛️ Control Systems
 
-**Toggle System** - Granular control over decoration behavior:
+**Toggle System** – Granular and persistent control over decoration behavior, with advanced memory management and interactive menu:
 
-| Control Type | Scope | Persistence | Description |
-|--------------|-------|-------------|-------------|
-| 🌐 **Global Toggle** | Extension-wide | Session | Enable/disable for all files |
-| 📄 **File Toggle** | Per-file | Persistent | Control individual file decoration |
-| ♻️ **Refresh** | Current file | Immediate | Force decoration update |
+| Control Type         | Scope           | Persistence         | Description |
+|---------------------|-----------------|---------------------|-------------|
+| 🌐 **Global Toggle** | Extension-wide  | Persistent (Config) | Enable/disable for all files, state saved across sessions |
+| 📄 **File Toggle**   | Per-file        | Persistent (Config) | Enable/disable decorations per file, state saved across sessions |
+| ♻️ **Refresh**       | Current file    | Immediate           | Force update decorations for current file |
+| 🧹 **Memory Cleanup**| Extension-wide  | Immediate           | Clean up memory for closed/unused editors, auto and manual |
+| 🧠 **Memory Stats**  | Extension-wide  | Immediate           | Show memory usage and health in menu |
+| 🛠️ **Interactive Menu** | Extension-wide | Immediate        | QuickPick menu for all actions, with live stats |
 
-**Color System** - Advanced color customization:
+**Color System** – Advanced color customization and live preview:
 
-| Feature | Capability | Persistence |
-|---------|------------|-------------|
-| 🌈 **Built-in Colors** | Predefined color palette | Workspace-wide |
-| #️⃣ **Custom Hex** | Any valid hex color | Workspace-wide |
-| 👀 **Live Preview** | Real-time color changes | Temporary |
+| Feature              | Capability                | Persistence         |
+|----------------------|--------------------------|---------------------|
+| 🌈 **Built-in Colors** | Predefined color palette | Workspace-wide      |
+| #️⃣ **Custom Hex**     | Any valid hex color      | Workspace-wide      |
+| 👀 **Live Preview**    | Real-time color changes  | Temporary           |
+| 🎨 **Color Picker**    | Interactive selection    | Immediate           |
+
+**Persistence & Memory Management**
+
+- Global and per-file enable/disable states are saved in VS Code configuration for session persistence.
+- Disabled files and global state are automatically loaded and saved.
+- Automatic and manual memory cleanup for disabled editors, with periodic timer and force cleanup option.
+- Memory statistics (entries, footprint, health) shown in menu for transparency and debugging.
+
+**User Experience Enhancements**
+
+- Interactive QuickPick menu for all control actions, including color change, refresh, cleanup, and stats.
+- Informative messages for all actions (enable/disable, refresh, cleanup, color change).
+- Robust error handling and legacy key cleanup for disabled editors.
 
 ## ⚡ Performance Architecture
 
