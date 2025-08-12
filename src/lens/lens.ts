@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 import { AdvancedCacheManager, SmartDebouncer } from '../core/performance-cache';
 import { OptimizedBracketParser } from '../core/performance-parser';
 import { shouldUseOriginalParser } from '../core/parser-exceptions';
+import { PERFORMANCE_LIMITS, DEFAULT_STYLES } from '../core/config';
+import { PositionUtils, regExpExecToArray, makeRegExpPart } from '../core/utils';
 import { LanguageFormatter } from './language-formatter';
 import {
   FILTER_RULES,
@@ -17,6 +19,12 @@ import {
   isEditorEnabled,
   isDocumentEnabled,
 } from '../actions/toggle';
+
+// ============================================================================
+// EXPORTED UTILITIES (for backward compatibility)
+// ============================================================================
+
+export { PositionUtils, regExpExecToArray } from '../core/utils';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -109,30 +117,30 @@ export class BracketLynxConfig {
     }
 
     try {
-      return this.getConfig().get('color', '#515151');
+      return this.getConfig().get('color', DEFAULT_STYLES.COLOR);
     } catch {
-      return '#515151';
+      return DEFAULT_STYLES.COLOR;
     }
   }
 
   static get fontStyle(): string {
-    return this.getConfig().get('fontStyle', 'italic');
+    return this.getConfig().get('fontStyle', DEFAULT_STYLES.FONT_STYLE);
   }
 
   static get prefix(): string {
-    return this.getConfig().get('prefix', '‹~ ');
+    return this.getConfig().get('prefix', DEFAULT_STYLES.PREFIX);
   }
 
   static get unmatchBracketsPrefix(): string {
-    return this.getConfig().get('unmatchBracketsPrefix', '❌ ');
+    return this.getConfig().get('unmatchBracketsPrefix', DEFAULT_STYLES.UNMATCH_PREFIX);
   }
 
   static get maxBracketHeaderLength(): number {
-    return this.getConfig().get('maxBracketHeaderLength', 50);
+    return this.getConfig().get('maxBracketHeaderLength', PERFORMANCE_LIMITS.MAX_HEADER_LENGTH);
   }
 
   static get minBracketScopeLines(): number {
-    return this.getConfig().get('minBracketScopeLines', 4);
+    return this.getConfig().get('minBracketScopeLines', PERFORMANCE_LIMITS.MIN_BRACKET_SCOPE_LINES);
   }
 
   static get enablePerformanceFilters(): boolean {
@@ -140,11 +148,11 @@ export class BracketLynxConfig {
   }
 
   static get maxFileSize(): number {
-    return this.getConfig().get('maxFileSize', 10 * 1024 * 1024); // 10MB default
+    return this.getConfig().get('maxFileSize', PERFORMANCE_LIMITS.MAX_FILE_SIZE);
   }
 
   static get maxDecorationsPerFile(): number {
-    return this.getConfig().get('maxDecorationsPerFile', 500);
+    return this.getConfig().get('maxDecorationsPerFile', PERFORMANCE_LIMITS.MAX_DECORATIONS_PER_FILE);
   }
 
   static get languageConfiguration(): LanguageConfiguration {
@@ -173,39 +181,7 @@ export class BracketLynxConfig {
 // UTILITIES
 // ============================================================================
 
-export namespace PositionUtils {
-  export const nextLine = (position: vscode.Position, increment: number = 1) =>
-    new vscode.Position(position.line + increment, 0);
 
-  export const nextCharacter = (
-    position: vscode.Position,
-    increment: number = 1
-  ) => new vscode.Position(position.line, position.character + increment);
-
-  export const min = (positions: vscode.Position[]) =>
-    positions.reduce((a, b) => (a.isBefore(b) ? a : b), positions[0]);
-
-  export const max = (positions: vscode.Position[]) =>
-    positions.reduce((a, b) => (a.isAfter(b) ? a : b), positions[0]);
-}
-
-export const regExpExecToArray = (
-  regexp: RegExp,
-  text: string
-): RegExpExecArray[] => {
-  const result: RegExpExecArray[] = [];
-  while (true) {
-    const match = regexp.exec(text);
-    if (null === match) {
-      break;
-    }
-    result.push(match);
-  }
-  return result;
-};
-
-const makeRegExpPart = (text: string) =>
-  text.replace(/([\\\/\*\[\]\(\)\{\}\|])/gmu, '\\$1').replace(/\s+/, '\\s');
 
 const isInlineScope = (bracket: BracketEntry) =>
   bracket.end.position.line <= bracket.start.position.line;

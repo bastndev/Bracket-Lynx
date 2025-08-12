@@ -5,6 +5,7 @@ import {
   BracketEntry,
   BracketDecorationSource 
 } from '../lens/lens';
+import { CACHE_CONFIG } from './config';
 
 // ============================================================================
 // PERFORMANCE CACHE INTERFACES
@@ -67,17 +68,17 @@ export class AdvancedCacheManager {
   
   // Configuration
   private config: CacheConfig = {
-    maxDocumentCacheSize: 50,
-    maxEditorCacheSize: 20,
-    documentCacheTTL: 5 * 60 * 1000,  // 5 minutes
-    editorCacheTTL: 10 * 60 * 1000,   // 10 minutes
-    cleanupInterval: 60 * 1000,       // 1 minute
+    maxDocumentCacheSize: CACHE_CONFIG.MAX_DOCUMENT_CACHE_SIZE,
+    maxEditorCacheSize: CACHE_CONFIG.MAX_EDITOR_CACHE_SIZE,
+    documentCacheTTL: CACHE_CONFIG.DOCUMENT_CACHE_TTL,
+    editorCacheTTL: CACHE_CONFIG.EDITOR_CACHE_TTL,
+    cleanupInterval: CACHE_CONFIG.CLEANUP_INTERVAL,
     enableMetrics: true,
     // Advanced memory management
-    memoryPressureThreshold: 100,     // 100MB
-    aggressiveCleanupThreshold: 200,  // 200MB
+    memoryPressureThreshold: CACHE_CONFIG.MEMORY_PRESSURE_THRESHOLD,
+    aggressiveCleanupThreshold: CACHE_CONFIG.AGGRESSIVE_CLEANUP_THRESHOLD,
     lowMemoryMode: false,
-    maxMemoryUsage: 500               // 500MB
+    maxMemoryUsage: CACHE_CONFIG.MAX_MEMORY_USAGE
   };
   
   // Cleanup timer

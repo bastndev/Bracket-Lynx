@@ -1,4 +1,10 @@
 import * as vscode from 'vscode';
+import { 
+  PROBLEMATIC_LANGUAGES, 
+  PROBLEMATIC_EXTENSIONS, 
+  PERFORMANCE_LIMITS,
+  isProblematicLanguage 
+} from './config';
 
 export interface ParserExceptionConfig {
   problematicLanguages: string[];
@@ -8,18 +14,10 @@ export interface ParserExceptionConfig {
 }
 
 const DEFAULT_CONFIG: ParserExceptionConfig = {
-  problematicLanguages: [
-    'astro', 'html', 'htm', 'vue', 'svelte', 'php', 
-    'javascriptreact', 'typescriptreact'
-  ],
-  
-  problematicExtensions: [
-    '.astro', '.html', '.htm', '.vue', '.svelte', 
-    '.php', '.jsx', '.tsx'
-  ],
-  
+  problematicLanguages: [...PROBLEMATIC_LANGUAGES],
+  problematicExtensions: [...PROBLEMATIC_EXTENSIONS],
   enableContentDetection: true,
-  maxContentAnalysisSize: 100 * 1024, // 100KB
+  maxContentAnalysisSize: PERFORMANCE_LIMITS.MAX_CONTENT_ANALYSIS_SIZE,
 };
 
 export class ParserExceptionManager {
@@ -38,15 +36,18 @@ export class ParserExceptionManager {
     this.config = { ...this.config, ...newConfig };
   }
   shouldUseOriginalParser(document: vscode.TextDocument): boolean {
-    if (this.config.problematicLanguages.includes(document.languageId)) {
+    // Check if language is in problematic list
+    if (isProblematicLanguage(document.languageId)) {
       return true;
     }
 
+    // Check file extension
     const fileName = document.fileName.toLowerCase();
     if (this.config.problematicExtensions.some(ext => fileName.endsWith(ext))) {
       return true;
     }
 
+    // Check for mixed content if enabled
     if (this.config.enableContentDetection) {
       return this.hasMixedContent(document);
     }
