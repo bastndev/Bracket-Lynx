@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { BracketLynx } from './lens/lens';
 import { showBracketLynxMenu, setBracketLynxProvider, setAstroDecorator, cleanupClosedEditor } from './actions/toggle';
-import { AstroDecorator } from './actions/astrojs-decorator';
+import { AstroDecorator } from './lens/decorators/astrojs-decorator';
 import { setAstroDecoratorForColors } from './actions/colors';
 
 export let extensionContext: vscode.ExtensionContext;

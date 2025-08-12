@@ -7,6 +7,7 @@ import {
   HeaderMode,
 } from '../lens/lens';
 import { containsControlFlowKeyword } from '../lens/lens-rules';
+import { PERFORMANCE_LIMITS } from './config';
 
 // ============================================================================
 // PARSING STATE INTERFACES
@@ -73,10 +74,10 @@ export class OptimizedBracketParser {
 
   // Performance filter configuration
   private readonly PERFORMANCE_FILTERS = {
-    MAX_SAFE_FILE_SIZE: 5 * 1024 * 1024, // 5MB - switch to performance mode
-    MAX_EXTREME_FILE_SIZE: 20 * 1024 * 1024, // 20MB - disable completely
-    MIN_BRACKET_LINES: 3, // Minimum lines to show decoration
-    MAX_DECORATIONS_PER_FILE: 500, // Maximum decorations per file
+    MAX_SAFE_FILE_SIZE: PERFORMANCE_LIMITS.MAX_FILE_SIZE, // 5MB - switch to performance mode
+    MAX_EXTREME_FILE_SIZE: PERFORMANCE_LIMITS.MAX_FILE_SIZE * 4, // 20MB - disable completely
+    MIN_BRACKET_LINES: PERFORMANCE_LIMITS.MIN_BRACKET_SCOPE_LINES, // Minimum lines to show decoration
+    MAX_DECORATIONS_PER_FILE: PERFORMANCE_LIMITS.MAX_DECORATIONS_PER_FILE, // Maximum decorations per file
     MIN_BRACKET_CONTENT_LENGTH: 10, // Minimum content length to show
     SKIP_LARGE_BRACKETS: 1000, // Skip brackets with >1000 lines
     MAX_NESTED_DEPTH: 20, // Maximum nesting depth to process

@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
-import { getCurrentColor } from './colors';
-import { isEditorEnabled, isExtensionEnabled } from './toggle';
-import { BracketLynxConfig } from '../lens/lens';
-import { AdvancedCacheManager } from '../core/performance-cache';
+import { getCurrentColor } from '../../actions/colors';
+import { isEditorEnabled, isExtensionEnabled } from '../../actions/toggle';
+import { BracketLynxConfig } from '../lens';
+import { AdvancedCacheManager } from '../../core/performance-cache';
 
 export interface ComponentRange {
   name: string;
