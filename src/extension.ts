@@ -1,6 +1,13 @@
 import * as vscode from 'vscode';
 import { BracketLynx } from './lens/lens';
-import { showBracketLynxMenu, setBracketLynxProvider, setAstroDecorator, cleanupClosedEditor } from './actions/toggle';
+import { 
+  showBracketLynxMenu, 
+  setBracketLynxProvider, 
+  setAstroDecorator, 
+  cleanupClosedEditor,
+  stopMemoryCleanupTimer,
+  forceMemoryCleanup 
+} from './actions/toggle';
 import { AstroDecorator } from './lens/decorators/astrojs-decorator';
 import { setAstroDecoratorForColors } from './actions/colors';
 
@@ -104,7 +111,6 @@ export const deactivate = () => {
     AstroDecorator.dispose();
     
     // MEMORY OPTIMIZATION: Stop cleanup timer and clear memory
-    const { stopMemoryCleanupTimer, forceMemoryCleanup } = require('./actions/toggle');
     stopMemoryCleanupTimer();
     forceMemoryCleanup();
     

@@ -1,4 +1,10 @@
 import * as vscode from 'vscode';
+import {
+  forceSyncColorWithConfiguration,
+  setBracketLynxProviderForColors,
+  initializeColorSystem,
+  changeDecorationColor,
+} from './colors';
 
 let isEnabled = true;
 let bracketLynxProvider: any = undefined;
@@ -98,7 +104,6 @@ export function refreshBrackets(): void {
   }
 
   if (bracketLynxProvider && isEditorEnabled(activeEditor)) {
-    const { forceSyncColorWithConfiguration } = require('./colors');
     forceSyncColorWithConfiguration()
       .then(() => {
         bracketLynxProvider.clearDecorationCache?.(activeEditor.document);
@@ -135,10 +140,6 @@ export function refreshBrackets(): void {
 export function setBracketLynxProvider(provider: any): void {
   bracketLynxProvider = provider;
 
-  const {
-    setBracketLynxProviderForColors,
-    initializeColorSystem,
-  } = require('./colors');
   setBracketLynxProviderForColors(provider);
   initializeColorSystem();
 
@@ -204,7 +205,6 @@ export function showBracketLynxMenu(): void {
           refreshBrackets();
           break;
         case 'color':
-          const { changeDecorationColor } = require('./colors');
           changeDecorationColor();
           break;
         case 'cleanup':
