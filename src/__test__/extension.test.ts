@@ -8,7 +8,7 @@ import { BracketLynx, BracketLynxConfig, PositionUtils, regExpExecToArray } from
 import { toggleBracketLynx, isExtensionEnabled, isEditorEnabled } from '../actions/toggle';
 import { LanguageFormatter } from '../lens/language-formatter';
 import { shouldExcludeSymbol, isLanguageSupported, filterContent } from '../lens/lens-rules';
-import { UniversalDecorator, AstroDecorator } from '../actions/astrojs-decorator';
+import { UniversalDecorator, AstroDecorator } from '../lens/decorators';
 
 suite('Extension Test Suite', () => {
 	vscode.window.showInformationMessage('🧪 Starting Bracket Lynx tests...');
