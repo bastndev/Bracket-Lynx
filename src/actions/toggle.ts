@@ -6,24 +6,49 @@ import {
   changeDecorationColor,
 } from './colors';
 
+// Configuration keys
+const CONFIG_SECTION = 'bracketLynx';
+const GLOBAL_ENABLED_KEY = 'globalEnabled';
+const DISABLED_FILES_KEY = 'disabledFiles';
+const MEMORY_CLEANUP_INTERVAL = 5 * 60 * 1000; // 5 minutes
+
+// Quick Pick Options
+const MENU_OPTIONS = [
+  {
+    label: '🌐 Toggle Global',
+    description: 'Activate/deactivate for all files',
+    action: 'global',
+  },
+  {
+    label: '📝 Toggle Current File',
+    description: 'Activate/deactivate only current file',
+    action: 'current',
+  }, 
+  {
+    label: '🎨 Change Color',
+    description: 'Change decoration color with preview',
+    action: 'color',
+  },
+  {
+    label: '🧹 Clean Memory',
+    description: '',
+    action: 'cleanup',
+  },
+  {
+    label: '♻️ Refresh',
+    description: 'Update decorations for current file',
+    action: 'refresh',
+  },
+];
+
 let isEnabled = true;
 let bracketLynxProvider: any = undefined;
 let astroDecorator: any = undefined;
 const disabledEditors = new Map<string, boolean>();
-
-// Configuration keys for persistence
-const CONFIG_SECTION = 'bracketLynx';
-const GLOBAL_ENABLED_KEY = 'globalEnabled';
-const DISABLED_FILES_KEY = 'disabledFiles';
-
-// Memory optimization: Periodic cleanup timer
 let memoryCleanupTimer: NodeJS.Timeout | undefined;
-const MEMORY_CLEANUP_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
 export async function toggleBracketLynx(): Promise<void> {
   isEnabled = !isEnabled;
-
-  // Persist global state
   await saveGlobalEnabledState(isEnabled);
 
   if (isEnabled) {
@@ -84,7 +109,6 @@ export async function toggleCurrentEditor(): Promise<void> {
     if (bracketLynxProvider) {
       bracketLynxProvider.forceUpdateEditor?.(activeEditor);
     }
-    // Update Astro decorations if it's an Astro file
     if (astroDecorator) {
       astroDecorator.forceUpdateEditor?.(activeEditor);
     }
@@ -97,7 +121,6 @@ export async function toggleCurrentEditor(): Promise<void> {
     if (bracketLynxProvider) {
       bracketLynxProvider.clearEditorDecorations?.(activeEditor);
     }
-    // Clear Astro decorations if it's an Astro file
     if (astroDecorator) {
       astroDecorator.clearDecorations?.(activeEditor);
     }
@@ -120,11 +143,9 @@ export function refreshBrackets(): void {
         bracketLynxProvider.clearDecorationCache?.(activeEditor.document);
         bracketLynxProvider.forceUpdateEditor?.(activeEditor);
 
-        // Refresh Astro decorations if it's an Astro file
         if (astroDecorator) {
           astroDecorator.forceUpdateEditor?.(activeEditor);
         }
-
         vscode.window.showInformationMessage('♻️ Bracket Lynx: Refreshed');
       })
       .catch((error: any) => {
@@ -132,11 +153,9 @@ export function refreshBrackets(): void {
         bracketLynxProvider.clearDecorationCache?.(activeEditor.document);
         bracketLynxProvider.forceUpdateEditor?.(activeEditor);
 
-        // Refresh Astro decorations even with errors
         if (astroDecorator) {
           astroDecorator.forceUpdateEditor?.(activeEditor);
         }
-
         vscode.window.showInformationMessage(
           '♻️ Bracket Lynx: Refreshed (with warnings)'
         );
@@ -150,11 +169,8 @@ export function refreshBrackets(): void {
 
 export function setBracketLynxProvider(provider: any): void {
   bracketLynxProvider = provider;
-
   setBracketLynxProviderForColors(provider);
   initializeColorSystem();
-
-  // Initialize memory cleanup timer
   startMemoryCleanupTimer();
 }
 
@@ -168,33 +184,8 @@ export function showBracketLynxMenu(): void {
     ? `🧠 Memory: ${memoryStats.disabledEditorsCount} entries (${memoryStats.memoryFootprintKB}KB)`
     : `⚠️ Memory: ${memoryStats.disabledEditorsCount} entries (${memoryStats.memoryFootprintKB}KB) - Cleanup recommended`;
 
-  const options = [
-    {
-      label: '🌐 Toggle Global',
-      description: 'Activate/deactivate for all files',
-      action: 'global',
-    },
-    {
-      label: '📝 Toggle Current File',
-      description: 'Activate/deactivate only current file',
-      action: 'current',
-    }, 
-    {
-      label: '🎨 Change Color',
-      description: 'Change decoration color with preview',
-      action: 'color',
-    },
-    {
-      label: '🧹 Clean Memory',
-      description: memoryLabel,
-      action: 'cleanup',
-    },
-    {
-      label: '♻️ Refresh',
-      description: 'Update decorations for current file',
-      action: 'refresh',
-    },
-  ];
+  const options = [...MENU_OPTIONS];
+  options[3].description = memoryLabel;
 
   vscode.window
     .showQuickPick(options, {
@@ -232,8 +223,6 @@ function reactivateExtension(): void {
   if (bracketLynxProvider) {
     bracketLynxProvider.updateAllDecoration?.();
   }
-
-  // Reactivate Astro decorations
   if (astroDecorator) {
     astroDecorator.forceRefresh?.();
   }
@@ -243,8 +232,6 @@ function deactivateExtension(): void {
   if (bracketLynxProvider) {
     bracketLynxProvider.clearAllDecorations?.();
   }
-
-  // Deactivate Astro decorations
   if (astroDecorator) {
     astroDecorator.clearAllDecorations?.();
   }
@@ -254,20 +241,14 @@ function getEditorKey(editor: vscode.TextEditor): string {
   return editor.document.uri.toString();
 }
 
-/**
- * Clean up disabled editor state when a document is closed
- * ENHANCED: More thorough cleanup with memory optimization and persistence
- */
 export async function cleanupClosedEditor(document: vscode.TextDocument): Promise<void> {
   const documentUri = document.uri.toString();
   let hasChanges = false;
 
-  // Remove the exact document URI
   if (disabledEditors.delete(documentUri)) {
     hasChanges = true;
   }
 
-  // Clean up any legacy keys that might reference this document
   const legacyKeysToDelete: string[] = [];
   for (const [key] of disabledEditors) {
     if (key.startsWith(documentUri + ':') || key.includes(documentUri)) {
@@ -280,12 +261,10 @@ export async function cleanupClosedEditor(document: vscode.TextDocument): Promis
     hasChanges = true;
   }
 
-  // Save changes if any were made
   if (hasChanges) {
     await saveDisabledFilesState();
   }
 
-  // Trigger a broader cleanup if we have too many entries
   if (disabledEditors.size > 100) {
     console.log(
       `⚠️ Bracket Lynx: Large memory footprint detected (${disabledEditors.size} entries), triggering cleanup`
@@ -294,37 +273,28 @@ export async function cleanupClosedEditor(document: vscode.TextDocument): Promis
   }
 }
 
-/**
- * Clean up all closed editors that are no longer visible
- * FIXED: Now cleans ALL closed editors, not just untitled ones, with persistence
- */
 export async function cleanupAllClosedEditors(): Promise<void> {
   const visibleUris = new Set<string>();
 
-  // Get all currently visible editor URIs
   vscode.window.visibleTextEditors.forEach((editor) => {
     visibleUris.add(editor.document.uri.toString());
   });
 
-  // Also include all open tabs (not just visible ones)
   vscode.workspace.textDocuments.forEach((document) => {
     visibleUris.add(document.uri.toString());
   });
 
   const keysToDelete: string[] = [];
   for (const [key] of disabledEditors) {
-    // CRITICAL FIX: Remove ALL editors that are no longer open
     if (!visibleUris.has(key)) {
       keysToDelete.push(key);
     }
   }
 
-  // Clean up the memory
   keysToDelete.forEach((key) => {
     disabledEditors.delete(key);
   });
 
-  // Save changes if any were made
   if (keysToDelete.length > 0) {
     await saveDisabledFilesState();
     console.log(
@@ -333,16 +303,11 @@ export async function cleanupAllClosedEditors(): Promise<void> {
   }
 }
 
-/**
- * Start automatic memory cleanup timer
- */
 function startMemoryCleanupTimer(): void {
-  // Clear existing timer if any
   if (memoryCleanupTimer) {
     clearInterval(memoryCleanupTimer);
   }
 
-  // Set up periodic cleanup
   memoryCleanupTimer = setInterval(async () => {
     const sizeBefore = disabledEditors.size;
     await cleanupAllClosedEditors();
@@ -356,9 +321,6 @@ function startMemoryCleanupTimer(): void {
   }, MEMORY_CLEANUP_INTERVAL);
 }
 
-/**
- * Stop memory cleanup timer (for cleanup/disposal)
- */
 export function stopMemoryCleanupTimer(): void {
   if (memoryCleanupTimer) {
     clearInterval(memoryCleanupTimer);
@@ -366,18 +328,14 @@ export function stopMemoryCleanupTimer(): void {
   }
 }
 
-/**
- * Get current memory usage statistics
- */
 export function getMemoryStats(): {
   disabledEditorsCount: number;
   memoryFootprintKB: number;
   isHealthy: boolean;
 } {
   const count = disabledEditors.size;
-  // Rough estimation: each entry ~100 bytes (URI string + boolean + Map overhead)
   const estimatedKB = Math.round((count * 100) / 1024);
-  const isHealthy = count < 50; // Consider healthy if less than 50 entries
+  const isHealthy = count < 50;
 
   return {
     disabledEditorsCount: count,
@@ -386,19 +344,12 @@ export function getMemoryStats(): {
   };
 }
 
-/**
- * Force immediate memory cleanup and optimization
- */
 export async function forceMemoryCleanup(): Promise<void> {
   const statsBefore = getMemoryStats();
-
-  // Clean up closed editors
   await cleanupAllClosedEditors();
 
-  // Additional cleanup: remove any invalid entries
   const keysToDelete: string[] = [];
   for (const [key] of disabledEditors) {
-    // Remove entries with invalid URIs or empty keys
     if (!key || key.trim() === '' || key.length > 1000) {
       keysToDelete.push(key);
     }
@@ -410,28 +361,17 @@ export async function forceMemoryCleanup(): Promise<void> {
   }
 
   const statsAfter = getMemoryStats();
-
+  
   console.log(`🚀 Bracket Lynx: Force cleanup completed`);
-  console.log(
-    `   Before: ${statsBefore.disabledEditorsCount} entries (${statsBefore.memoryFootprintKB}KB)`
-  );
-  console.log(
-    `   After: ${statsAfter.disabledEditorsCount} entries (${statsAfter.memoryFootprintKB}KB)`
-  );
-  console.log(
-    `   Freed: ${
-      statsBefore.disabledEditorsCount - statsAfter.disabledEditorsCount
-    } entries`
-  );
+  console.log(`   Before: ${statsBefore.disabledEditorsCount} entries (${statsBefore.memoryFootprintKB}KB)`);
+  console.log(`   After: ${statsAfter.disabledEditorsCount} entries (${statsAfter.memoryFootprintKB}KB)`);
+  console.log(`   Freed: ${statsBefore.disabledEditorsCount - statsAfter.disabledEditorsCount} entries`);
 }
 
 // ============================================================================
 // PERSISTENCE FUNCTIONS
 // ============================================================================
 
-/**
- * Save global enabled state to VSCode configuration
- */
 async function saveGlobalEnabledState(enabled: boolean): Promise<void> {
   try {
     const config = vscode.workspace.getConfiguration(CONFIG_SECTION);
@@ -441,22 +381,16 @@ async function saveGlobalEnabledState(enabled: boolean): Promise<void> {
   }
 }
 
-/**
- * Load global enabled state from VSCode configuration
- */
 function loadGlobalEnabledState(): boolean {
   try {
     const config = vscode.workspace.getConfiguration(CONFIG_SECTION);
     return config.get<boolean>(GLOBAL_ENABLED_KEY, true);
   } catch (error) {
     console.error('Failed to load global enabled state:', error);
-    return true; // Default to enabled
+    return true;
   }
 }
 
-/**
- * Save disabled files state to VSCode configuration
- */
 async function saveDisabledFilesState(): Promise<void> {
   try {
     const config = vscode.workspace.getConfiguration(CONFIG_SECTION);
@@ -467,9 +401,6 @@ async function saveDisabledFilesState(): Promise<void> {
   }
 }
 
-/**
- * Load disabled files state from VSCode configuration
- */
 function loadDisabledFilesState(): void {
   try {
     const config = vscode.workspace.getConfiguration(CONFIG_SECTION);
@@ -489,10 +420,7 @@ function loadDisabledFilesState(): void {
  * This should be called when the extension activates
  */
 export function initializePersistedState(): void {
-  // Load global enabled state
   isEnabled = loadGlobalEnabledState();
-  
-  // Load disabled files state
   loadDisabledFilesState();
   
   console.log(`🔄 Bracket Lynx: Initialized state - Global: ${isEnabled ? 'enabled' : 'disabled'}, Disabled files: ${disabledEditors.size}`);
