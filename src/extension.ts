@@ -102,5 +102,11 @@ export const activate = async (context: vscode.ExtensionContext) => {
 export const deactivate = () => {
     // Cleanup Universal decorations
     AstroDecorator.dispose();
-    // Other cleanup handled automatically by VSCode
+    
+    // MEMORY OPTIMIZATION: Stop cleanup timer and clear memory
+    const { stopMemoryCleanupTimer, forceMemoryCleanup } = require('./actions/toggle');
+    stopMemoryCleanupTimer();
+    forceMemoryCleanup();
+    
+    console.log('🧹 Bracket Lynx: Extension deactivated and memory cleaned up');
 };

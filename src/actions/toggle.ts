@@ -5,6 +5,10 @@ let bracketLynxProvider: any = undefined;
 let astroDecorator: any = undefined;
 const disabledEditors = new Map<string, boolean>();
 
+// Memory optimization: Periodic cleanup timer
+let memoryCleanupTimer: NodeJS.Timeout | undefined;
+const MEMORY_CLEANUP_INTERVAL = 5 * 60 * 1000; // 5 minutes
+
 export function toggleBracketLynx(): void {
   isEnabled = !isEnabled;
 
@@ -137,6 +141,9 @@ export function setBracketLynxProvider(provider: any): void {
   } = require('./colors');
   setBracketLynxProviderForColors(provider);
   initializeColorSystem();
+
+  // Initialize memory cleanup timer
+  startMemoryCleanupTimer();
 }
 
 export function setAstroDecorator(decorator: any): void {
@@ -144,6 +151,11 @@ export function setAstroDecorator(decorator: any): void {
 }
 
 export function showBracketLynxMenu(): void {
+  const memoryStats = getMemoryStats();
+  const memoryLabel = memoryStats.isHealthy
+    ? `🧠 Memory: ${memoryStats.disabledEditorsCount} entries (${memoryStats.memoryFootprintKB}KB)`
+    : `⚠️ Memory: ${memoryStats.disabledEditorsCount} entries (${memoryStats.memoryFootprintKB}KB) - Cleanup recommended`;
+
   const options = [
     {
       label: '🌐 Toggle Global',
@@ -164,6 +176,11 @@ export function showBracketLynxMenu(): void {
       label: '♻️ Refresh',
       description: 'Update decorations for current file',
       action: 'refresh',
+    },
+    {
+      label: '🧹 Clean Memory',
+      description: memoryLabel,
+      action: 'cleanup',
     },
   ];
 
@@ -189,6 +206,12 @@ export function showBracketLynxMenu(): void {
         case 'color':
           const { changeDecorationColor } = require('./colors');
           changeDecorationColor();
+          break;
+        case 'cleanup':
+          forceMemoryCleanup();
+          vscode.window.showInformationMessage(
+            '🧹 Bracket Lynx: Memory cleanup completed!'
+          );
           break;
       }
     });
@@ -222,40 +245,155 @@ function getEditorKey(editor: vscode.TextEditor): string {
 
 /**
  * Clean up disabled editor state when a document is closed
+ * ENHANCED: More thorough cleanup with memory optimization
  */
 export function cleanupClosedEditor(document: vscode.TextDocument): void {
   const documentUri = document.uri.toString();
 
+  // Remove the exact document URI
+  disabledEditors.delete(documentUri);
+
+  // Clean up any legacy keys that might reference this document
   const legacyKeysToDelete: string[] = [];
   for (const [key] of disabledEditors) {
-    if (key.startsWith(documentUri + ':')) {
+    if (key.startsWith(documentUri + ':') || key.includes(documentUri)) {
       legacyKeysToDelete.push(key);
     }
   }
   legacyKeysToDelete.forEach((key) => disabledEditors.delete(key));
+
+  // Trigger a broader cleanup if we have too many entries
+  if (disabledEditors.size > 100) {
+    console.log(
+      `⚠️ Bracket Lynx: Large memory footprint detected (${disabledEditors.size} entries), triggering cleanup`
+    );
+    cleanupAllClosedEditors();
+  }
 }
 
 /**
- * Clean up temporary/untitled files that are no longer visible
+ * Clean up all closed editors that are no longer visible
+ * FIXED: Now cleans ALL closed editors, not just untitled ones
  */
 export function cleanupAllClosedEditors(): void {
   const visibleUris = new Set<string>();
 
+  // Get all currently visible editor URIs
   vscode.window.visibleTextEditors.forEach((editor) => {
     visibleUris.add(editor.document.uri.toString());
   });
 
+  // Also include all open tabs (not just visible ones)
+  vscode.workspace.textDocuments.forEach((document) => {
+    visibleUris.add(document.uri.toString());
+  });
+
   const keysToDelete: string[] = [];
   for (const [key] of disabledEditors) {
-    if (
-      !visibleUris.has(key) &&
-      (key.startsWith('untitled:') || key.includes('Untitled'))
-    ) {
+    // CRITICAL FIX: Remove ALL editors that are no longer open
+    if (!visibleUris.has(key)) {
       keysToDelete.push(key);
     }
   }
 
+  // Clean up the memory
   keysToDelete.forEach((key) => {
     disabledEditors.delete(key);
   });
+
+  // Debug logging for memory optimization
+  if (keysToDelete.length > 0) {
+    console.log(
+      `🧹 Bracket Lynx: Cleaned up ${keysToDelete.length} closed editor(s) from memory`
+    );
+  }
+}
+
+/**
+ * Start automatic memory cleanup timer
+ */
+function startMemoryCleanupTimer(): void {
+  // Clear existing timer if any
+  if (memoryCleanupTimer) {
+    clearInterval(memoryCleanupTimer);
+  }
+
+  // Set up periodic cleanup
+  memoryCleanupTimer = setInterval(() => {
+    const sizeBefore = disabledEditors.size;
+    cleanupAllClosedEditors();
+    const sizeAfter = disabledEditors.size;
+
+    if (sizeBefore !== sizeAfter) {
+      console.log(
+        `🔄 Bracket Lynx: Periodic cleanup - reduced memory from ${sizeBefore} to ${sizeAfter} entries`
+      );
+    }
+  }, MEMORY_CLEANUP_INTERVAL);
+}
+
+/**
+ * Stop memory cleanup timer (for cleanup/disposal)
+ */
+export function stopMemoryCleanupTimer(): void {
+  if (memoryCleanupTimer) {
+    clearInterval(memoryCleanupTimer);
+    memoryCleanupTimer = undefined;
+  }
+}
+
+/**
+ * Get current memory usage statistics
+ */
+export function getMemoryStats(): {
+  disabledEditorsCount: number;
+  memoryFootprintKB: number;
+  isHealthy: boolean;
+} {
+  const count = disabledEditors.size;
+  // Rough estimation: each entry ~100 bytes (URI string + boolean + Map overhead)
+  const estimatedKB = Math.round((count * 100) / 1024);
+  const isHealthy = count < 50; // Consider healthy if less than 50 entries
+
+  return {
+    disabledEditorsCount: count,
+    memoryFootprintKB: estimatedKB,
+    isHealthy,
+  };
+}
+
+/**
+ * Force immediate memory cleanup and optimization
+ */
+export function forceMemoryCleanup(): void {
+  const statsBefore = getMemoryStats();
+
+  // Clean up closed editors
+  cleanupAllClosedEditors();
+
+  // Additional cleanup: remove any invalid entries
+  const keysToDelete: string[] = [];
+  for (const [key] of disabledEditors) {
+    // Remove entries with invalid URIs or empty keys
+    if (!key || key.trim() === '' || key.length > 1000) {
+      keysToDelete.push(key);
+    }
+  }
+
+  keysToDelete.forEach((key) => disabledEditors.delete(key));
+
+  const statsAfter = getMemoryStats();
+
+  console.log(`🚀 Bracket Lynx: Force cleanup completed`);
+  console.log(
+    `   Before: ${statsBefore.disabledEditorsCount} entries (${statsBefore.memoryFootprintKB}KB)`
+  );
+  console.log(
+    `   After: ${statsAfter.disabledEditorsCount} entries (${statsAfter.memoryFootprintKB}KB)`
+  );
+  console.log(
+    `   Freed: ${
+      statsBefore.disabledEditorsCount - statsAfter.disabledEditorsCount
+    } entries`
+  );
 }
