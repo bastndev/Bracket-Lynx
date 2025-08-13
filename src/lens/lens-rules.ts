@@ -30,7 +30,7 @@ export const FILTER_RULES: FilterRules = {
 // Re-export constants for backward compatibility
 export { EXCLUDED_SYMBOLS, SUPPORTED_LANGUAGES, ALLOWED_JSON_FILES } from '../core/config';
 export const { MAX_HEADER_WORDS, MAX_EXCEPTION_WORDS, MAX_CSS_WORDS } = WORD_LIMITS;
-export const { EXCEPTION_WORDS, CSS_RELATED_WORDS, TRY_CATCH_KEYWORDS, IF_ELSE_KEYWORDS } = KEYWORDS;
+export const { EXCEPTION_WORDS, PROPS_PATTERNS, CSS_RELATED_WORDS, TRY_CATCH_KEYWORDS, IF_ELSE_KEYWORDS } = KEYWORDS;
 
 // ============================================================================
 // VALIDATION FUNCTIONS
@@ -59,6 +59,13 @@ export function shouldProcessFile(languageId: string, fileName: string): boolean
 export function containsExceptionWord(text: string): boolean {
   return EXCEPTION_WORDS.some(word => 
     text.toLowerCase().includes(word.toLowerCase())
+  );
+}
+
+export function containsPropsPattern(text: string): boolean {
+  const lowerText = text.toLowerCase();
+  return PROPS_PATTERNS.some(pattern => 
+    lowerText.endsWith(pattern) || lowerText.includes(`...${pattern}`)
   );
 }
 
@@ -113,7 +120,10 @@ export function applyWordLimit(text: string, languageId?: string): string {
   // Determine max words based on context
   let maxWords: number = MAX_HEADER_WORDS;
   
-  if (containsExceptionWord(text)) {
+  // Special exception for patterns ending with "props" (like "...props") - allow 2 words
+  if (containsPropsPattern(text)) {
+    maxWords = 2;
+  } else if (containsExceptionWord(text)) {
     maxWords = MAX_EXCEPTION_WORDS;
   } else if (containsCssContent(text) || isCssLanguage(languageId)) {
     maxWords = MAX_CSS_WORDS;
