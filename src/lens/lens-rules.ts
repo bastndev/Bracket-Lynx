@@ -8,6 +8,7 @@ import {
   isAllowedJsonFile,
   shouldProcessFile as configShouldProcessFile
 } from '../core/config';
+import { handlePropsPattern } from './decorators/js-ts-decorator-function';
 
 // ============================================================================
 // INTERFACES AND TYPES
@@ -62,19 +63,6 @@ export function containsExceptionWord(text: string): boolean {
   );
 }
 
-export function containsPropsPattern(text: string): string | null {
-  const lowerText = text.toLowerCase();
-  const hasProps = PROPS_PATTERNS.some(pattern => 
-    lowerText.endsWith(pattern) || lowerText.includes(`...${pattern}`)
-  );
-
-  if (hasProps) {
-    return '❨❩➤'; // Return the new symbol if props are found
-  }
-
-  return null; // Return null if no props are found
-}
-
 export function containsCssContent(text: string): boolean {
   return CSS_RELATED_WORDS.some(word => 
     text.toLowerCase().includes(word.toLowerCase())
@@ -122,7 +110,7 @@ export function applyWordLimit(text: string, languageId?: string): string {
   }
 
   // Check for props pattern first
-  const propsReplacement = containsPropsPattern(text);
+  const propsReplacement = handlePropsPattern(text);
   if (propsReplacement) {
     const words = text.split(/\s+/).filter(word => word.length > 0);
     if (words.length > 1) {
