@@ -8,7 +8,7 @@ import {
   isAllowedJsonFile,
   shouldProcessFile as configShouldProcessFile
 } from '../core/config';
-import { handlePropsPattern } from './decorators/js-ts-decorator-function';
+import { handlePropsPattern, handleArrowFunctionPattern } from './decorators/js-ts-decorator-function';
 
 // ============================================================================
 // INTERFACES AND TYPES
@@ -109,7 +109,13 @@ export function applyWordLimit(text: string, languageId?: string): string {
     return '';
   }
 
-  // Check for props pattern first
+  // Handle arrow functions first for special decoration
+  const arrowFuncDecoration = handleArrowFunctionPattern(text);
+  if (arrowFuncDecoration) {
+    return arrowFuncDecoration;
+  }
+
+  // Check for props pattern
   const propsReplacement = handlePropsPattern(text);
   if (propsReplacement) {
     const words = text.split(/\s+/).filter(word => word.length > 0);
