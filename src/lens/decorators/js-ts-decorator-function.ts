@@ -3,6 +3,23 @@ import { KEYWORDS } from '../../core/config';
 const { PROPS_PATTERNS } = KEYWORDS;
 
 /**
+ * Get the first meaningful word (skip common prefixes/symbols)
+ */
+function getFirstMeaningfulWord(words: string[]): string {
+  const skipWords = ['export', 'const', 'function', 'async', 'default'];
+  
+  for (const word of words) {
+    const cleanWord = word.toLowerCase().trim();
+    if (cleanWord && !skipWords.includes(cleanWord) && cleanWord !== 'props') {
+      return word;
+    }
+  }
+  
+  // If no meaningful word found, return the first word
+  return words[0] || '';
+}
+
+/**
  * Checks for JSX/TSX props patterns (e.g., `...props`) and returns a replacement symbol.
  * @param text The text content to analyze.
  * @returns The replacement symbol '❨❩➤' if a pattern is found, otherwise null.
@@ -182,12 +199,14 @@ export function detectAndDecorate(content: string): string {
     return arrowResult;
   }
 
-  // Check for props pattern
+  // Check for props pattern - limit to only one word
   const propsResult = handlePropsPattern(content);
   if (propsResult) {
     const words = content.split(/\s+/).filter(Boolean);
     if (words.length > 1) {
-      return `${words.slice(0, -1).join(' ')} ${propsResult}`;
+      // Return only the first meaningful word and the symbol
+      const firstWord = getFirstMeaningfulWord(words);
+      return `${firstWord} ${propsResult}`;
     }
     return propsResult;
   }

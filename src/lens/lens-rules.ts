@@ -140,13 +140,14 @@ export function applyWordLimit(text: string, languageId?: string): string {
     return arrowFuncDecoration;
   }
 
-  // Check for props pattern
+  // Check for props pattern - limit to only one word
   const propsReplacement = handlePropsPattern(text);
   if (propsReplacement) {
     const words = text.split(/\s+/).filter(word => word.length > 0);
     if (words.length > 1) {
-      // Return the word before props and the symbol (e.g., "GitHub ❨❩➤")
-      return `${words.slice(0, -1).join(' ')} ${propsReplacement}`;
+      // Return only the first meaningful word and the symbol (e.g., "GitHub ➤")
+      const firstWord = getFirstMeaningfulWord(words);
+      return `${firstWord} ${propsReplacement}`;
     }
     return propsReplacement; // Only show the symbol if it's just "props"
   }
@@ -209,6 +210,23 @@ export function applyWordLimit(text: string, languageId?: string): string {
 // ============================================================================
 // UTILITY FUNCTIONS
 // ============================================================================
+
+/**
+ * Get the first meaningful word (skip common prefixes/symbols)
+ */
+function getFirstMeaningfulWord(words: string[]): string {
+  const skipWords = ['export', 'const', 'function', 'async', 'default'];
+  
+  for (const word of words) {
+    const cleanWord = word.toLowerCase().trim();
+    if (cleanWord && !skipWords.includes(cleanWord) && cleanWord !== 'props') {
+      return word;
+    }
+  }
+  
+  // If no meaningful word found, return the first word
+  return words[0] || '';
+}
 
 function escapeRegExp(string: string): string {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
