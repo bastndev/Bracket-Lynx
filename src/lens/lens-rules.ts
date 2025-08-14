@@ -8,6 +8,7 @@ import {
   isAllowedJsonFile,
   shouldProcessFile as configShouldProcessFile
 } from '../core/config';
+import { handlePropsPattern, handleArrowFunctionPattern } from './decorators/js-ts-decorator-function';
 
 // ============================================================================
 // INTERFACES AND TYPES
@@ -30,7 +31,7 @@ export const FILTER_RULES: FilterRules = {
 // Re-export constants for backward compatibility
 export { EXCLUDED_SYMBOLS, SUPPORTED_LANGUAGES, ALLOWED_JSON_FILES } from '../core/config';
 export const { MAX_HEADER_WORDS, MAX_EXCEPTION_WORDS, MAX_CSS_WORDS } = WORD_LIMITS;
-export const { EXCEPTION_WORDS, CSS_RELATED_WORDS, TRY_CATCH_KEYWORDS, IF_ELSE_KEYWORDS } = KEYWORDS;
+export const { EXCEPTION_WORDS, PROPS_PATTERNS, CSS_RELATED_WORDS, TRY_CATCH_KEYWORDS, IF_ELSE_KEYWORDS } = KEYWORDS;
 
 // ============================================================================
 // VALIDATION FUNCTIONS
@@ -107,13 +108,36 @@ export function applyWordLimit(text: string, languageId?: string): string {
   if (!text) {
     return '';
   }
+
+  // Handle arrow functions first for special decoration
+  const arrowFuncDecoration = handleArrowFunctionPattern(text);
+  if (arrowFuncDecoration) {
+    return arrowFuncDecoration;
+  }
+
+  // Check for props pattern
+  const propsReplacement = handlePropsPattern(text);
+  if (propsReplacement) {
+    const words = text.split(/\s+/).filter(word => word.length > 0);
+    if (words.length > 1) {
+      // Return the word before props and the symbol (e.g., "GitHub ❨❩➤")
+      return `${words.slice(0, -1).join(' ')} ${propsReplacement}`;
+    }
+    return propsReplacement; // Only show the symbol if it's just "props"
+  }
   
+  const lowerText = text.toLowerCase();
   const words = text.split(/\s+/).filter(word => word.length > 0);
   
   // Determine max words based on context
   let maxWords: number = MAX_HEADER_WORDS;
   
-  if (containsExceptionWord(text)) {
+  // Handle async functions first, then other exports
+  if (lowerText.includes('export') && lowerText.includes('async')) {
+    maxWords = 2; // For 'export async'
+  } else if (lowerText.startsWith('export const') || lowerText.startsWith('export function')) {
+    maxWords = 3;
+  } else if (containsExceptionWord(text)) {
     maxWords = MAX_EXCEPTION_WORDS;
   } else if (containsCssContent(text) || isCssLanguage(languageId)) {
     maxWords = MAX_CSS_WORDS;
