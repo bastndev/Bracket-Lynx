@@ -46,6 +46,13 @@ export function handlePropsPattern(text: string): string | null {
  */
 export function handleArrowFunctionPattern(text: string): string | null {
   const lowerText = text.toLowerCase();
+  
+  // Must contain '=>' to be considered an arrow function
+  if (!lowerText.includes('=>')) {
+    return null;
+  }
+  
+  // Check for export const pattern with arrow function
   if (lowerText.startsWith('export const') && !lowerText.includes('async')) {
     const words = text.split(/\s+/).filter(Boolean);
     // Reconstructs the string as "export [FunctionName] ❨❩➤"
@@ -53,6 +60,7 @@ export function handleArrowFunctionPattern(text: string): string | null {
       return `${words[0]} ${words[2]} ❨❩➤`;
     }
   }
+  
   return null;
 }
 
@@ -134,10 +142,8 @@ export class ArrowFunctionDecorator {
    */
   static isArrowFunction(content: string): boolean {
     const lowerText = content.toLowerCase();
-    return (
-      lowerText.includes('=>') ||
-      (lowerText.startsWith('export const') && !lowerText.includes('async'))
-    );
+    // Must contain '=>' to be considered an arrow function
+    return lowerText.includes('=>');
   }
 
   /**

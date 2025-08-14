@@ -94,6 +94,14 @@ export function isAsyncFunction(lowerText: string): boolean {
   ) && !lowerText.includes('=>'); // Exclude arrow functions
 }
 
+export function isArrowFunction(lowerText: string): boolean {
+  // Check for arrow function patterns only
+  return (
+    lowerText.includes('=>') &&
+    (lowerText.includes('export') || lowerText.includes('const') || lowerText.includes('let') || lowerText.includes('var'))
+  );
+}
+
 
 
 export function isComplexFunction(lowerText: string): boolean {
@@ -134,12 +142,6 @@ export function applyWordLimit(text: string, languageId?: string): string {
     return '';
   }
 
-  // Handle arrow functions first for special decoration
-  const arrowFuncDecoration = handleArrowFunctionPattern(text);
-  if (arrowFuncDecoration) {
-    return arrowFuncDecoration;
-  }
-
   // Check for props pattern - limit to only one word
   const propsReplacement = handlePropsPattern(text);
   if (propsReplacement) {
@@ -169,6 +171,8 @@ export function applyWordLimit(text: string, languageId?: string): string {
     }
   }
 
+
+
   // Check for complex functions (with React types, generics, etc.) and add ⇄ symbol
   if (isComplexFunction(lowerText)) {
     if (words.length >= 3) {
@@ -191,8 +195,8 @@ export function applyWordLimit(text: string, languageId?: string): string {
   // Handle async functions first, then other exports
   if (lowerText.includes('export') && lowerText.includes('async')) {
     maxWords = 2; // For 'export async'
-  } else if (lowerText.startsWith('export const')) {
-    // Only apply to export const (not export function, as those have symbols)
+  } else if (lowerText.startsWith('export const') && lowerText.includes('=>')) {
+    // Only apply to export const arrow functions (that contain '=>')
     maxWords = 3;
   } else if (containsExceptionWord(text)) {
     maxWords = MAX_EXCEPTION_WORDS;

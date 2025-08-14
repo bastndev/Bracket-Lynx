@@ -902,6 +902,23 @@ export class BracketHeaderGenerator {
   // NEW: Create language formatter instance
   private static languageFormatter = new LanguageFormatter();
 
+  /**
+   * Get the first meaningful word (skip common prefixes/symbols)
+   */
+  private static getFirstMeaningfulWord(words: string[]): string {
+    const skipWords = ['export', 'const', 'function', 'async', 'default', 'let', 'var'];
+    
+    for (const word of words) {
+      const cleanWord = word.toLowerCase().trim();
+      if (cleanWord && !skipWords.includes(cleanWord) && cleanWord !== 'props') {
+        return word;
+      }
+    }
+    
+    // If no meaningful word found, return the first word
+    return words[0] || '';
+  }
+
   static getBracketHeader(
     document: vscode.TextDocument,
     context: BracketContext
@@ -910,7 +927,17 @@ export class BracketHeaderGenerator {
     const regulateHeader = (text: string) => {
       let result = text.replace(/\s+/gu, ' ').trim();
 
-      // NEW: Apply rules filtering first to remove excluded symbols
+      // FIRST: Check for arrow functions before filtering (to preserve 'const')
+      const lowerText = result.toLowerCase();
+      if (lowerText.includes('=>') && (lowerText.includes('export') || lowerText.includes('const'))) {
+        const words = result.split(/\s+/).filter(Boolean);
+        const functionName = this.getFirstMeaningfulWord(words);
+        if (functionName) {
+          return `export ${functionName} ❨❩➤`;
+        }
+      }
+
+      // NEW: Apply rules filtering to remove excluded symbols
       result = filterContent(result);
 
       // NEW: Apply language-specific formatting before length truncation
