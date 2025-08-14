@@ -120,12 +120,18 @@ export function applyWordLimit(text: string, languageId?: string): string {
     return propsReplacement; // Only show the symbol if it's just "props"
   }
   
+  const lowerText = text.toLowerCase();
   const words = text.split(/\s+/).filter(word => word.length > 0);
   
   // Determine max words based on context
   let maxWords: number = MAX_HEADER_WORDS;
   
-  if (containsExceptionWord(text)) {
+  // Handle async functions first, then other exports
+  if (lowerText.includes('export') && lowerText.includes('async')) {
+    maxWords = 2; // For 'export async'
+  } else if (lowerText.startsWith('export const') || lowerText.startsWith('export function')) {
+    maxWords = 3;
+  } else if (containsExceptionWord(text)) {
     maxWords = MAX_EXCEPTION_WORDS;
   } else if (containsCssContent(text) || isCssLanguage(languageId)) {
     maxWords = MAX_CSS_WORDS;

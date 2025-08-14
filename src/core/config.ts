@@ -92,7 +92,7 @@ export const EXCLUDED_SYMBOLS = [
   '|',
   '}',
   '//',
-  'const',
+  // 'const',
   '---',
   '--',
   '...',
@@ -101,7 +101,7 @@ export const EXCLUDED_SYMBOLS = [
 
 export const WORD_LIMITS = {
   MAX_HEADER_WORDS: 1,
-  MAX_EXCEPTION_WORDS: 2,
+  MAX_EXCEPTION_WORDS: 3, // Allow 3 words for exports
   MAX_CSS_WORDS: 2,
 } as const;
 
