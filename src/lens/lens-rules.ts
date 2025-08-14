@@ -85,6 +85,15 @@ export function containsControlFlowKeyword(text: string): boolean {
   return containsTryCatchKeyword(text) || containsIfElseKeyword(text);
 }
 
+export function isAsyncFunction(lowerText: string): boolean {
+  // Check for async function patterns only
+  return (
+    lowerText.includes('async function') ||
+    lowerText.includes('async ') ||
+    (lowerText.includes('export') && lowerText.includes('async'))
+  ) && !lowerText.includes('=>'); // Exclude arrow functions
+}
+
 // ============================================================================
 // CONTENT FILTERING AND FORMATTING
 // ============================================================================
@@ -128,6 +137,20 @@ export function applyWordLimit(text: string, languageId?: string): string {
   
   const lowerText = text.toLowerCase();
   const words = text.split(/\s+/).filter(word => word.length > 0);
+  
+  // Check for async functions only and add ⧘⧙ symbol
+  if (isAsyncFunction(lowerText)) {
+    if (words.length >= 3) {
+      // Take first 2 words and add the symbol (removing the last word)
+      return `${words.slice(0, 2).join(' ')} ⧘⧙`;
+    } else if (words.length === 2) {
+      // If only 2 words, add the symbol
+      return `${words.join(' ')} ⧘⧙`;
+    } else if (words.length === 1) {
+      // If only 1 word, add the symbol
+      return `${words[0]} ⧘⧙`;
+    }
+  }
   
   // Determine max words based on context
   let maxWords: number = MAX_HEADER_WORDS;

@@ -113,6 +113,12 @@ export const KEYWORDS = {
   IF_ELSE_KEYWORDS: ['if', 'else', 'switch', 'case'] as const,
 } as const;
 
+export const FUNCTION_SYMBOLS = {
+  ARROW_FUNCTION: '❨❩➤',
+  ASYNC_FUNCTION: '⧘⧙',
+  PROPS: '➤',
+} as const;
+
 // ============================================================================
 // CACHE CONFIGURATION
 // ============================================================================
@@ -179,4 +185,8 @@ export function shouldProcessFile(
 
   // For other languages, use the standard check
   return isSupportedLanguage(languageId);
+}
+
+export function getFunctionSymbols(): typeof FUNCTION_SYMBOLS {
+  return FUNCTION_SYMBOLS;
 }
