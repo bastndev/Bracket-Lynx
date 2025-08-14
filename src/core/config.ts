@@ -97,6 +97,7 @@ export const EXCLUDED_SYMBOLS = [
   '--',
   '...',
   'MARK',
+  // 'props',
 ] as const;
 
 export const WORD_LIMITS = {
@@ -116,6 +117,7 @@ export const KEYWORDS = {
 export const FUNCTION_SYMBOLS = {
   ARROW_FUNCTION: '❨❩➤',
   ASYNC_FUNCTION: '⧘⧙',
+  COMPLEX_FUNCTION: '⇄',
   PROPS: '➤',
 } as const;
 

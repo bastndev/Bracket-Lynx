@@ -94,6 +94,22 @@ export function isAsyncFunction(lowerText: string): boolean {
   ) && !lowerText.includes('=>'); // Exclude arrow functions
 }
 
+
+
+export function isComplexFunction(lowerText: string): boolean {
+  // Check for functions with complex type parameters (React components, etc.)
+  return (
+    (lowerText.includes('function ') || 
+     (lowerText.includes('export') && lowerText.includes('function'))) &&
+    (lowerText.includes('react.') || 
+     lowerText.includes('svgprops') || 
+     lowerText.includes('htmlprops') ||
+     lowerText.includes('<') && lowerText.includes('>')) && // Generic types
+    !lowerText.includes('async') && // Exclude async functions
+    !lowerText.includes('=>') // Exclude arrow functions
+  );
+}
+
 // ============================================================================
 // CONTENT FILTERING AND FORMATTING
 // ============================================================================
@@ -151,6 +167,22 @@ export function applyWordLimit(text: string, languageId?: string): string {
       return `${words[0]} ⧘⧙`;
     }
   }
+
+  // Check for complex functions (with React types, generics, etc.) and add ⇄ symbol
+  if (isComplexFunction(lowerText)) {
+    if (words.length >= 3) {
+      // Take first 2 words and add the symbol (removing the last word)
+      return `${words.slice(0, 2).join(' ')} ⇄`;
+    } else if (words.length === 2) {
+      // If only 2 words, add the symbol
+      return `${words.join(' ')} ⇄`;
+    } else if (words.length === 1) {
+      // If only 1 word, add the symbol
+      return `${words[0]} ⇄`;
+    }
+  }
+
+
   
   // Determine max words based on context
   let maxWords: number = MAX_HEADER_WORDS;
@@ -158,7 +190,8 @@ export function applyWordLimit(text: string, languageId?: string): string {
   // Handle async functions first, then other exports
   if (lowerText.includes('export') && lowerText.includes('async')) {
     maxWords = 2; // For 'export async'
-  } else if (lowerText.startsWith('export const') || lowerText.startsWith('export function')) {
+  } else if (lowerText.startsWith('export const')) {
+    // Only apply to export const (not export function, as those have symbols)
     maxWords = 3;
   } else if (containsExceptionWord(text)) {
     maxWords = MAX_EXCEPTION_WORDS;

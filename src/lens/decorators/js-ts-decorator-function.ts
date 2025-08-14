@@ -46,6 +46,8 @@ export class ArrowFunctionDecorator {
   private static arrowFunctionSymbol = '❨❩➤';
   private static asyncFunctionSymbol = '⧘⧙';
 
+  private static complexFunctionSymbol = '⇄';
+
   /**
    * Get the current arrow function symbol (backward compatibility)
    */
@@ -56,10 +58,15 @@ export class ArrowFunctionDecorator {
   /**
    * Get the current symbols
    */
-  static getSymbols(): { arrow: string; async: string } {
+  static getSymbols(): {
+    arrow: string;
+    async: string;
+    complex: string;
+  } {
     return {
       arrow: this.arrowFunctionSymbol,
       async: this.asyncFunctionSymbol,
+      complex: this.complexFunctionSymbol,
     };
   }
 
@@ -68,6 +75,20 @@ export class ArrowFunctionDecorator {
    */
   static changeArrowFunctionSymbol(newSymbol: string): void {
     this.arrowFunctionSymbol = newSymbol;
+  }
+
+  /**
+   * Change the async function symbol
+   */
+  static changeAsyncFunctionSymbol(newSymbol: string): void {
+    this.asyncFunctionSymbol = newSymbol;
+  }
+
+  /**
+   * Change the complex function symbol
+   */
+  static changeComplexFunctionSymbol(newSymbol: string): void {
+    this.complexFunctionSymbol = newSymbol;
   }
 
   /**
@@ -99,6 +120,36 @@ export class ArrowFunctionDecorator {
     return (
       lowerText.includes('=>') ||
       (lowerText.startsWith('export const') && !lowerText.includes('async'))
+    );
+  }
+
+  /**
+   * Check if content contains an async function
+   */
+  static isAsyncFunction(content: string): boolean {
+    const lowerText = content.toLowerCase();
+    return (
+      (lowerText.includes('async function') ||
+        lowerText.includes('async ') ||
+        (lowerText.includes('export') && lowerText.includes('async'))) &&
+      !lowerText.includes('=>')
+    );
+  }
+
+  /**
+   * Check if content contains a complex function (with React types, generics, etc.)
+   */
+  static isComplexFunction(content: string): boolean {
+    const lowerText = content.toLowerCase();
+    return (
+      (lowerText.includes('function ') ||
+        (lowerText.includes('export') && lowerText.includes('function'))) &&
+      (lowerText.includes('react.') ||
+        lowerText.includes('svgprops') ||
+        lowerText.includes('htmlprops') ||
+        (lowerText.includes('<') && lowerText.includes('>'))) &&
+      !lowerText.includes('async') &&
+      !lowerText.includes('=>')
     );
   }
 
@@ -150,11 +201,13 @@ export function detectAndDecorate(content: string): string {
 export function getFunctionSymbols(): {
   arrow: string;
   async: string;
+  complex: string;
   props: string;
 } {
   return {
     arrow: '❨❩➤',
     async: '⧘⧙',
+    complex: '⇄',
     props: '➤',
   };
 }
