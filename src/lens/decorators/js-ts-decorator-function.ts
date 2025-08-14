@@ -14,7 +14,7 @@ export function handlePropsPattern(text: string): string | null {
   );
 
   if (hasProps) {
-    return '❨❩➤';
+    return '➤';
   }
 
   return null;
