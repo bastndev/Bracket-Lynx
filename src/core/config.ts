@@ -3,10 +3,6 @@
  * This file contains all constants and configuration values used across the extension
  */
 
-// ============================================================================
-// SUPPORTED LANGUAGES AND FILES
-// ============================================================================
-
 export const SUPPORTED_LANGUAGES = [
   'astro',
   'css',
@@ -26,7 +22,6 @@ export const SUPPORTED_LANGUAGES = [
 
 export const ALLOWED_JSON_FILES = ['package.json'] as const;
 
-// Languages that require special parsing due to mixed content
 export const PROBLEMATIC_LANGUAGES = [
   'astro',
   'html',
@@ -45,64 +40,25 @@ export const PROBLEMATIC_EXTENSIONS = [
   '.tsx',
 ] as const;
 
-// ============================================================================
-// PERFORMANCE LIMITS
-// ============================================================================
-
 export const PERFORMANCE_LIMITS = {
-  MAX_FILE_SIZE: 5 * 1024 * 1024, // 5MB (reduced from 10MB)
-  MAX_DECORATIONS_PER_FILE: 300, // 300 (reduced from 500)
-  MIN_BRACKET_SCOPE_LINES: 5, // 5 (increased from 4)
-  MAX_CONTENT_ANALYSIS_SIZE: 100 * 1024, // 100KB
+  MAX_FILE_SIZE: 5 * 1024 * 1024,
+  MAX_DECORATIONS_PER_FILE: 300,
+  MIN_BRACKET_SCOPE_LINES: 5,
+  MAX_CONTENT_ANALYSIS_SIZE: 100 * 1024,
   MAX_HEADER_LENGTH: 50,
-  DEBOUNCE_DELAY: 150, // Base debounce delay in ms
+  DEBOUNCE_DELAY: 150,
 } as const;
 
-// ============================================================================
-// FILTERING AND FORMATTING
-// ============================================================================
-
 export const EXCLUDED_SYMBOLS = [
-  '!',
-  '"',
-  '#',
-  '$',
-  '%',
-  '&',
-  "'",
-  '(',
-  ')',
-  ',',
-  '.',
-  '/',
-  ':',
-  ';',
-  '=',
-  '>',
-  '<',
-  '?',
-  '@',
-  '[',
-  '\\',
-  ']',
-  '^',
-  '_',
-  '`',
-  '{',
-  '|',
-  '}',
-  '//',
-  // 'const',
-  '---',
-  '--',
-  '...',
-  'MARK',
-  // 'props',
+  '!', '"', '#', '$', '%', '&', "'", ',', '.', '/',  ';',  '<', '?',
+  '@', '[', '\\', ']', '^', '_','`', '{', '|', '}', '//', '---', '--', '...',
+  ':', '(',')', '=', '>', 
+  'MARK', 'props', 'const'
 ] as const;
 
 export const WORD_LIMITS = {
   MAX_HEADER_WORDS: 1,
-  MAX_EXCEPTION_WORDS: 2, // Allow 3 words for exports
+  MAX_EXCEPTION_WORDS: 2,
   MAX_CSS_WORDS: 2,
 } as const;
 
@@ -121,24 +77,16 @@ export const FUNCTION_SYMBOLS = {
   PROPS: '➤',
 } as const;
 
-// ============================================================================
-// CACHE CONFIGURATION
-// ============================================================================
-
 export const CACHE_CONFIG = {
   MAX_DOCUMENT_CACHE_SIZE: 50,
   MAX_EDITOR_CACHE_SIZE: 20,
-  DOCUMENT_CACHE_TTL: 5 * 60 * 1000, // 5 minutes
-  EDITOR_CACHE_TTL: 10 * 60 * 1000, // 10 minutes
-  CLEANUP_INTERVAL: 60 * 1000, // 1 minute
-  MEMORY_PRESSURE_THRESHOLD: 100, // 100MB
-  AGGRESSIVE_CLEANUP_THRESHOLD: 200, // 200MB
-  MAX_MEMORY_USAGE: 500, // 500MB
+  DOCUMENT_CACHE_TTL: 5 * 60 * 1000,
+  EDITOR_CACHE_TTL: 10 * 60 * 1000,
+  CLEANUP_INTERVAL: 60 * 1000,
+  MEMORY_PRESSURE_THRESHOLD: 100,
+  AGGRESSIVE_CLEANUP_THRESHOLD: 200,
+  MAX_MEMORY_USAGE: 500,
 } as const;
-
-// ============================================================================
-// DEFAULT STYLES
-// ============================================================================
 
 export const DEFAULT_STYLES = {
   COLOR: '#515151',
@@ -147,17 +95,9 @@ export const DEFAULT_STYLES = {
   UNMATCH_PREFIX: '❌ ',
 } as const;
 
-// ============================================================================
-// TYPE DEFINITIONS
-// ============================================================================
-
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
 export type ProblematicLanguage = (typeof PROBLEMATIC_LANGUAGES)[number];
 export type AllowedJsonFile = (typeof ALLOWED_JSON_FILES)[number];
-
-// ============================================================================
-// UTILITY FUNCTIONS
-// ============================================================================
 
 export function isSupportedLanguage(
   languageId: string
@@ -180,12 +120,9 @@ export function shouldProcessFile(
   languageId: string,
   fileName: string
 ): boolean {
-  // For JSON files, check if it's in the allowed list
   if (languageId === 'json' || languageId === 'jsonc') {
     return isAllowedJsonFile(fileName);
   }
-
-  // For other languages, use the standard check
   return isSupportedLanguage(languageId);
 }
 
