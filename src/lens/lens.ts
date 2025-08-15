@@ -1617,6 +1617,32 @@ export class BracketLynx {
     CacheManager.editorCache.delete(textEditor);
   }
 
+  /**
+   * Force refresh color for all decorations - called by color system
+   */
+  static forceColorRefresh(): void {
+    if (!isExtensionEnabled()) {
+      return;
+    }
+
+    // Clear all existing decorations first
+    this.clearAllDecorations();
+    
+    // Clear all decoration caches to force recreation with new color
+    CacheManager.clearAllDecorationCache();
+    
+    // Small delay to ensure cleanup is complete
+    setTimeout(() => {
+      // Update all visible editors immediately
+      vscode.window.visibleTextEditors
+        .filter((editor) => isEditorEnabled(editor))
+        .forEach((editor) => {
+          // Force immediate update without debouncing for color changes
+          this.updateDecoration(editor);
+        });
+    }, 50);
+  }
+
 
 
   /**

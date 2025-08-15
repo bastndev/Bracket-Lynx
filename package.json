@@ -63,10 +63,6 @@
       {
         "command": "bracketLynx.menu",
         "title": "Bracket Lynx: Toggle & Refresh 🛠️"
-      },
-      {
-        "command": "bracketLynx.debug",
-        "title": "Bracket Lynx: Debug State 🔍"
       }
     ],
     "configuration": {

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { BracketLynx } from './lens/lens';
 import { AstroDecorator } from './lens/decorators/astrojs-decorator';
-import { setAstroDecoratorForColors } from './actions/colors';
+import { setBracketLynxProviderForColors, setAstroDecoratorForColors } from './actions/colors';
 import { showBracketLynxMenu, setBracketLynxProvider, setAstroDecorator, cleanupClosedEditor, initializePersistedState, getCurrentState } from './actions/toggle';
 
 export let extensionContext: vscode.ExtensionContext;
@@ -14,7 +14,12 @@ export const activate = async (context: vscode.ExtensionContext) => {
     
     setBracketLynxProvider(BracketLynx);
     setAstroDecorator(AstroDecorator);
+    setBracketLynxProviderForColors(BracketLynx);
     setAstroDecoratorForColors(AstroDecorator);
+    
+    // Initialize color system
+    const { initializeColorSystem } = await import('./actions/colors.js');
+    initializeColorSystem();
     
     context.subscriptions.push(
         vscode.commands.registerCommand('bracketLynx.menu', showBracketLynxMenu),
