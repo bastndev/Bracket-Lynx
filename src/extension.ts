@@ -1,16 +1,8 @@
 import * as vscode from 'vscode';
 import { BracketLynx } from './lens/lens';
-import { 
-  showBracketLynxMenu, 
-  setBracketLynxProvider, 
-  setAstroDecorator, 
-  cleanupClosedEditor,
-  stopMemoryCleanupTimer,
-  forceMemoryCleanup,
-  initializePersistedState
-} from './actions/toggle';
 import { AstroDecorator } from './lens/decorators/astrojs-decorator';
 import { setAstroDecoratorForColors } from './actions/colors';
+import { showBracketLynxMenu, setBracketLynxProvider, setAstroDecorator, cleanupClosedEditor, stopMemoryCleanupTimer, forceMemoryCleanup, initializePersistedState } from './actions/toggle';
 
 export let extensionContext: vscode.ExtensionContext;
 

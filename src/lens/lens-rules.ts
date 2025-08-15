@@ -1,13 +1,7 @@
 import { SUPPORTED_LANGUAGES, ALLOWED_JSON_FILES, SupportedLanguage, escapeRegExp } from '../core/utils';
 import { formatAsyncFunction, formatComplexFunction, isAsyncFunction, isComplexFunction } from './decorators/js-ts-decorator-function';
 
-// ============================================================================
-// 🎯 CONFIGURATION CONSTANTS - Easy to edit at the top!
-// ============================================================================
-
-/**
- * WORD LIMITS - Controls how many words are displayed
- */
+//WORD LIMITS - Controls how many words are displayed
 export const WORD_LIMITS = {
   MAX_HEADER_WORDS: 1,
   MAX_EXCEPTION_WORDS: 2,
@@ -15,7 +9,7 @@ export const WORD_LIMITS = {
 } as const;
 
 export const EXCLUDED_SYMBOLS = [
-  '!', '"', '#', '$', '%', '&', "'", ',', '.', '/', ';', '<', '?', '@', 
+  '!', '"', '$', '%', '&', "'", ',', '.', '/', ';', '<', '?', '@', 
   '[', '\\', ']', '^', '_', '`', '{', '|', '}','//', '---', '--', '...',
   ':', '(', ')', '=', '>', 'MARK',
 ] as const;
