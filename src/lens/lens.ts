@@ -1,11 +1,11 @@
 import * as vscode from 'vscode';
-import { AdvancedCacheManager, SmartDebouncer } from '../core/performance-cache';
-import { OptimizedBracketParser } from '../core/performance-parser';
-import { PositionUtils, regExpExecToArray, makeRegExpPart, PERFORMANCE_LIMITS, SUPPORTED_LANGUAGES, ALLOWED_JSON_FILES, PROBLEMATIC_LANGUAGES, PROBLEMATIC_EXTENSIONS, SupportedLanguage, ProblematicLanguage, AllowedJsonFile } from '../core/utils';
 import { LanguageFormatter } from './language-formatter';
-import { FILTER_RULES, shouldExcludeSymbol, filterContent, isLanguageSupported as isLanguageSupportedRules, shouldProcessFile as shouldProcessFileRules, applyWordLimit, containsControlFlowKeyword } from './lens-rules';
-import { isExtensionEnabled, isEditorEnabled, isDocumentEnabled } from '../actions/toggle';
+import { OptimizedBracketParser } from '../core/performance-parser';
 import { getEffectiveColor, onConfigurationChanged } from '../actions/colors';
+import { AdvancedCacheManager, SmartDebouncer } from '../core/performance-cache';
+import { isExtensionEnabled, isEditorEnabled, isDocumentEnabled } from '../actions/toggle';
+import { PositionUtils, regExpExecToArray, makeRegExpPart, PERFORMANCE_LIMITS, SUPPORTED_LANGUAGES, ALLOWED_JSON_FILES, PROBLEMATIC_LANGUAGES, PROBLEMATIC_EXTENSIONS, SupportedLanguage, ProblematicLanguage, AllowedJsonFile } from '../core/utils';
+import { FILTER_RULES, shouldExcludeSymbol, filterContent, isLanguageSupported as isLanguageSupportedRules, shouldProcessFile as shouldProcessFileRules, applyWordLimit, containsControlFlowKeyword } from './lens-rules';
 
 // RE-EXPORT CONSTANTS FOR EASY ACCESS
 export {
