@@ -1,12 +1,10 @@
-// Centralized function symbol management for decorations
-
 // ============================================================================
 // 🎯 SYMBOL CONFIGURATION - CHANGE SYMBOLS HERE TO UPDATE ALL DECORATIONS
 // ============================================================================
-//
+// 
 // Para cambiar los símbolos de las decoraciones, modifica SOLO estos valores:
 // - arrowFunctionSymbol: Para funciones flecha (export const func = () => {})
-// - asyncFunctionSymbol: Para funciones async (async function, export async)
+// - asyncFunctionSymbol: Para funciones async (async function, export async)  
 // - complexFunctionSymbol: Para funciones complejas (con React types, generics)
 //
 // Los cambios se aplicarán automáticamente en toda la extensión.
@@ -78,22 +76,7 @@ class FunctionSymbols {
   }
 }
 
-/**
- * Get the first meaningful word (skip common prefixes/symbols)
- */
-function getFirstMeaningfulWord(words: string[]): string {
-  const skipWords = ['export', 'const', 'function', 'async', 'default'];
-
-  for (const word of words) {
-    const cleanWord = word.toLowerCase().trim();
-    if (cleanWord && !skipWords.includes(cleanWord)) {
-      return word;
-    }
-  }
-
-  // If no meaningful word found, return the first word
-  return words[0] || '';
-}
+// getFirstMeaningfulWord function removed - not used in this file
 
 /**
  * Handles the decoration for exported arrow functions.

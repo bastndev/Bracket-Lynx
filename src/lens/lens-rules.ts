@@ -178,22 +178,7 @@ export function applyWordLimit(text: string, languageId?: string): string {
 // UTILITY FUNCTIONS
 // ============================================================================
 
-/**
- * Get the first meaningful word (skip common prefixes/symbols)
- */
-function getFirstMeaningfulWord(words: string[]): string {
-  const skipWords = ['export', 'const', 'function', 'async', 'default'];
-  
-  for (const word of words) {
-    const cleanWord = word.toLowerCase().trim();
-    if (cleanWord && !skipWords.includes(cleanWord)) {
-      return word;
-    }
-  }
-  
-  // If no meaningful word found, return the first word
-  return words[0] || '';
-}
+// Removed duplicate getFirstMeaningfulWord function - using the one from js-ts-decorator-function.ts
 
 function escapeRegExp(string: string): string {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

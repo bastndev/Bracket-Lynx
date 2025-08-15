@@ -50,9 +50,39 @@ export const PERFORMANCE_LIMITS = {
 } as const;
 
 export const EXCLUDED_SYMBOLS = [
-  '!', '"', '#', '$', '%', '&', "'", ',', '.', '/', ';', '<', '?', '@', 
-  '[', '\\', ']', '^', '_', '`', '{', '|', '}','//', '---', '--', '...',
-  ':', '(', ')', '=', '>', 'MARK',
+  '!',
+  '"',
+  '#',
+  '$',
+  '%',
+  '&',
+  "'",
+  ',',
+  '.',
+  '/',
+  ';',
+  '<',
+  '?',
+  '@',
+  '[',
+  '\\',
+  ']',
+  '^',
+  '_',
+  '`',
+  '{',
+  '|',
+  '}',
+  '//',
+  '---',
+  '--',
+  '...',
+  ':',
+  '(',
+  ')',
+  '=',
+  '>',
+  'MARK',
   // 'const',
 ] as const;
 
@@ -69,11 +99,7 @@ export const KEYWORDS = {
   IF_ELSE_KEYWORDS: ['if', 'else', 'switch', 'case'] as const,
 } as const;
 
-export const FUNCTION_SYMBOLS = {
-  ARROW_FUNCTION: '❨❩➤',
-  ASYNC_FUNCTION: '⧘⧙',
-  COMPLEX_FUNCTION: '⇄',
-} as const;
+// Function symbols moved to js-ts-decorator-function.ts for centralized management
 
 export const CACHE_CONFIG = {
   MAX_DOCUMENT_CACHE_SIZE: 50,
@@ -124,6 +150,4 @@ export function shouldProcessFile(
   return isSupportedLanguage(languageId);
 }
 
-export function getFunctionSymbols(): typeof FUNCTION_SYMBOLS {
-  return FUNCTION_SYMBOLS;
-}
+// getFunctionSymbols moved to js-ts-decorator-function.ts for centralized management
