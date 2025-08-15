@@ -1,20 +1,40 @@
 import {
-  EXCLUDED_SYMBOLS,
   SUPPORTED_LANGUAGES,
-  ALLOWED_JSON_FILES,
-  WORD_LIMITS,
-  KEYWORDS,
   isSupportedLanguage,
   isAllowedJsonFile,
   shouldProcessFile as configShouldProcessFile
 } from './config';
 import { 
-  handleArrowFunctionPattern,
   formatAsyncFunction,
   formatComplexFunction,
   isAsyncFunction as decoratorIsAsyncFunction,
   isComplexFunction as decoratorIsComplexFunction
 } from './decorators/js-ts-decorator-function';
+
+/**
+ * WORD LIMITS - Controls how many words are displayed
+ */
+export const WORD_LIMITS = {
+  MAX_HEADER_WORDS: 1,
+  MAX_EXCEPTION_WORDS: 2,
+  MAX_CSS_WORDS: 2,
+} as const;
+
+export const EXCLUDED_SYMBOLS = [
+  '!', '"', '#', '$', '%', '&', "'", ',', '.', '/', ';', '<', '?', '@', 
+  '[', '\\', ']', '^', '_', '`', '{', '|', '}','//', '---', '--', '...',
+  ':', '(', ')', '=', '>', 'MARK',
+] as const;
+
+/**
+ * KEYWORDS - For content analysis and pattern detection
+ */
+export const KEYWORDS = {
+  EXCEPTION_WORDS: ['export'] as const,
+  CSS_RELATED_WORDS: ['style', 'styles', 'css'] as const,
+  TRY_CATCH_KEYWORDS: ['try', 'catch', 'finally'] as const,
+  IF_ELSE_KEYWORDS: ['if', 'else', 'switch', 'case'] as const,
+} as const;
 
 // ============================================================================
 // INTERFACES AND TYPES
@@ -35,7 +55,7 @@ export const FILTER_RULES: FilterRules = {
 };
 
 // Re-export constants for backward compatibility
-export { EXCLUDED_SYMBOLS, SUPPORTED_LANGUAGES, ALLOWED_JSON_FILES } from './config';
+export { SUPPORTED_LANGUAGES, ALLOWED_JSON_FILES } from './config';
 export const { MAX_HEADER_WORDS, MAX_EXCEPTION_WORDS, MAX_CSS_WORDS } = WORD_LIMITS;
 export const { EXCEPTION_WORDS, CSS_RELATED_WORDS, TRY_CATCH_KEYWORDS, IF_ELSE_KEYWORDS } = KEYWORDS;
 

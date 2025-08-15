@@ -49,55 +49,7 @@ export const PERFORMANCE_LIMITS = {
   DEBOUNCE_DELAY: 150,
 } as const;
 
-export const EXCLUDED_SYMBOLS = [
-  '!',
-  '"',
-  '#',
-  '$',
-  '%',
-  '&',
-  "'",
-  ',',
-  '.',
-  '/',
-  ';',
-  '<',
-  '?',
-  '@',
-  '[',
-  '\\',
-  ']',
-  '^',
-  '_',
-  '`',
-  '{',
-  '|',
-  '}',
-  '//',
-  '---',
-  '--',
-  '...',
-  ':',
-  '(',
-  ')',
-  '=',
-  '>',
-  'MARK',
-  // 'const',
-] as const;
-
-export const WORD_LIMITS = {
-  MAX_HEADER_WORDS: 1,
-  MAX_EXCEPTION_WORDS: 2,
-  MAX_CSS_WORDS: 2,
-} as const;
-
-export const KEYWORDS = {
-  EXCEPTION_WORDS: ['export'] as const,
-  CSS_RELATED_WORDS: ['style', 'styles', 'css'] as const,
-  TRY_CATCH_KEYWORDS: ['try', 'catch', 'finally'] as const,
-  IF_ELSE_KEYWORDS: ['if', 'else', 'switch', 'case'] as const,
-} as const;
+// Rule-related constants moved to lens-rules.ts for centralized rule management
 
 // Function symbols moved to js-ts-decorator-function.ts for centralized management
 
