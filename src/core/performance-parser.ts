@@ -1336,71 +1336,7 @@ export class OptimizedBracketParser {
     }
   }
 
-  /**
-   * Perform aggressive cleanup for memory pressure
-   */
-  aggressiveCleanup(): void {
-    const now = Date.now();
-    const aggressiveTTL = Math.min(this.PARSE_CACHE_MAX_AGE / 2, 60 * 1000); // 1 minute max
 
-    let cleanedCount = 0;
-
-    // More aggressive cleanup of parse state cache
-    for (const [key, entry] of this.parseStateCache) {
-      if (
-        now - entry.timestamp > aggressiveTTL ||
-        entry.fileSize > 1024 * 1024
-      ) {
-        // Clean large files
-        this.parseStateCache.delete(key);
-        cleanedCount++;
-      }
-    }
-
-    // More aggressive cleanup of token cache
-    for (const [key, entry] of this.tokenCache) {
-      if (now - entry.timestamp > aggressiveTTL) {
-        this.tokenCache.delete(key);
-        cleanedCount++;
-      }
-    }
-
-    console.log(
-      `Bracket Lynx Parser: Aggressive cleanup removed ${cleanedCount} entries`
-    );
-  }
-
-  /**
-   * Get memory usage estimation
-   */
-  getMemoryUsage(): {
-    parseStateCache: string;
-    tokenCache: string;
-    total: string;
-  } {
-    let parseStateMB = 0;
-    let tokenMB = 0;
-
-    // Estimate parse state cache memory
-    for (const [, entry] of this.parseStateCache) {
-      parseStateMB += entry.fileSize || 0;
-      parseStateMB += (entry.states?.length || 0) * 100; // Rough estimate per state
-    }
-
-    // Estimate token cache memory
-    for (const [, entry] of this.tokenCache) {
-      tokenMB += (entry.tokens?.length || 0) * 50; // Rough estimate per token
-      tokenMB += entry.pattern?.length || 0;
-    }
-
-    const totalMB = (parseStateMB + tokenMB) / 1024 / 1024;
-
-    return {
-      parseStateCache: `${Math.round(parseStateMB / 1024 / 1024)}MB`,
-      tokenCache: `${Math.round(tokenMB / 1024 / 1024)}MB`,
-      total: `${Math.round(totalMB)}MB`,
-    };
-  }
 
   /**
    * Dispose and cleanup

@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { BracketLynx } from './lens/lens';
 import { AstroDecorator } from './lens/decorators/astrojs-decorator';
 import { setAstroDecoratorForColors } from './actions/colors';
-import { showBracketLynxMenu, setBracketLynxProvider, setAstroDecorator, cleanupClosedEditor, stopMemoryCleanupTimer, forceMemoryCleanup, initializePersistedState } from './actions/toggle';
+import { showBracketLynxMenu, setBracketLynxProvider, setAstroDecorator, cleanupClosedEditor, initializePersistedState } from './actions/toggle';
 
 export let extensionContext: vscode.ExtensionContext;
 
@@ -106,9 +106,5 @@ export const deactivate = async () => {
     // Cleanup Universal decorations
     AstroDecorator.dispose();
     
-    // MEMORY OPTIMIZATION: Stop cleanup timer and clear memory
-    stopMemoryCleanupTimer();
-    await forceMemoryCleanup();
-    
-    console.log('🧹 Bracket Lynx: Extension deactivated and memory cleaned up');
+    console.log('🧹 Bracket Lynx: Extension deactivated');
 };

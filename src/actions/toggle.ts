@@ -10,7 +10,6 @@ import {
 const CONFIG_SECTION = 'bracketLynx';
 const GLOBAL_ENABLED_KEY = 'globalEnabled';
 const DISABLED_FILES_KEY = 'disabledFiles';
-const MEMORY_CLEANUP_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
 // Quick Pick Options
 const MENU_OPTIONS = [
@@ -30,11 +29,6 @@ const MENU_OPTIONS = [
     action: 'color',
   },
   {
-    label: '🧹 Clean Memory',
-    description: '',
-    action: 'cleanup',
-  },
-  {
     label: '♻️ Refresh',
     description: 'Update decorations for current file',
     action: 'refresh',
@@ -45,7 +39,6 @@ let isEnabled = true;
 let bracketLynxProvider: any = undefined;
 let astroDecorator: any = undefined;
 const disabledEditors = new Map<string, boolean>();
-let memoryCleanupTimer: NodeJS.Timeout | undefined;
 
 export async function toggleBracketLynx(): Promise<void> {
   isEnabled = !isEnabled;
@@ -171,7 +164,6 @@ export function setBracketLynxProvider(provider: any): void {
   bracketLynxProvider = provider;
   setBracketLynxProviderForColors(provider);
   initializeColorSystem();
-  startMemoryCleanupTimer();
 }
 
 export function setAstroDecorator(decorator: any): void {
@@ -179,16 +171,8 @@ export function setAstroDecorator(decorator: any): void {
 }
 
 export function showBracketLynxMenu(): void {
-  const memoryStats = getMemoryStats();
-  const memoryLabel = memoryStats.isHealthy
-    ? `🧠 Memory: ${memoryStats.disabledEditorsCount} entries (${memoryStats.memoryFootprintKB}KB)`
-    : `⚠️ Memory: ${memoryStats.disabledEditorsCount} entries (${memoryStats.memoryFootprintKB}KB) - Cleanup recommended`;
-
-  const options = [...MENU_OPTIONS];
-  options[3].description = memoryLabel;
-
   vscode.window
-    .showQuickPick(options, {
+    .showQuickPick(MENU_OPTIONS, {
       placeHolder: 'Choose Bracket Lynx action...',
     })
     .then(async (selected) => {
@@ -208,12 +192,6 @@ export function showBracketLynxMenu(): void {
           break;
         case 'color':
           changeDecorationColor();
-          break;
-        case 'cleanup':
-          await forceMemoryCleanup();
-          vscode.window.showInformationMessage(
-            '🧹 Bracket Lynx: Memory cleanup completed!'
-          );
           break;
       }
     });
@@ -264,109 +242,11 @@ export async function cleanupClosedEditor(document: vscode.TextDocument): Promis
   if (hasChanges) {
     await saveDisabledFilesState();
   }
-
-  if (disabledEditors.size > 100) {
-    console.log(
-      `⚠️ Bracket Lynx: Large memory footprint detected (${disabledEditors.size} entries), triggering cleanup`
-    );
-    await cleanupAllClosedEditors();
-  }
 }
 
-export async function cleanupAllClosedEditors(): Promise<void> {
-  const visibleUris = new Set<string>();
 
-  vscode.window.visibleTextEditors.forEach((editor) => {
-    visibleUris.add(editor.document.uri.toString());
-  });
 
-  vscode.workspace.textDocuments.forEach((document) => {
-    visibleUris.add(document.uri.toString());
-  });
 
-  const keysToDelete: string[] = [];
-  for (const [key] of disabledEditors) {
-    if (!visibleUris.has(key)) {
-      keysToDelete.push(key);
-    }
-  }
-
-  keysToDelete.forEach((key) => {
-    disabledEditors.delete(key);
-  });
-
-  if (keysToDelete.length > 0) {
-    await saveDisabledFilesState();
-    console.log(
-      `🧹 Bracket Lynx: Cleaned up ${keysToDelete.length} closed editor(s) from memory and persisted changes`
-    );
-  }
-}
-
-function startMemoryCleanupTimer(): void {
-  if (memoryCleanupTimer) {
-    clearInterval(memoryCleanupTimer);
-  }
-
-  memoryCleanupTimer = setInterval(async () => {
-    const sizeBefore = disabledEditors.size;
-    await cleanupAllClosedEditors();
-    const sizeAfter = disabledEditors.size;
-
-    if (sizeBefore !== sizeAfter) {
-      console.log(
-        `🔄 Bracket Lynx: Periodic cleanup - reduced memory from ${sizeBefore} to ${sizeAfter} entries`
-      );
-    }
-  }, MEMORY_CLEANUP_INTERVAL);
-}
-
-export function stopMemoryCleanupTimer(): void {
-  if (memoryCleanupTimer) {
-    clearInterval(memoryCleanupTimer);
-    memoryCleanupTimer = undefined;
-  }
-}
-
-export function getMemoryStats(): {
-  disabledEditorsCount: number;
-  memoryFootprintKB: number;
-  isHealthy: boolean;
-} {
-  const count = disabledEditors.size;
-  const estimatedKB = Math.round((count * 100) / 1024);
-  const isHealthy = count < 50;
-
-  return {
-    disabledEditorsCount: count,
-    memoryFootprintKB: estimatedKB,
-    isHealthy,
-  };
-}
-
-export async function forceMemoryCleanup(): Promise<void> {
-  const statsBefore = getMemoryStats();
-  await cleanupAllClosedEditors();
-
-  const keysToDelete: string[] = [];
-  for (const [key] of disabledEditors) {
-    if (!key || key.trim() === '' || key.length > 1000) {
-      keysToDelete.push(key);
-    }
-  }
-
-  if (keysToDelete.length > 0) {
-    keysToDelete.forEach((key) => disabledEditors.delete(key));
-    await saveDisabledFilesState();
-  }
-
-  const statsAfter = getMemoryStats();
-  
-  console.log(`🚀 Bracket Lynx: Force cleanup completed`);
-  console.log(`   Before: ${statsBefore.disabledEditorsCount} entries (${statsBefore.memoryFootprintKB}KB)`);
-  console.log(`   After: ${statsAfter.disabledEditorsCount} entries (${statsAfter.memoryFootprintKB}KB)`);
-  console.log(`   Freed: ${statsBefore.disabledEditorsCount - statsAfter.disabledEditorsCount} entries`);
-}
 
 // ============================================================================
 // PERSISTENCE FUNCTIONS
