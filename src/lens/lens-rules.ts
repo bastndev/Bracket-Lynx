@@ -288,10 +288,14 @@ export function formatArrowFunction(text: string): string | null {
   }
   
   const arrowType = detectArrowFunctionType(text);
-  if (!arrowType) return null;
+  if (!arrowType) {
+    return null;
+  }
   
   const words = text.split(/\s+/).filter(Boolean);
-  if (words.length === 0) return null;
+  if (words.length === 0) {
+    return null;
+  }
   
   switch (arrowType) {
     case 'normal':
