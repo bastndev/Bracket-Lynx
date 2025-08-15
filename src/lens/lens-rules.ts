@@ -1,41 +1,28 @@
 import { SUPPORTED_LANGUAGES, ALLOWED_JSON_FILES, SupportedLanguage, escapeRegExp } from '../core/utils';
 import { formatAsyncFunction, formatComplexFunction, isAsyncFunction, isComplexFunction } from './decorators/js-ts-decorator-function';
 
-/**
- * WORD LIMITS - Controls how many words are displayed for different content types
- * These limits ensure consistent and readable bracket headers across the extension
- */
+// WORD LIMITS - Controls how many words are displayed
 export const WORD_LIMITS = {
-  /** Maximum words for regular headers */
-  MAX_HEADER_WORDS: 1,
-  /** Maximum words for exception-related content */
-  MAX_EXCEPTION_WORDS: 2,
-  /** Maximum words for CSS-related content */
-  MAX_CSS_WORDS: 2,
-  /** Maximum words for normal arrow functions */
-  MAX_ARROW_WORDS: 3,
-  /** Maximum words for collection arrow functions */
-  MAX_COLLECTION_ARROW_WORDS: 1,
+  MAX_HEADER_WORDS: 1,           // Header
+  MAX_EXCEPTION_WORDS: 2,        // Exception
+  MAX_CSS_WORDS: 2,              // CSS
+  MAX_ARROW_WORDS: 3,            // Normal arrow
+  MAX_COLLECTION_ARROW_WORDS: 1, // Collection arrow
 } as const;
 
 /**
  * FUNCTION_SYMBOLS - Centralized symbols for consistent formatting
- * These symbols provide visual distinction between different function types
  */
 export const FUNCTION_SYMBOLS = {
-  /** Symbol for normal arrow functions (export const, const, let, var) */
   NORMAL_ARROW: '❨❩➤',
-  /** Symbol for collection arrow functions (object properties) */
   COLLECTION_ARROW: '⮞',
-  /** Symbol for async functions */
   ASYNC_FUNCTION: '⧘⧙',
-  /** Symbol for complex functions */
   COMPLEX_FUNCTION: '⇄',
 } as const;
 
 export const EXCLUDED_SYMBOLS = [
-  '!', '"', '$', '%', '&', "'", ',', '.', '/', ';', '<', '?', '@', 
-  '[', '\\', ']', '^', '_', '`', '{', '|', '}','//', '---', '--', '...',
+  '!', '"', '$', '%', '&', "'", ',', '.', '/', ';', '<', '?', '@', '\\',
+  '[', ']', '^', '_', '`', '{', '|', '}','//', '---', '--', '...',
   ':', '(', ')', '=', '>', 'MARK',
 ] as const;
 
