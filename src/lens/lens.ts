@@ -1,16 +1,22 @@
 import * as vscode from 'vscode';
-import { AdvancedCacheManager, SmartDebouncer } from '../core/performance-cache';
+import {
+  AdvancedCacheManager,
+  SmartDebouncer,
+} from '../core/performance-cache';
 import { OptimizedBracketParser } from '../core/performance-parser';
-import { shouldUseOriginalParser } from '../core/parser-exceptions';
-import { PERFORMANCE_LIMITS, DEFAULT_STYLES } from '../core/config';
-import { PositionUtils, regExpExecToArray, makeRegExpPart } from '../core/utils';
+import {
+  PositionUtils,
+  regExpExecToArray,
+  makeRegExpPart,
+  PERFORMANCE_LIMITS,
+} from '../core/utils';
 import { LanguageFormatter } from './language-formatter';
 import {
   FILTER_RULES,
   shouldExcludeSymbol,
   filterContent,
-  isLanguageSupported,
-  shouldProcessFile,
+  isLanguageSupported as isLanguageSupportedRules,
+  shouldProcessFile as shouldProcessFileRules,
   applyWordLimit,
   containsControlFlowKeyword,
 } from './lens-rules';
@@ -20,6 +26,60 @@ import {
   isDocumentEnabled,
 } from '../actions/toggle';
 import { getEffectiveColor, onConfigurationChanged } from '../actions/colors';
+import {
+  SUPPORTED_LANGUAGES,
+  ALLOWED_JSON_FILES,
+  PROBLEMATIC_LANGUAGES,
+  PROBLEMATIC_EXTENSIONS,
+  SupportedLanguage,
+  ProblematicLanguage,
+  AllowedJsonFile,
+} from '../core/utils';
+
+// ============================================================================
+// RE-EXPORT CONSTANTS FOR EASY ACCESS
+// ============================================================================
+
+export {
+  SUPPORTED_LANGUAGES,
+  ALLOWED_JSON_FILES,
+  PROBLEMATIC_LANGUAGES,
+  PROBLEMATIC_EXTENSIONS,
+  SupportedLanguage,
+  ProblematicLanguage,
+  AllowedJsonFile,
+} from '../core/utils';
+
+// ============================================================================
+// CONFIGURATION UTILITY FUNCTIONS
+// ============================================================================
+
+export function isSupportedLanguage(
+  languageId: string
+): languageId is SupportedLanguage {
+  return (SUPPORTED_LANGUAGES as readonly string[]).includes(languageId);
+}
+
+export function isProblematicLanguage(
+  languageId: string
+): languageId is ProblematicLanguage {
+  return (PROBLEMATIC_LANGUAGES as readonly string[]).includes(languageId);
+}
+
+export function isAllowedJsonFile(fileName: string): boolean {
+  const baseName = fileName.split('/').pop() || fileName;
+  return (ALLOWED_JSON_FILES as readonly string[]).includes(baseName);
+}
+
+export function shouldProcessFileConfig(
+  languageId: string,
+  fileName: string
+): boolean {
+  if (languageId === 'json' || languageId === 'jsonc') {
+    return isAllowedJsonFile(fileName);
+  }
+  return isSupportedLanguage(languageId);
+}
 
 // ============================================================================
 // EXPORTED UTILITIES (for backward compatibility)
@@ -117,30 +177,36 @@ export class BracketLynxConfig {
     }
 
     try {
-      return this.getConfig().get('color', DEFAULT_STYLES.COLOR);
+      return this.getConfig().get('color', '#515151');
     } catch {
-      return DEFAULT_STYLES.COLOR;
+      return '#515151';
     }
   }
 
   static get fontStyle(): string {
-    return this.getConfig().get('fontStyle', DEFAULT_STYLES.FONT_STYLE);
+    return this.getConfig().get('fontStyle', 'italic');
   }
 
   static get prefix(): string {
-    return this.getConfig().get('prefix', DEFAULT_STYLES.PREFIX);
+    return this.getConfig().get('prefix', '‹~ ');
   }
 
   static get unmatchBracketsPrefix(): string {
-    return this.getConfig().get('unmatchBracketsPrefix', DEFAULT_STYLES.UNMATCH_PREFIX);
+    return this.getConfig().get('unmatchBracketsPrefix', '❌ ');
   }
 
   static get maxBracketHeaderLength(): number {
-    return this.getConfig().get('maxBracketHeaderLength', PERFORMANCE_LIMITS.MAX_HEADER_LENGTH);
+    return this.getConfig().get(
+      'maxBracketHeaderLength',
+      PERFORMANCE_LIMITS.MAX_HEADER_LENGTH
+    );
   }
 
   static get minBracketScopeLines(): number {
-    return this.getConfig().get('minBracketScopeLines', PERFORMANCE_LIMITS.MIN_BRACKET_SCOPE_LINES);
+    return this.getConfig().get(
+      'minBracketScopeLines',
+      PERFORMANCE_LIMITS.MIN_BRACKET_SCOPE_LINES
+    );
   }
 
   static get enablePerformanceFilters(): boolean {
@@ -148,11 +214,17 @@ export class BracketLynxConfig {
   }
 
   static get maxFileSize(): number {
-    return this.getConfig().get('maxFileSize', PERFORMANCE_LIMITS.MAX_FILE_SIZE);
+    return this.getConfig().get(
+      'maxFileSize',
+      PERFORMANCE_LIMITS.MAX_FILE_SIZE
+    );
   }
 
   static get maxDecorationsPerFile(): number {
-    return this.getConfig().get('maxDecorationsPerFile', PERFORMANCE_LIMITS.MAX_DECORATIONS_PER_FILE);
+    return this.getConfig().get(
+      'maxDecorationsPerFile',
+      PERFORMANCE_LIMITS.MAX_DECORATIONS_PER_FILE
+    );
   }
 
   static get languageConfiguration(): LanguageConfiguration {
@@ -181,8 +253,6 @@ export class BracketLynxConfig {
 // UTILITIES
 // ============================================================================
 
-
-
 const isInlineScope = (bracket: BracketEntry) =>
   bracket.end.position.line <= bracket.start.position.line;
 
@@ -202,7 +272,8 @@ export class DocumentDecorationCacheEntry {
 
   constructor(document: vscode.TextDocument) {
     // Use parser exception manager
-    if (shouldUseOriginalParser(document)) {
+    const optimizedParser = OptimizedBracketParser.getInstance();
+    if (optimizedParser.shouldUseOriginalParser(document)) {
       // Use original parser for problematic files
       this.brackets = BracketParser.parseBrackets(document);
 
@@ -213,13 +284,6 @@ export class DocumentDecorationCacheEntry {
       }
     } else {
       // Use optimized parser for other files
-      const optimizedParser = OptimizedBracketParser.getInstance();
-
-      // Configure fallback parser to avoid circular dependencies
-      optimizedParser.setFallbackParser(
-        BracketParser.parseBrackets.bind(BracketParser)
-      );
-
       this.brackets = optimizedParser.parseBrackets(document);
 
       if (BracketLynxConfig.debug) {
@@ -902,6 +966,31 @@ export class BracketHeaderGenerator {
   // NEW: Create language formatter instance
   private static languageFormatter = new LanguageFormatter();
 
+  /**
+   * Get the first meaningful word (skip common prefixes/symbols)
+   */
+  private static getFirstMeaningfulWord(words: string[]): string {
+    const skipWords = [
+      'export',
+      'const',
+      'function',
+      'async',
+      'default',
+      'let',
+      'var',
+    ];
+
+    for (const word of words) {
+      const cleanWord = word.toLowerCase().trim();
+      if (cleanWord && !skipWords.includes(cleanWord)) {
+        return word;
+      }
+    }
+
+    // If no meaningful word found, return the first word
+    return words[0] || '';
+  }
+
   static getBracketHeader(
     document: vscode.TextDocument,
     context: BracketContext
@@ -910,7 +999,20 @@ export class BracketHeaderGenerator {
     const regulateHeader = (text: string) => {
       let result = text.replace(/\s+/gu, ' ').trim();
 
-      // NEW: Apply rules filtering first to remove excluded symbols
+      // FIRST: Check for arrow functions before filtering (to preserve 'const')
+      const lowerText = result.toLowerCase();
+      if (
+        lowerText.includes('=>') &&
+        (lowerText.includes('export') || lowerText.includes('const'))
+      ) {
+        const words = result.split(/\s+/).filter(Boolean);
+        const functionName = this.getFirstMeaningfulWord(words);
+        if (functionName) {
+          return `export ${functionName} ❨❩➤`;
+        }
+      }
+
+      // NEW: Apply rules filtering to remove excluded symbols
       result = filterContent(result);
 
       // NEW: Apply language-specific formatting before length truncation
@@ -1072,18 +1174,21 @@ export class BracketDecorationGenerator {
     };
 
     const scanner = (context: BracketContext) => {
-      const lineSpan = context.entry.end.position.line - context.entry.start.position.line + 1;
+      const lineSpan =
+        context.entry.end.position.line - context.entry.start.position.line + 1;
       const meetsMinLines = minBracketScopeLines <= lineSpan;
-      
+
       // Check if it's a control flow block (exception to minimum lines rule)
       let isControlFlowException = false;
       if (!meetsMinLines) {
         const startLine = context.entry.start.position.line;
         const endLine = context.entry.end.position.line;
-        const content = document.getText(new vscode.Range(startLine, 0, endLine + 1, 0));
+        const content = document.getText(
+          new vscode.Range(startLine, 0, endLine + 1, 0)
+        );
         isControlFlowException = containsControlFlowKeyword(content);
       }
-      
+
       if (meetsMinLines || isControlFlowException) {
         if (
           // Skip if next block starts on same line as closing
@@ -1201,7 +1306,12 @@ export class BracketLynx {
     }
 
     // NEW: Check if language is supported by rules
-    if (!shouldProcessFile(textEditor.document.languageId, textEditor.document.fileName)) {
+    if (
+      !shouldProcessFileConfig(
+        textEditor.document.languageId,
+        textEditor.document.fileName
+      )
+    ) {
       const editorCache = CacheManager.editorCache.get(textEditor);
       editorCache?.dispose();
       CacheManager.editorCache.delete(textEditor);
@@ -1330,7 +1440,7 @@ export class BracketLynx {
     }
 
     // NEW: Check if language is supported by rules
-    if (!shouldProcessFile(document.languageId, document.fileName)) {
+    if (!shouldProcessFileConfig(document.languageId, document.fileName)) {
       return;
     }
 
@@ -1346,7 +1456,7 @@ export class BracketLynx {
     }
 
     // NEW: Check if language is supported by rules
-    if (!shouldProcessFile(document.languageId, document.fileName)) {
+    if (!shouldProcessFileConfig(document.languageId, document.fileName)) {
       return;
     }
 
@@ -1402,7 +1512,7 @@ export class BracketLynx {
     if (
       isExtensionEnabled() &&
       isDocumentEnabled(document) &&
-      shouldProcessFile(document.languageId, document.fileName) &&
+      shouldProcessFileConfig(document.languageId, document.fileName) &&
       ('auto' === mode || 'on-save' === mode)
     ) {
       this.delayUpdateDecorationByDocument(document);
@@ -1413,7 +1523,7 @@ export class BracketLynx {
     if (
       isExtensionEnabled() &&
       isDocumentEnabled(document) &&
-      shouldProcessFile(document.languageId, document.fileName) &&
+      shouldProcessFileConfig(document.languageId, document.fileName) &&
       'on-save' === BracketLynxConfig.mode
     ) {
       this.updateDecorationByDocument(document);
@@ -1430,7 +1540,7 @@ export class BracketLynx {
     }
 
     // NEW: Check if language is supported by rules
-    if (!shouldProcessFile(document.languageId, document.fileName)) {
+    if (!shouldProcessFileConfig(document.languageId, document.fileName)) {
       return;
     }
 
@@ -1455,7 +1565,8 @@ export class BracketLynx {
   ): void {
     try {
       // Use parser exception manager
-      if (shouldUseOriginalParser(document)) {
+      const optimizedParser = OptimizedBracketParser.getInstance();
+      if (optimizedParser.shouldUseOriginalParser(document)) {
         if (BracketLynxConfig.debug) {
           console.log(
             `Bracket Lynx: Skipping incremental parsing for: ${document.fileName}`
@@ -1466,7 +1577,6 @@ export class BracketLynx {
       }
 
       // Use incremental parsing for other files
-      const optimizedParser = OptimizedBracketParser.getInstance();
       const existingCache = CacheManager.documentCache.get(document);
 
       if (existingCache && existingCache.brackets) {

@@ -2,19 +2,32 @@ import * as vscode from 'vscode';
 import { getCurrentColor } from '../../actions/colors';
 import { isEditorEnabled, isExtensionEnabled } from '../../actions/toggle';
 import { BracketLynxConfig } from '../lens';
-import { AdvancedCacheManager } from '../../core/performance-cache';
+
+// 🎯 ULTRA-SPECIFIC Types for maximum type safety and intellisense
+export type AstroComponentName = 'Fragment' | 'Astro' | 'Code' | 'Markdown' | 'Debug' | 'slot' | 'Component';
+export type HtmlElementName = 'style' | 'script' | 'section' | 'article' | 'main' | 'header' | 'footer' | 'aside' | 'nav' | 'html' | 'body';
+export type SupportedExtension = '.astro' | '.html';
+export type SupportedLanguageId = 'astro' | 'html';
 
 export interface ComponentRange {
-  name: string;
-  startLine: number;
-  endLine: number;
-  range: vscode.Range;
-  hasContent: boolean;
+  readonly name: string;
+  readonly startLine: number;
+  readonly endLine: number;
+  readonly range: vscode.Range;
+  readonly hasContent: boolean;
+  readonly componentType?: 'astro' | 'html' | 'custom';
+  readonly lineSpan?: number;
+}
+
+// 🚀 Performance-optimized component stack entry
+interface ComponentStackEntry {
+  readonly name: string;
+  readonly startLine: number;
+  readonly timestamp?: number; // For debugging performance
 }
 
 export class UniversalDecorator {
   private static decorationType: vscode.TextEditorDecorationType | undefined;
-  private static cache = AdvancedCacheManager.getInstance();
   private static readonly SUPPORTED_EXTENSIONS = ['.astro', '.html'];
   private static readonly SUPPORTED_LANGUAGE_IDS = ['astro', 'html'];
   
@@ -110,49 +123,68 @@ export class UniversalDecorator {
     return decorations;
   }
 
+  // 🚀 HYPER-OPTIMIZED Regex Cache - Compiled once, used forever!
+  private static readonly OPEN_TAG_REGEX = /<(\w+)(?:\s+[^>]*)?(?<!\/)\s*>/;
+  private static readonly CLOSE_TAG_REGEX = /<\/(\w+)\s*>/;
+  private static readonly TAG_DETECTOR_REGEX = /<[^>]+>/;
+
   /**
-   * Find component ranges in the document
+   * 🔥 LIGHTNING-FAST Component Range Finder - Multi-level optimization!
    */
   private static findComponentRanges(lines: string[]): ComponentRange[] {
-    const componentStack: { name: string, startLine: number }[] = [];
+    const componentStack: ComponentStackEntry[] = [];
     const componentRanges: ComponentRange[] = [];
+    const minLines = Math.max(1, BracketLynxConfig.minBracketScopeLines - 2);
 
+    // 🚀 ULTRA-FAST Line Processing - Skip non-tag lines instantly
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
+      
+      // 🔥 INSTANT SKIP - No tags, no processing!
+      if (!line || !this.TAG_DETECTOR_REGEX.test(line)) {continue;}
+      
       const trimmedLine = line.trim();
-
-      const openTagMatch = trimmedLine.match(/<(\w+)(?:\s+[^>]*)?(?<!\/)\s*>/);
+      
+      // 🎯 SMART Tag Detection - Process opening tags first (more common)
+      const openTagMatch = trimmedLine.match(this.OPEN_TAG_REGEX);
       if (openTagMatch) {
         const componentName = openTagMatch[1];
         if (this.isTargetElement(componentName)) {
-          componentStack.push({ name: componentName, startLine: i + 1 });
+          componentStack.push({ 
+            name: componentName, 
+            startLine: i + 1,
+            timestamp: BracketLynxConfig.debug ? Date.now() : undefined
+          });
         }
+        continue; // 🚀 Skip close tag check - can't be both!
       }
 
-      const closeTagMatch = trimmedLine.match(/<\/(\w+)\s*>/);
+      // 🔍 Process closing tags
+      const closeTagMatch = trimmedLine.match(this.CLOSE_TAG_REGEX);
       if (closeTagMatch) {
         const componentName = closeTagMatch[1];
         
+        // 🚀 REVERSE SEARCH - LIFO stack behavior for better performance
         for (let j = componentStack.length - 1; j >= 0; j--) {
           if (componentStack[j].name === componentName) {
             const openComponent = componentStack[j];
             componentStack.splice(j, 1);
 
             const lineSpan = (i + 1) - openComponent.startLine;
-            const minLines = Math.max(1, BracketLynxConfig.minBracketScopeLines - 2); 
             
-            if (lineSpan >= minLines) {
-              const hasContent = this.hasSignificantContent(lines, openComponent.startLine - 1, i);
+            // 🎯 SMART Content Analysis - Only if meets minimum requirements
+            if (lineSpan >= minLines && this.hasSignificantContent(lines, openComponent.startLine - 1, i)) {
+              const componentType = this.isAstroComponent(componentName) ? 'astro' : 'html';
               
-              if (hasContent) {
-                componentRanges.push({
-                  name: componentName,
-                  startLine: openComponent.startLine,
-                  endLine: i + 1,
-                  range: new vscode.Range(i, line.length, i, line.length),
-                  hasContent: true
-                });
-              }
+              componentRanges.push({
+                name: componentName,
+                startLine: openComponent.startLine,
+                endLine: i + 1,
+                range: new vscode.Range(i, line.length, i, line.length),
+                hasContent: true,
+                componentType,
+                lineSpan
+              });
             }
             break;
           }
@@ -180,7 +212,7 @@ export class UniversalDecorator {
 
     const astroElements = [
       'Fragment', 'Astro', 'Code', 'Markdown', 'Debug',
-      'slot', 'Fragment', 'Component'
+      'slot', 'Component'
     ];
     
     return astroElements.includes(tagName);
@@ -199,44 +231,43 @@ export class UniversalDecorator {
     return targetHtmlElements.includes(tagName.toLowerCase());
   }
 
+  // 🚀 ULTRA-OPTIMIZED Content Analyzer - Smart early exits and caching
+  private static readonly INSIGNIFICANT_CONTENT = new Set(['{', '}', '', '<!--', '-->']);
+  private static readonly COMMENT_REGEX = /^<!--.*-->$/;
+  
   /**
-   * Check if there's significant content between component tags
-   * Improved to detect content with only 1 significant line, with special handling for style tags
+   * 🧠 MEGA-SMART Content Detector - Optimized with early exits and pattern recognition
    */
   private static hasSignificantContent(lines: string[], startIndex: number, endIndex: number): boolean {
-    let significantLines = 0;
+    // 🚀 Quick validation - avoid processing if range is too small
+    if (endIndex - startIndex < 2) {return false;}
     
-    const openingLine = lines[startIndex]?.trim() || '';
+    // 🎯 Smart tag detection with cached regex
+    const openingLine = lines[startIndex]?.trim();
+    if (!openingLine) {return false;}
+    
     const tagMatch = openingLine.match(/<(\w+)/);
-    const tagName = tagMatch ? tagMatch[1].toLowerCase() : '';
+    const tagName = tagMatch?.[1]?.toLowerCase();
+    const isStyleTag = tagName === 'style';
     
+    // 🔥 OPTIMIZED Content Scanner - Early exit on first significant content
     for (let i = startIndex + 1; i < endIndex; i++) {
-      const contentLine = lines[i].trim();
+      const contentLine = lines[i]?.trim();
       
-      if (!contentLine) {
-        continue;
-      }
+      // 🚀 Ultra-fast insignificant content check
+      if (!contentLine || this.INSIGNIFICANT_CONTENT.has(contentLine)) {continue;}
       
-      if (contentLine.startsWith('<!--') || contentLine.endsWith('-->')) {
-        continue;
-      }
+      // 🎯 Smart comment detection
+      if (this.COMMENT_REGEX.test(contentLine)) {continue;}
       
-      if (tagName === 'style') {
-        if (contentLine && contentLine !== '{' && contentLine !== '}') {
-          significantLines++;
-          return true;
-        }
-      } else {
-        if (contentLine !== '{' && contentLine !== '}') {
-          significantLines++;
-          if (significantLines >= 1) {
-            return true;
-          }
-        }
-      }
+      // 🔥 INSTANT RETURN for style tags - no need to count
+      if (isStyleTag) {return true;}
+      
+      // 🚀 IMMEDIATE SUCCESS - Found significant content!
+      return true;
     }
     
-    return significantLines >= 1;
+    return false;
   }
 
   /**
@@ -370,12 +401,7 @@ export class UniversalDecorator {
     }
   }
 
-  /**
-   * @deprecated Use updateDecorations instead
-   */
-  public static updateAstroDecorations(editor: vscode.TextEditor): void {
-    this.updateDecorations(editor);
-  }
+  // updateAstroDecorations method removed - use updateDecorations instead
 }
 
 export const AstroDecorator = UniversalDecorator;

@@ -5,6 +5,77 @@
 import * as vscode from 'vscode';
 
 // ============================================================================
+// PERFORMANCE CONFIGURATION
+// ============================================================================
+
+export const PERFORMANCE_LIMITS = {
+  MAX_FILE_SIZE: 5 * 1024 * 1024,
+  MAX_DECORATIONS_PER_FILE: 300,
+  MIN_BRACKET_SCOPE_LINES: 5,
+  MAX_CONTENT_ANALYSIS_SIZE: 100 * 1024,
+  MAX_HEADER_LENGTH: 50,
+  DEBOUNCE_DELAY: 150,
+} as const;
+
+export const CACHE_CONFIG = {
+  MAX_DOCUMENT_CACHE_SIZE: 50,
+  MAX_EDITOR_CACHE_SIZE: 20,
+  DOCUMENT_CACHE_TTL: 5 * 60 * 1000,
+  EDITOR_CACHE_TTL: 10 * 60 * 1000,
+  CLEANUP_INTERVAL: 60 * 1000,
+  MEMORY_PRESSURE_THRESHOLD: 100,
+  AGGRESSIVE_CLEANUP_THRESHOLD: 200,
+  MAX_MEMORY_USAGE: 500,
+} as const;
+
+
+// ============================================================================
+// LANGUAGE AND FILE CONFIGURATION
+// ============================================================================
+
+export const SUPPORTED_LANGUAGES = [
+  'astro',
+  'css',
+  'html',
+  'javascript',
+  'javascriptreact',
+  'json',
+  'jsonc',
+  'less',
+  'sass',
+  'scss',
+  'svelte',
+  'typescript',
+  'typescriptreact',
+  'vue',
+] as const;
+
+export const ALLOWED_JSON_FILES = ['package.json'] as const;
+
+export const PROBLEMATIC_LANGUAGES = [
+  'astro',
+  'html',
+  'vue',
+  'svelte',
+  'javascriptreact',
+  'typescriptreact',
+] as const;
+
+export const PROBLEMATIC_EXTENSIONS = [
+  '.astro',
+  '.html',
+  '.vue',
+  '.svelte',
+  '.jsx',
+  '.tsx',
+] as const;
+
+export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
+export type ProblematicLanguage = (typeof PROBLEMATIC_LANGUAGES)[number];
+export type AllowedJsonFile = (typeof ALLOWED_JSON_FILES)[number];
+
+
+// ============================================================================
 // STRING UTILITIES
 // ============================================================================
 
