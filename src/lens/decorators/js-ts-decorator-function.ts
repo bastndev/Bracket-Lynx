@@ -1,10 +1,7 @@
-/**
- * Function symbols configuration - centralized symbol management
- */
 class FunctionSymbols {
-  private static arrowFunctionSymbol = '❨❩➤'; // 🏹 Arrow functions
-  private static asyncFunctionSymbol = '⧘⧙'; // ⚡ Async functions
-  private static complexFunctionSymbol = '⇄'; // 🔄 Complex functions
+  private static arrowFunctionSymbol = '❨❩➤';
+  private static asyncFunctionSymbol = '⧘⧙';
+  private static complexFunctionSymbol = '⇄';
 
   /**
    * Get arrow function symbol
