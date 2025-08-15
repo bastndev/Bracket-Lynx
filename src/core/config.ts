@@ -83,7 +83,7 @@ export const EXCLUDED_SYMBOLS = [
   '=',
   '>',
   'MARK',
-  'const',
+  // 'const',
 ] as const;
 
 export const WORD_LIMITS = {
