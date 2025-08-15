@@ -1,45 +1,13 @@
 import * as vscode from 'vscode';
-import {
-  AdvancedCacheManager,
-  SmartDebouncer,
-} from '../core/performance-cache';
+import { AdvancedCacheManager, SmartDebouncer } from '../core/performance-cache';
 import { OptimizedBracketParser } from '../core/performance-parser';
-import {
-  PositionUtils,
-  regExpExecToArray,
-  makeRegExpPart,
-  PERFORMANCE_LIMITS,
-} from '../core/utils';
+import { PositionUtils, regExpExecToArray, makeRegExpPart, PERFORMANCE_LIMITS, SUPPORTED_LANGUAGES, ALLOWED_JSON_FILES, PROBLEMATIC_LANGUAGES, PROBLEMATIC_EXTENSIONS, SupportedLanguage, ProblematicLanguage, AllowedJsonFile } from '../core/utils';
 import { LanguageFormatter } from './language-formatter';
-import {
-  FILTER_RULES,
-  shouldExcludeSymbol,
-  filterContent,
-  isLanguageSupported as isLanguageSupportedRules,
-  shouldProcessFile as shouldProcessFileRules,
-  applyWordLimit,
-  containsControlFlowKeyword,
-} from './lens-rules';
-import {
-  isExtensionEnabled,
-  isEditorEnabled,
-  isDocumentEnabled,
-} from '../actions/toggle';
+import { FILTER_RULES, shouldExcludeSymbol, filterContent, isLanguageSupported as isLanguageSupportedRules, shouldProcessFile as shouldProcessFileRules, applyWordLimit, containsControlFlowKeyword } from './lens-rules';
+import { isExtensionEnabled, isEditorEnabled, isDocumentEnabled } from '../actions/toggle';
 import { getEffectiveColor, onConfigurationChanged } from '../actions/colors';
-import {
-  SUPPORTED_LANGUAGES,
-  ALLOWED_JSON_FILES,
-  PROBLEMATIC_LANGUAGES,
-  PROBLEMATIC_EXTENSIONS,
-  SupportedLanguage,
-  ProblematicLanguage,
-  AllowedJsonFile,
-} from '../core/utils';
 
-// ============================================================================
 // RE-EXPORT CONSTANTS FOR EASY ACCESS
-// ============================================================================
-
 export {
   SUPPORTED_LANGUAGES,
   ALLOWED_JSON_FILES,
