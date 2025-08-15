@@ -6,22 +6,6 @@ const DEFAULT_COLOR = '#515151';
 const DECORATION_CLEAR_DELAY = 50;
 const INITIALIZATION_DELAY = 100;
 
-interface ColorOption extends vscode.QuickPickItem {
-  value: string;
-}
-
-export interface IBracketLynxProvider {
-  clearAllDecorations(): void;
-  updateAllDecoration(): void;
-  clearEditorDecorations?(editor: vscode.TextEditor): void;
-  onDidChangeConfiguration?(): void;
-  forceColorRefresh?(): void;
-}
-
-let bracketLynxProvider: IBracketLynxProvider | undefined = undefined;
-let astroDecorator: any = undefined;
-let currentColor: string = DEFAULT_COLOR;
-
 /**
  * Get available color presets for the color picker
  */
@@ -64,6 +48,24 @@ function getAvailableColors(): ColorOption[] {
     },
   ];
 }
+
+interface ColorOption extends vscode.QuickPickItem {
+  value: string;
+}
+
+export interface IBracketLynxProvider {
+  clearAllDecorations(): void;
+  updateAllDecoration(): void;
+  clearEditorDecorations?(editor: vscode.TextEditor): void;
+  onDidChangeConfiguration?(): void;
+  forceColorRefresh?(): void;
+}
+
+let bracketLynxProvider: IBracketLynxProvider | undefined = undefined;
+let astroDecorator: any = undefined;
+let currentColor: string = DEFAULT_COLOR;
+
+
 
 export function setBracketLynxProviderForColors(
   provider: IBracketLynxProvider
