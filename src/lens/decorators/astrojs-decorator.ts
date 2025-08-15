@@ -110,34 +110,46 @@ export class UniversalDecorator {
 
   /**
    * Find component ranges in the document
+   * Optimized with cached regex and reduced string operations
    */
   private static findComponentRanges(lines: string[]): ComponentRange[] {
     const componentStack: { name: string, startLine: number }[] = [];
     const componentRanges: ComponentRange[] = [];
+    
+    // Cache regex patterns for better performance
+    const openTagRegex = /<(\w+)(?:\s+[^>]*)?(?<!\/)\s*>/;
+    const closeTagRegex = /<\/(\w+)\s*>/;
+    const minLines = Math.max(1, BracketLynxConfig.minBracketScopeLines - 2);
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       const trimmedLine = line.trim();
+      
+      // Skip empty lines early
+      if (!trimmedLine || !trimmedLine.includes('<')) {
+        continue;
+      }
 
-      const openTagMatch = trimmedLine.match(/<(\w+)(?:\s+[^>]*)?(?<!\/)\s*>/);
+      const openTagMatch = trimmedLine.match(openTagRegex);
       if (openTagMatch) {
         const componentName = openTagMatch[1];
         if (this.isTargetElement(componentName)) {
           componentStack.push({ name: componentName, startLine: i + 1 });
         }
+        continue; // Skip close tag check if we found an open tag
       }
 
-      const closeTagMatch = trimmedLine.match(/<\/(\w+)\s*>/);
+      const closeTagMatch = trimmedLine.match(closeTagRegex);
       if (closeTagMatch) {
         const componentName = closeTagMatch[1];
         
+        // Search from end for better performance (LIFO stack behavior)
         for (let j = componentStack.length - 1; j >= 0; j--) {
           if (componentStack[j].name === componentName) {
             const openComponent = componentStack[j];
             componentStack.splice(j, 1);
 
             const lineSpan = (i + 1) - openComponent.startLine;
-            const minLines = Math.max(1, BracketLynxConfig.minBracketScopeLines - 2); 
             
             if (lineSpan >= minLines) {
               const hasContent = this.hasSignificantContent(lines, openComponent.startLine - 1, i);

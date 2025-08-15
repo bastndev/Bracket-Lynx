@@ -2,7 +2,6 @@ import {
   SUPPORTED_LANGUAGES,
   ALLOWED_JSON_FILES,
   SupportedLanguage,
-  AllowedJsonFile,
   escapeRegExp,
 } from '../core/utils';
 import { 
@@ -47,6 +46,20 @@ export const EXCLUDED_SYMBOLS = [
   ':', '(', ')', '=', '>', 'MARK',
 ] as const;
 
+// Optimized Set for O(1) lookups
+const EXCLUDED_SYMBOLS_SET = new Set<string>(EXCLUDED_SYMBOLS);
+
+// Cached regex patterns for better performance
+const REGEX_CACHE = new Map<string, RegExp>();
+
+function getCachedRegex(pattern: string, flags: string = 'g'): RegExp {
+  const key = `${pattern}|${flags}`;
+  if (!REGEX_CACHE.has(key)) {
+    REGEX_CACHE.set(key, new RegExp(pattern, flags));
+  }
+  return REGEX_CACHE.get(key)!;
+}
+
 /**
  * KEYWORDS - For content analysis and pattern detection
  */
@@ -56,6 +69,12 @@ export const KEYWORDS = {
   TRY_CATCH_KEYWORDS: ['try', 'catch', 'finally'] as const,
   IF_ELSE_KEYWORDS: ['if', 'else', 'switch', 'case'] as const,
 } as const;
+
+// Optimized Sets for O(1) lookups
+const CSS_RELATED_WORDS_SET = new Set<string>(KEYWORDS.CSS_RELATED_WORDS);
+const TRY_CATCH_KEYWORDS_SET = new Set<string>(KEYWORDS.TRY_CATCH_KEYWORDS);
+const IF_ELSE_KEYWORDS_SET = new Set<string>(KEYWORDS.IF_ELSE_KEYWORDS);
+const CSS_LANGUAGES_SET = new Set<string>(['css', 'scss', 'sass', 'less']);
 
 // ============================================================================
 // INTERFACES AND TYPES
@@ -85,7 +104,7 @@ export const { EXCEPTION_WORDS, CSS_RELATED_WORDS, TRY_CATCH_KEYWORDS, IF_ELSE_K
 // ============================================================================
 
 export function shouldExcludeSymbol(symbol: string): boolean {
-  return (EXCLUDED_SYMBOLS as readonly string[]).includes(symbol);
+  return EXCLUDED_SYMBOLS_SET.has(symbol);
 }
 
 export function isLanguageSupported(languageId: string): boolean {
@@ -105,27 +124,40 @@ export function shouldProcessFile(languageId: string, fileName: string): boolean
 // ============================================================================
 
 export function containsExceptionWord(text: string): boolean {
+  const lowerText = typeof text === 'string' && text === text.toLowerCase() ? text : text.toLowerCase();
   return EXCEPTION_WORDS.some(word => 
-    text.toLowerCase().includes(word.toLowerCase())
+    lowerText.includes(word.toLowerCase())
   );
 }
 
 export function containsCssContent(text: string): boolean {
-  return CSS_RELATED_WORDS.some(word => 
-    text.toLowerCase().includes(word.toLowerCase())
-  );
+  const lowerText = typeof text === 'string' && text === text.toLowerCase() ? text : text.toLowerCase();
+  for (const word of CSS_RELATED_WORDS_SET) {
+    if (lowerText.includes(word)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 export function containsTryCatchKeyword(text: string): boolean {
-  return TRY_CATCH_KEYWORDS.some(keyword => 
-    text.toLowerCase().includes(keyword.toLowerCase())
-  );
+  const lowerText = text.toLowerCase();
+  for (const keyword of TRY_CATCH_KEYWORDS_SET) {
+    if (lowerText.includes(keyword)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 export function containsIfElseKeyword(text: string): boolean {
-  return IF_ELSE_KEYWORDS.some(keyword => 
-    text.toLowerCase().includes(keyword.toLowerCase())
-  );
+  const lowerText = text.toLowerCase();
+  for (const keyword of IF_ELSE_KEYWORDS_SET) {
+    if (lowerText.includes(keyword)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 export function containsControlFlowKeyword(text: string): boolean {
@@ -154,9 +186,10 @@ export function filterContent(content: string): string {
   
   let filtered = content;
 
-  // Remove excluded symbols
+  // Remove excluded symbols using cached regex
   for (const symbol of EXCLUDED_SYMBOLS) {
-    filtered = filtered.replace(new RegExp(escapeRegExp(symbol), 'g'), ' ');
+    const regex = getCachedRegex(escapeRegExp(symbol), 'g');
+    filtered = filtered.replace(regex, ' ');
   }
 
   return filtered.replace(/\s+/g, ' ').trim();
@@ -167,8 +200,7 @@ export function applyWordLimit(text: string, languageId?: string): string {
     return '';
   }
 
-
-  
+  // Cache toLowerCase() call to avoid multiple conversions
   const lowerText = text.toLowerCase();
   const words = text.split(/\s+/).filter(word => word.length > 0);
   
@@ -177,16 +209,12 @@ export function applyWordLimit(text: string, languageId?: string): string {
     return formatAsyncFunction(words);
   }
 
-
-
   // Check for complex functions (with React types, generics, etc.) and add symbol
   if (isComplexFunction(lowerText)) {
     return formatComplexFunction(words);
   }
 
-
-  
-  // Determine max words based on context
+  // Determine max words based on context - use cached lowerText
   let maxWords: number = MAX_HEADER_WORDS;
   
   // Handle async functions first, then other exports
@@ -195,9 +223,9 @@ export function applyWordLimit(text: string, languageId?: string): string {
   } else if (lowerText.startsWith('export const') && lowerText.includes('=>')) {
     // Only apply to export const arrow functions (that contain '=>')
     maxWords = 3;
-  } else if (containsExceptionWord(text)) {
+  } else if (containsExceptionWord(lowerText)) { // Pass lowerText to avoid re-conversion
     maxWords = MAX_EXCEPTION_WORDS;
-  } else if (containsCssContent(text) || isCssLanguage(languageId)) {
+  } else if (containsCssContent(lowerText) || isCssLanguage(languageId)) { // Pass lowerText to avoid re-conversion
     maxWords = MAX_CSS_WORDS;
   }
   
@@ -216,5 +244,5 @@ function isCssLanguage(languageId?: string): boolean {
   if (!languageId) {
     return false;
   }
-  return ['css', 'scss', 'sass', 'less'].includes(languageId);
+  return CSS_LANGUAGES_SET.has(languageId);
 }

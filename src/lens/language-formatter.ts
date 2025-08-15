@@ -1,6 +1,18 @@
 import { shouldExcludeSymbol, filterContent } from './lens-rules';
 
 export class LanguageFormatter {
+  // Cached regex patterns for better performance
+  private static readonly CSS_PATTERNS = [
+    /^[.#][\w-]+/,
+    /[\w-]+\s*:\s*[\w-]+/,
+    /^@[\w-]+/,
+    /\.([\w-]+)\s*{/,
+    /#([\w-]+)\s*{/,
+    /[\w-]+\s*,\s*[\w-]+/,
+  ];
+  
+  private static readonly CSS_SELECTOR_REGEX = /[.#]/g;
+
   /**
    * Format context based on language with smart CSS detection
    */
@@ -46,6 +58,7 @@ export class LanguageFormatter {
 
   /**
    * Smart CSS Detection: Detects CSS patterns regardless of file type
+   * Optimized with cached regex patterns
    */
   private looksLikeCSS(context: string): boolean {
     if (!context || context.length < 2) {
@@ -53,22 +66,16 @@ export class LanguageFormatter {
     }
 
     const trimmedContext = context.trim();
-    const cssPatterns = [
-      /^[.#][\w-]+/,
-      /[\w-]+\s*:\s*[\w-]+/,
-      /^@[\w-]+/,
-      /\.([\w-]+)\s*{/,
-      /#([\w-]+)\s*{/,
-      /[\w-]+\s*,\s*[\w-]+/,
-    ];
 
-    for (const pattern of cssPatterns) {
+    // Use cached patterns for better performance
+    for (const pattern of LanguageFormatter.CSS_PATTERNS) {
       if (pattern.test(trimmedContext)) {
         return true;
       }
     }
 
-    const cssSelectorCount = (trimmedContext.match(/[.#]/g) || []).length;
+    // Use cached regex for selector counting
+    const cssSelectorCount = (trimmedContext.match(LanguageFormatter.CSS_SELECTOR_REGEX) || []).length;
     const hasSpaces = trimmedContext.includes(' ');
 
     return cssSelectorCount >= 2 && hasSpaces;
