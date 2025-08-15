@@ -40,29 +40,7 @@ export const PROBLEMATIC_EXTENSIONS = [
   '.tsx',
 ] as const;
 
-export const PERFORMANCE_LIMITS = {
-  MAX_FILE_SIZE: 5 * 1024 * 1024,
-  MAX_DECORATIONS_PER_FILE: 300,
-  MIN_BRACKET_SCOPE_LINES: 5,
-  MAX_CONTENT_ANALYSIS_SIZE: 100 * 1024,
-  MAX_HEADER_LENGTH: 50,
-  DEBOUNCE_DELAY: 150,
-} as const;
-
-// Rule-related constants moved to lens-rules.ts for centralized rule management
-
-// Function symbols moved to js-ts-decorator-function.ts for centralized management
-
-export const CACHE_CONFIG = {
-  MAX_DOCUMENT_CACHE_SIZE: 50,
-  MAX_EDITOR_CACHE_SIZE: 20,
-  DOCUMENT_CACHE_TTL: 5 * 60 * 1000,
-  EDITOR_CACHE_TTL: 10 * 60 * 1000,
-  CLEANUP_INTERVAL: 60 * 1000,
-  MEMORY_PRESSURE_THRESHOLD: 100,
-  AGGRESSIVE_CLEANUP_THRESHOLD: 200,
-  MAX_MEMORY_USAGE: 500,
-} as const;
+// Performance constants moved to src/core/utils.ts for centralized performance management
 
 export const DEFAULT_STYLES = {
   COLOR: '#515151',

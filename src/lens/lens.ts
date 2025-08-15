@@ -1,8 +1,16 @@
 import * as vscode from 'vscode';
-import { AdvancedCacheManager, SmartDebouncer } from '../core/performance-cache';
+import {
+  AdvancedCacheManager,
+  SmartDebouncer,
+} from '../core/performance-cache';
 import { OptimizedBracketParser } from '../core/performance-parser';
-import { PERFORMANCE_LIMITS, DEFAULT_STYLES } from './config';
-import { PositionUtils, regExpExecToArray, makeRegExpPart } from '../core/utils';
+import { DEFAULT_STYLES } from './config';
+import {
+  PositionUtils,
+  regExpExecToArray,
+  makeRegExpPart,
+  PERFORMANCE_LIMITS,
+} from '../core/utils';
 import { LanguageFormatter } from './language-formatter';
 import {
   FILTER_RULES,
@@ -131,15 +139,24 @@ export class BracketLynxConfig {
   }
 
   static get unmatchBracketsPrefix(): string {
-    return this.getConfig().get('unmatchBracketsPrefix', DEFAULT_STYLES.UNMATCH_PREFIX);
+    return this.getConfig().get(
+      'unmatchBracketsPrefix',
+      DEFAULT_STYLES.UNMATCH_PREFIX
+    );
   }
 
   static get maxBracketHeaderLength(): number {
-    return this.getConfig().get('maxBracketHeaderLength', PERFORMANCE_LIMITS.MAX_HEADER_LENGTH);
+    return this.getConfig().get(
+      'maxBracketHeaderLength',
+      PERFORMANCE_LIMITS.MAX_HEADER_LENGTH
+    );
   }
 
   static get minBracketScopeLines(): number {
-    return this.getConfig().get('minBracketScopeLines', PERFORMANCE_LIMITS.MIN_BRACKET_SCOPE_LINES);
+    return this.getConfig().get(
+      'minBracketScopeLines',
+      PERFORMANCE_LIMITS.MIN_BRACKET_SCOPE_LINES
+    );
   }
 
   static get enablePerformanceFilters(): boolean {
@@ -147,11 +164,17 @@ export class BracketLynxConfig {
   }
 
   static get maxFileSize(): number {
-    return this.getConfig().get('maxFileSize', PERFORMANCE_LIMITS.MAX_FILE_SIZE);
+    return this.getConfig().get(
+      'maxFileSize',
+      PERFORMANCE_LIMITS.MAX_FILE_SIZE
+    );
   }
 
   static get maxDecorationsPerFile(): number {
-    return this.getConfig().get('maxDecorationsPerFile', PERFORMANCE_LIMITS.MAX_DECORATIONS_PER_FILE);
+    return this.getConfig().get(
+      'maxDecorationsPerFile',
+      PERFORMANCE_LIMITS.MAX_DECORATIONS_PER_FILE
+    );
   }
 
   static get languageConfiguration(): LanguageConfiguration {
@@ -179,8 +202,6 @@ export class BracketLynxConfig {
 // ============================================================================
 // UTILITIES
 // ============================================================================
-
-
 
 const isInlineScope = (bracket: BracketEntry) =>
   bracket.end.position.line <= bracket.start.position.line;
@@ -899,15 +920,23 @@ export class BracketHeaderGenerator {
    * Get the first meaningful word (skip common prefixes/symbols)
    */
   private static getFirstMeaningfulWord(words: string[]): string {
-    const skipWords = ['export', 'const', 'function', 'async', 'default', 'let', 'var'];
-    
+    const skipWords = [
+      'export',
+      'const',
+      'function',
+      'async',
+      'default',
+      'let',
+      'var',
+    ];
+
     for (const word of words) {
       const cleanWord = word.toLowerCase().trim();
       if (cleanWord && !skipWords.includes(cleanWord)) {
         return word;
       }
     }
-    
+
     // If no meaningful word found, return the first word
     return words[0] || '';
   }
@@ -922,7 +951,10 @@ export class BracketHeaderGenerator {
 
       // FIRST: Check for arrow functions before filtering (to preserve 'const')
       const lowerText = result.toLowerCase();
-      if (lowerText.includes('=>') && (lowerText.includes('export') || lowerText.includes('const'))) {
+      if (
+        lowerText.includes('=>') &&
+        (lowerText.includes('export') || lowerText.includes('const'))
+      ) {
         const words = result.split(/\s+/).filter(Boolean);
         const functionName = this.getFirstMeaningfulWord(words);
         if (functionName) {
@@ -1092,18 +1124,21 @@ export class BracketDecorationGenerator {
     };
 
     const scanner = (context: BracketContext) => {
-      const lineSpan = context.entry.end.position.line - context.entry.start.position.line + 1;
+      const lineSpan =
+        context.entry.end.position.line - context.entry.start.position.line + 1;
       const meetsMinLines = minBracketScopeLines <= lineSpan;
-      
+
       // Check if it's a control flow block (exception to minimum lines rule)
       let isControlFlowException = false;
       if (!meetsMinLines) {
         const startLine = context.entry.start.position.line;
         const endLine = context.entry.end.position.line;
-        const content = document.getText(new vscode.Range(startLine, 0, endLine + 1, 0));
+        const content = document.getText(
+          new vscode.Range(startLine, 0, endLine + 1, 0)
+        );
         isControlFlowException = containsControlFlowKeyword(content);
       }
-      
+
       if (meetsMinLines || isControlFlowException) {
         if (
           // Skip if next block starts on same line as closing
@@ -1221,7 +1256,12 @@ export class BracketLynx {
     }
 
     // NEW: Check if language is supported by rules
-    if (!shouldProcessFile(textEditor.document.languageId, textEditor.document.fileName)) {
+    if (
+      !shouldProcessFile(
+        textEditor.document.languageId,
+        textEditor.document.fileName
+      )
+    ) {
       const editorCache = CacheManager.editorCache.get(textEditor);
       editorCache?.dispose();
       CacheManager.editorCache.delete(textEditor);
