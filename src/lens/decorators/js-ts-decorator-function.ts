@@ -2,6 +2,8 @@ class FunctionSymbols {
   private static arrowFunctionSymbol = '❨❩➤';
   private static asyncFunctionSymbol = '⧘⧙';
   private static complexFunctionSymbol = '⇄';
+  
+  private static collectionArrowSymbol = '⮞';
 
   /**
    * Get arrow function symbol
@@ -25,17 +27,26 @@ class FunctionSymbols {
   }
 
   /**
+   * Get collection arrow symbol
+   */
+  static getCollectionArrowSymbol(): string {
+    return this.collectionArrowSymbol;
+  }
+
+  /**
    * Get all symbols
    */
   static getAllSymbols(): {
     arrow: string;
     async: string;
     complex: string;
+    collectionArrow: string;
   } {
     return {
       arrow: this.arrowFunctionSymbol,
       async: this.asyncFunctionSymbol,
       complex: this.complexFunctionSymbol,
+      collectionArrow: this.collectionArrowSymbol,
     };
   }
 
@@ -59,8 +70,25 @@ class FunctionSymbols {
   static setComplexSymbol(newSymbol: string): void {
     this.complexFunctionSymbol = newSymbol;
   }
+
+  /**
+   * Change collection arrow symbol
+   */
+  static setCollectionArrowSymbol(newSymbol: string): void {
+    this.collectionArrowSymbol = newSymbol;
+  }
 }
 
+// ============================================================================
+// CENTRALIZED SYMBOL EXPORTS - Single source of truth
+// ============================================================================
+
+export const FUNCTION_SYMBOLS = {
+  NORMAL_ARROW: FunctionSymbols.getArrowSymbol(),
+  COLLECTION_ARROW: FunctionSymbols.getCollectionArrowSymbol(),
+  ASYNC_FUNCTION: FunctionSymbols.getAsyncSymbol(),
+  COMPLEX_FUNCTION: FunctionSymbols.getComplexSymbol(),
+} as const;
 
 
 /**
@@ -148,6 +176,7 @@ export function getFunctionSymbols(): {
   arrow: string;
   async: string;
   complex: string;
+  collectionArrow: string;
 } {
   return FunctionSymbols.getAllSymbols();
 }
@@ -167,6 +196,10 @@ export function getComplexSymbol(): string {
   return FunctionSymbols.getComplexSymbol();
 }
 
+export function getCollectionArrowSymbol(): string {
+  return FunctionSymbols.getCollectionArrowSymbol();
+}
+
 /**
  * Change symbols (for configuration)
  */
@@ -180,6 +213,10 @@ export function setAsyncSymbol(newSymbol: string): void {
 
 export function setComplexSymbol(newSymbol: string): void {
   FunctionSymbols.setComplexSymbol(newSymbol);
+}
+
+export function setCollectionArrowSymbol(newSymbol: string): void {
+  FunctionSymbols.setCollectionArrowSymbol(newSymbol);
 }
 
 /**

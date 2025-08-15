@@ -1,5 +1,5 @@
 import { SUPPORTED_LANGUAGES, ALLOWED_JSON_FILES, SupportedLanguage, escapeRegExp } from '../core/utils';
-import { formatAsyncFunction, formatComplexFunction, isAsyncFunction, isComplexFunction } from './decorators/js-ts-decorator-function';
+import { formatAsyncFunction, formatComplexFunction, isAsyncFunction, isComplexFunction, FUNCTION_SYMBOLS } from './decorators/js-ts-decorator-function';
 
 // WORD LIMITS - Controls how many words are displayed
 export const WORD_LIMITS = {
@@ -12,13 +12,8 @@ export const WORD_LIMITS = {
 
 /**
  * FUNCTION_SYMBOLS - Centralized symbols for consistent formatting
+ * Imported from js-ts-decorator-function.ts to avoid duplication
  */
-export const FUNCTION_SYMBOLS = {
-  NORMAL_ARROW: '❨❩➤',
-  COLLECTION_ARROW: '⮞',
-  ASYNC_FUNCTION: '⧘⧙',
-  COMPLEX_FUNCTION: '⇄',
-} as const;
 
 export const EXCLUDED_SYMBOLS = [
   '!', '"', '$', '%', '&', "'", ',', '.', '/', ';', '<', '?', '@', '\\',
@@ -117,7 +112,7 @@ export const FILTER_RULES: FilterRules = {
 // Re-export constants for backward compatibility
 export { SUPPORTED_LANGUAGES, ALLOWED_JSON_FILES } from '../core/utils';
 export const { MAX_HEADER_WORDS, MAX_EXCEPTION_WORDS, MAX_CSS_WORDS, MAX_ARROW_WORDS, MAX_COLLECTION_ARROW_WORDS } = WORD_LIMITS;
-export const { NORMAL_ARROW, COLLECTION_ARROW, ASYNC_FUNCTION, COMPLEX_FUNCTION } = FUNCTION_SYMBOLS;
+export { FUNCTION_SYMBOLS };
 export const { EXCEPTION_WORDS, CSS_RELATED_WORDS, TRY_CATCH_KEYWORDS, IF_ELSE_KEYWORDS } = KEYWORDS;
 
 // ============================================================================
