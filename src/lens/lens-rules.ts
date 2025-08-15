@@ -1,16 +1,23 @@
 import { SUPPORTED_LANGUAGES, ALLOWED_JSON_FILES, SupportedLanguage, escapeRegExp } from '../core/utils';
-import { formatAsyncFunction, formatComplexFunction, isAsyncFunction, isComplexFunction } from './decorators/js-ts-decorator-function';
+import { formatAsyncFunction, formatComplexFunction, isAsyncFunction, isComplexFunction, FUNCTION_SYMBOLS } from './decorators/js-ts-decorator-function';
 
-//WORD LIMITS - Controls how many words are displayed
+// WORD LIMITS - Controls how many words are displayed
 export const WORD_LIMITS = {
-  MAX_HEADER_WORDS: 1,
-  MAX_EXCEPTION_WORDS: 2,
-  MAX_CSS_WORDS: 2,
+  MAX_HEADER_WORDS: 1,           // Header
+  MAX_EXCEPTION_WORDS: 2,        // Exception
+  MAX_CSS_WORDS: 2,              // CSS
+  MAX_ARROW_WORDS: 3,            // Normal arrow
+  MAX_COLLECTION_ARROW_WORDS: 1, // Collection arrow
 } as const;
 
+/**
+ * FUNCTION_SYMBOLS - Centralized symbols for consistent formatting
+ * Imported from js-ts-decorator-function.ts to avoid duplication
+ */
+
 export const EXCLUDED_SYMBOLS = [
-  '!', '"', '$', '%', '&', "'", ',', '.', '/', ';', '<', '?', '@', 
-  '[', '\\', ']', '^', '_', '`', '{', '|', '}','//', '---', '--', '...',
+  '!', '"', '$', '%', '&', "'", ',', '.', '/', ';', '<', '?', '@', '\\',
+  '[', ']', '^', '_', '`', '{', '|', '}','//', '---', '--', '...',
   ':', '(', ')', '=', '>', 'MARK',
 ] as const;
 
@@ -70,8 +77,8 @@ const CSS_LANGUAGES_SET = new Set<string>(['css', 'scss', 'sass', 'less']);
 
 export type ExcludedSymbol = typeof EXCLUDED_SYMBOLS[number];
 export type CssLanguage = 'css' | 'scss' | 'sass' | 'less';
-export type WordLimitType = 'header' | 'exception' | 'css';
-export type ContentType = 'async' | 'complex' | 'arrow' | 'css' | 'exception' | 'control-flow';
+export type WordLimitType = 'header' | 'exception' | 'css' | 'arrow';
+export type ContentType = 'async' | 'complex' | 'arrow' | 'collection-arrow' | 'css' | 'exception' | 'control-flow';
 
 // Smart union types for better intellisense
 export type LanguageContext = {
@@ -104,7 +111,8 @@ export const FILTER_RULES: FilterRules = {
 
 // Re-export constants for backward compatibility
 export { SUPPORTED_LANGUAGES, ALLOWED_JSON_FILES } from '../core/utils';
-export const { MAX_HEADER_WORDS, MAX_EXCEPTION_WORDS, MAX_CSS_WORDS } = WORD_LIMITS;
+export const { MAX_HEADER_WORDS, MAX_EXCEPTION_WORDS, MAX_CSS_WORDS, MAX_ARROW_WORDS, MAX_COLLECTION_ARROW_WORDS } = WORD_LIMITS;
+export { FUNCTION_SYMBOLS };
 export const { EXCEPTION_WORDS, CSS_RELATED_WORDS, TRY_CATCH_KEYWORDS, IF_ELSE_KEYWORDS } = KEYWORDS;
 
 // ============================================================================
@@ -203,6 +211,102 @@ export function isArrowFunction(lowerText: string): boolean {
   );
 }
 
+export function isCollectionArrowFunction(lowerText: string): boolean {
+  // Input validation
+  if (!lowerText || typeof lowerText !== 'string') {
+    return false;
+  }
+  
+  // Check for arrow functions in collections/objects (like Icon.Sun, Icon.Moon)
+  // More robust detection: must have arrow, colon, and NOT be a variable declaration
+  const hasArrow = lowerText.includes('=>');
+  const hasColon = lowerText.includes(':');
+  const isVariableDeclaration = lowerText.includes('export') || 
+                               lowerText.includes('const') || 
+                               lowerText.includes('let') || 
+                               lowerText.includes('var');
+  
+  return hasArrow && hasColon && !isVariableDeclaration;
+}
+
+/**
+ * 🎯 UNIFIED Arrow Function Type Detector
+ * Determines the type of arrow function for consistent processing
+ */
+export function detectArrowFunctionType(text: string): 'normal' | 'collection' | null {
+  // Input validation
+  if (!text || typeof text !== 'string') {
+    return null;
+  }
+  
+  const lowerText = text.toLowerCase().trim();
+  
+  if (!lowerText.includes('=>')) {
+    return null;
+  }
+  
+  // Check for normal arrow functions (export const, const, let, var)
+  if (lowerText.includes('export') || lowerText.includes('const') || 
+      lowerText.includes('let') || lowerText.includes('var')) {
+    return 'normal';
+  }
+  
+  // Check for collection arrow functions (object properties with arrow functions)
+  if (lowerText.includes(':') && !lowerText.includes('export')) {
+    return 'collection';
+  }
+  
+  return null;
+}
+
+/**
+ * 🚀 OPTIMIZED Arrow Function Formatter
+ * Handles both normal and collection arrow functions with proper symbols
+ */
+export function formatArrowFunction(text: string): string | null {
+  // Input validation
+  if (!text || typeof text !== 'string') {
+    return null;
+  }
+  
+  const arrowType = detectArrowFunctionType(text);
+  if (!arrowType) {
+    return null;
+  }
+  
+  const words = text.split(/\s+/).filter(Boolean);
+  if (words.length === 0) {
+    return null;
+  }
+  
+  switch (arrowType) {
+    case 'normal':
+      if (words.length >= 2) {
+        const firstTwoWords = words.slice(0, 2).join(' ');
+        return `${firstTwoWords} ${FUNCTION_SYMBOLS.NORMAL_ARROW}`;
+      } else if (words.length === 1) {
+        return `${words[0]} ${FUNCTION_SYMBOLS.NORMAL_ARROW}`;
+      }
+      break;
+      
+    case 'collection':
+      if (words.length >= 1) {
+        const functionName = words[0];
+        return `${functionName} ${FUNCTION_SYMBOLS.COLLECTION_ARROW}`;
+      }
+      break;
+  }
+  
+  return null;
+}
+
+export function formatCollectionArrowFunction(words: string[]): string {
+  if (words.length >= 1) {
+    return `${words[0]} ⮞`;
+  }
+  return words.join(' ');
+}
+
 // ============================================================================
 // CONTENT FILTERING AND FORMATTING
 // ============================================================================
@@ -228,9 +332,18 @@ export function filterContent(content: string): string {
 
 /**
  * 🚀 MEGA-INTELLIGENT Content Analyzer - Analyzes everything in one pass!
+ * This function determines the content type and appropriate formatting rules
+ * @param text - The text content to analyze
+ * @param languageId - Optional language identifier for context-specific analysis
+ * @returns ContentAnalysisResult with type, word limits, and formatting requirements
  */
 function analyzeContentSmart(text: string, languageId?: string): ContentAnalysisResult {
-  const lowerText = text.toLowerCase();
+  // Input validation
+  if (!text || typeof text !== 'string') {
+    return { contentType: null, maxWords: MAX_HEADER_WORDS, requiresSymbol: false, isOptimized: true };
+  }
+  
+  const lowerText = text.toLowerCase().trim();
   
   // Ultra-fast content type detection with priority order
   if (isAsyncFunction(lowerText)) {
@@ -241,8 +354,13 @@ function analyzeContentSmart(text: string, languageId?: string): ContentAnalysis
     return { contentType: 'complex', maxWords: 2, requiresSymbol: true, isOptimized: true };
   }
   
-  if (lowerText.includes('=>') && (lowerText.includes('export') || lowerText.includes('const'))) {
-    return { contentType: 'arrow', maxWords: 3, requiresSymbol: false, isOptimized: true };
+  // Check for arrow functions using unified detection
+  const arrowType = detectArrowFunctionType(text);
+  if (arrowType === 'normal') {
+    return { contentType: 'arrow', maxWords: MAX_ARROW_WORDS, requiresSymbol: false, isOptimized: true };
+  }
+  if (arrowType === 'collection') {
+    return { contentType: 'collection-arrow', maxWords: MAX_COLLECTION_ARROW_WORDS, requiresSymbol: true, isOptimized: true };
   }
   
   if (containsExceptionWord(lowerText)) {
@@ -273,6 +391,7 @@ export function applyWordLimit(text: string, languageId?: string): string {
     switch (analysis.contentType) {
       case 'async': return formatAsyncFunction(words);
       case 'complex': return formatComplexFunction(words);
+      case 'collection-arrow': return formatCollectionArrowFunction(words);
     }
   }
   

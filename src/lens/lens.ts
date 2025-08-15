@@ -5,7 +5,7 @@ import { getEffectiveColor, onConfigurationChanged } from '../actions/colors';
 import { AdvancedCacheManager, SmartDebouncer } from '../core/performance-cache';
 import { isExtensionEnabled, isEditorEnabled, isDocumentEnabled } from '../actions/toggle';
 import { PositionUtils, regExpExecToArray, makeRegExpPart, PERFORMANCE_LIMITS, SUPPORTED_LANGUAGES, ALLOWED_JSON_FILES, PROBLEMATIC_LANGUAGES, PROBLEMATIC_EXTENSIONS, SupportedLanguage, ProblematicLanguage, AllowedJsonFile } from '../core/utils';
-import { FILTER_RULES, shouldExcludeSymbol, filterContent, isLanguageSupported as isLanguageSupportedRules, shouldProcessFile as shouldProcessFileRules, applyWordLimit, containsControlFlowKeyword } from './lens-rules';
+import { FILTER_RULES, shouldExcludeSymbol, filterContent, isLanguageSupported as isLanguageSupportedRules, shouldProcessFile as shouldProcessFileRules, applyWordLimit, containsControlFlowKeyword, formatArrowFunction } from './lens-rules';
 
 // RE-EXPORT CONSTANTS FOR EASY ACCESS
 export {
@@ -224,11 +224,22 @@ export class BracketLynxConfig {
 const isInlineScope = (bracket: BracketEntry) =>
   bracket.end.position.line <= bracket.start.position.line;
 
-const debug = (output: any) => {
-  if (BracketLynxConfig.debug) {
-    console.debug(output);
-  }
-};
+    interface DebugOutput {
+      message: string;
+      data?: unknown;
+      timestamp: number;
+      context?: string;
+    }
+
+    const debug = (output: DebugOutput | string) => {
+      if (BracketLynxConfig.debug) {
+        if (typeof output === 'string') {
+          console.debug(output);
+        } else {
+          console.debug(`[${output.context || 'BracketLynx'}] ${output.message}`, output.data);
+        }
+      }
+    };
 
 // ============================================================================
 // CACHE MANAGEMENT
@@ -967,17 +978,10 @@ export class BracketHeaderGenerator {
     const regulateHeader = (text: string) => {
       let result = text.replace(/\s+/gu, ' ').trim();
 
-      // FIRST: Check for arrow functions before filtering (to preserve 'const')
-      const lowerText = result.toLowerCase();
-      if (
-        lowerText.includes('=>') &&
-        (lowerText.includes('export') || lowerText.includes('const'))
-      ) {
-        const words = result.split(/\s+/).filter(Boolean);
-        const functionName = this.getFirstMeaningfulWord(words);
-        if (functionName) {
-          return `export ${functionName} ❨❩➤`;
-        }
+      // FIRST: Check for arrow functions using unified logic
+      const arrowResult = formatArrowFunction(result);
+      if (arrowResult) {
+        return arrowResult;
       }
 
       // NEW: Apply rules filtering to remove excluded symbols
