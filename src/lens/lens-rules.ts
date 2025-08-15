@@ -8,7 +8,7 @@ import {
   isAllowedJsonFile,
   shouldProcessFile as configShouldProcessFile
 } from '../core/config';
-import { handlePropsPattern, handleArrowFunctionPattern } from './decorators/js-ts-decorator-function';
+import { handleArrowFunctionPattern } from './decorators/js-ts-decorator-function';
 
 // ============================================================================
 // INTERFACES AND TYPES
@@ -31,7 +31,7 @@ export const FILTER_RULES: FilterRules = {
 // Re-export constants for backward compatibility
 export { EXCLUDED_SYMBOLS, SUPPORTED_LANGUAGES, ALLOWED_JSON_FILES } from '../core/config';
 export const { MAX_HEADER_WORDS, MAX_EXCEPTION_WORDS, MAX_CSS_WORDS } = WORD_LIMITS;
-export const { EXCEPTION_WORDS, PROPS_PATTERNS, CSS_RELATED_WORDS, TRY_CATCH_KEYWORDS, IF_ELSE_KEYWORDS } = KEYWORDS;
+export const { EXCEPTION_WORDS, CSS_RELATED_WORDS, TRY_CATCH_KEYWORDS, IF_ELSE_KEYWORDS } = KEYWORDS;
 
 // ============================================================================
 // VALIDATION FUNCTIONS
@@ -142,17 +142,7 @@ export function applyWordLimit(text: string, languageId?: string): string {
     return '';
   }
 
-  // Check for props pattern - limit to only one word
-  const propsReplacement = handlePropsPattern(text);
-  if (propsReplacement) {
-    const words = text.split(/\s+/).filter(word => word.length > 0);
-    if (words.length > 1) {
-      // Return only the first meaningful word and the symbol (e.g., "GitHub ➤")
-      const firstWord = getFirstMeaningfulWord(words);
-      return `${firstWord} ${propsReplacement}`;
-    }
-    return propsReplacement; // Only show the symbol if it's just "props"
-  }
+
   
   const lowerText = text.toLowerCase();
   const words = text.split(/\s+/).filter(word => word.length > 0);
@@ -223,7 +213,7 @@ function getFirstMeaningfulWord(words: string[]): string {
   
   for (const word of words) {
     const cleanWord = word.toLowerCase().trim();
-    if (cleanWord && !skipWords.includes(cleanWord) && cleanWord !== 'props') {
+    if (cleanWord && !skipWords.includes(cleanWord)) {
       return word;
     }
   }

@@ -910,7 +910,7 @@ export class BracketHeaderGenerator {
     
     for (const word of words) {
       const cleanWord = word.toLowerCase().trim();
-      if (cleanWord && !skipWords.includes(cleanWord) && cleanWord !== 'props') {
+      if (cleanWord && !skipWords.includes(cleanWord)) {
         return word;
       }
     }

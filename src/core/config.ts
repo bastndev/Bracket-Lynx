@@ -64,7 +64,6 @@ export const WORD_LIMITS = {
 
 export const KEYWORDS = {
   EXCEPTION_WORDS: ['export'] as const,
-  PROPS_PATTERNS: ['props'] as const,
   CSS_RELATED_WORDS: ['style', 'styles', 'css'] as const,
   TRY_CATCH_KEYWORDS: ['try', 'catch', 'finally'] as const,
   IF_ELSE_KEYWORDS: ['if', 'else', 'switch', 'case'] as const,
@@ -74,7 +73,6 @@ export const FUNCTION_SYMBOLS = {
   ARROW_FUNCTION: '❨❩➤',
   ASYNC_FUNCTION: '⧘⧙',
   COMPLEX_FUNCTION: '⇄',
-  PROPS: '➤',
 } as const;
 
 export const CACHE_CONFIG = {

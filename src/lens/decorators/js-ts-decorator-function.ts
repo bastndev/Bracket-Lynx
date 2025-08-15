@@ -1,7 +1,5 @@
 import { KEYWORDS } from '../../core/config';
 
-const { PROPS_PATTERNS } = KEYWORDS;
-
 /**
  * Get the first meaningful word (skip common prefixes/symbols)
  */
@@ -10,7 +8,7 @@ function getFirstMeaningfulWord(words: string[]): string {
   
   for (const word of words) {
     const cleanWord = word.toLowerCase().trim();
-    if (cleanWord && !skipWords.includes(cleanWord) && cleanWord !== 'props') {
+    if (cleanWord && !skipWords.includes(cleanWord)) {
       return word;
     }
   }
@@ -19,24 +17,7 @@ function getFirstMeaningfulWord(words: string[]): string {
   return words[0] || '';
 }
 
-/**
- * Checks for JSX/TSX props patterns (e.g., `...props`) and returns a replacement symbol.
- * @param text The text content to analyze.
- * @returns The replacement symbol '❨❩➤' if a pattern is found, otherwise null.
- */
-export function handlePropsPattern(text: string): string | null {
-  const lowerText = text.toLowerCase();
-  const hasProps = PROPS_PATTERNS.some(
-    (pattern) =>
-      lowerText.endsWith(pattern) || lowerText.includes(`...${pattern}`)
-  );
 
-  if (hasProps) {
-    return '➤';
-  }
-
-  return null;
-}
 
 /**
  * Handles the decoration for exported arrow functions.
@@ -205,17 +186,7 @@ export function detectAndDecorate(content: string): string {
     return arrowResult;
   }
 
-  // Check for props pattern - limit to only one word
-  const propsResult = handlePropsPattern(content);
-  if (propsResult) {
-    const words = content.split(/\s+/).filter(Boolean);
-    if (words.length > 1) {
-      // Return only the first meaningful word and the symbol
-      const firstWord = getFirstMeaningfulWord(words);
-      return `${firstWord} ${propsResult}`;
-    }
-    return propsResult;
-  }
+
 
   return content;
 }
@@ -227,12 +198,10 @@ export function getFunctionSymbols(): {
   arrow: string;
   async: string;
   complex: string;
-  props: string;
 } {
   return {
     arrow: '❨❩➤',
     async: '⧘⧙',
     complex: '⇄',
-    props: '➤',
   };
 }
