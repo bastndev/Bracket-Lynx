@@ -4,7 +4,6 @@ import {
   SmartDebouncer,
 } from '../core/performance-cache';
 import { OptimizedBracketParser } from '../core/performance-parser';
-import { DEFAULT_STYLES } from './config';
 import {
   PositionUtils,
   regExpExecToArray,
@@ -16,8 +15,8 @@ import {
   FILTER_RULES,
   shouldExcludeSymbol,
   filterContent,
-  isLanguageSupported,
-  shouldProcessFile,
+  isLanguageSupported as isLanguageSupportedRules,
+  shouldProcessFile as shouldProcessFileRules,
   applyWordLimit,
   containsControlFlowKeyword,
 } from './lens-rules';
@@ -27,6 +26,62 @@ import {
   isDocumentEnabled,
 } from '../actions/toggle';
 import { getEffectiveColor, onConfigurationChanged } from '../actions/colors';
+import {
+  SUPPORTED_LANGUAGES,
+  ALLOWED_JSON_FILES,
+  PROBLEMATIC_LANGUAGES,
+  PROBLEMATIC_EXTENSIONS,
+  SupportedLanguage,
+  ProblematicLanguage,
+  AllowedJsonFile,
+} from '../core/utils';
+import { DEFAULT_STYLES } from './lens-rules';
+
+// ============================================================================
+// RE-EXPORT CONSTANTS FOR EASY ACCESS
+// ============================================================================
+
+export {
+  SUPPORTED_LANGUAGES,
+  ALLOWED_JSON_FILES,
+  PROBLEMATIC_LANGUAGES,
+  PROBLEMATIC_EXTENSIONS,
+  SupportedLanguage,
+  ProblematicLanguage,
+  AllowedJsonFile,
+} from '../core/utils';
+export { DEFAULT_STYLES } from './lens-rules';
+
+// ============================================================================
+// CONFIGURATION UTILITY FUNCTIONS
+// ============================================================================
+
+export function isSupportedLanguage(
+  languageId: string
+): languageId is SupportedLanguage {
+  return (SUPPORTED_LANGUAGES as readonly string[]).includes(languageId);
+}
+
+export function isProblematicLanguage(
+  languageId: string
+): languageId is ProblematicLanguage {
+  return (PROBLEMATIC_LANGUAGES as readonly string[]).includes(languageId);
+}
+
+export function isAllowedJsonFile(fileName: string): boolean {
+  const baseName = fileName.split('/').pop() || fileName;
+  return (ALLOWED_JSON_FILES as readonly string[]).includes(baseName);
+}
+
+export function shouldProcessFileConfig(
+  languageId: string,
+  fileName: string
+): boolean {
+  if (languageId === 'json' || languageId === 'jsonc') {
+    return isAllowedJsonFile(fileName);
+  }
+  return isSupportedLanguage(languageId);
+}
 
 // ============================================================================
 // EXPORTED UTILITIES (for backward compatibility)
@@ -1257,7 +1312,7 @@ export class BracketLynx {
 
     // NEW: Check if language is supported by rules
     if (
-      !shouldProcessFile(
+      !shouldProcessFileConfig(
         textEditor.document.languageId,
         textEditor.document.fileName
       )
@@ -1390,7 +1445,7 @@ export class BracketLynx {
     }
 
     // NEW: Check if language is supported by rules
-    if (!shouldProcessFile(document.languageId, document.fileName)) {
+    if (!shouldProcessFileConfig(document.languageId, document.fileName)) {
       return;
     }
 
@@ -1406,7 +1461,7 @@ export class BracketLynx {
     }
 
     // NEW: Check if language is supported by rules
-    if (!shouldProcessFile(document.languageId, document.fileName)) {
+    if (!shouldProcessFileConfig(document.languageId, document.fileName)) {
       return;
     }
 
@@ -1462,7 +1517,7 @@ export class BracketLynx {
     if (
       isExtensionEnabled() &&
       isDocumentEnabled(document) &&
-      shouldProcessFile(document.languageId, document.fileName) &&
+      shouldProcessFileConfig(document.languageId, document.fileName) &&
       ('auto' === mode || 'on-save' === mode)
     ) {
       this.delayUpdateDecorationByDocument(document);
@@ -1473,7 +1528,7 @@ export class BracketLynx {
     if (
       isExtensionEnabled() &&
       isDocumentEnabled(document) &&
-      shouldProcessFile(document.languageId, document.fileName) &&
+      shouldProcessFileConfig(document.languageId, document.fileName) &&
       'on-save' === BracketLynxConfig.mode
     ) {
       this.updateDecorationByDocument(document);
@@ -1490,7 +1545,7 @@ export class BracketLynx {
     }
 
     // NEW: Check if language is supported by rules
-    if (!shouldProcessFile(document.languageId, document.fileName)) {
+    if (!shouldProcessFileConfig(document.languageId, document.fileName)) {
       return;
     }
 

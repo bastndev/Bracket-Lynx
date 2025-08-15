@@ -16,12 +16,14 @@ import {
 } from '../core/utils';
 import { 
   SUPPORTED_LANGUAGES, 
-  ALLOWED_JSON_FILES, 
-  PERFORMANCE_LIMITS,
+  ALLOWED_JSON_FILES
+} from '../core/utils';
+import { 
   isSupportedLanguage,
   isAllowedJsonFile,
-  shouldProcessFile
-} from '../lens/config';
+  shouldProcessFileConfig as shouldProcessFile
+} from '../lens/lens';
+import { PERFORMANCE_LIMITS } from '../core/utils';
 
 suite('Bracket Lynx Core Tests', () => {
 	console.log('🧪 Starting Bracket Lynx core tests...');

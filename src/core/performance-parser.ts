@@ -7,7 +7,7 @@ import {
   HeaderMode,
 } from '../lens/lens';
 import { containsControlFlowKeyword } from '../lens/lens-rules';
-import { PROBLEMATIC_LANGUAGES, PROBLEMATIC_EXTENSIONS } from '../lens/config';
+import { PROBLEMATIC_LANGUAGES, PROBLEMATIC_EXTENSIONS } from './utils';
 import { PERFORMANCE_LIMITS } from './utils';
 
 // ============================================================================

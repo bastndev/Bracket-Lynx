@@ -1,15 +1,46 @@
 import {
   SUPPORTED_LANGUAGES,
-  isSupportedLanguage,
-  isAllowedJsonFile,
-  shouldProcessFile as configShouldProcessFile
-} from './config';
+  ALLOWED_JSON_FILES,
+  SupportedLanguage,
+  AllowedJsonFile,
+} from '../core/utils';
 import { 
   formatAsyncFunction,
   formatComplexFunction,
   isAsyncFunction as decoratorIsAsyncFunction,
   isComplexFunction as decoratorIsComplexFunction
 } from './decorators/js-ts-decorator-function';
+
+// ============================================================================
+// STYLE CONFIGURATION
+// ============================================================================
+
+export const DEFAULT_STYLES = {
+  COLOR: '#515151',
+  FONT_STYLE: 'italic',
+  PREFIX: '‹~ ',
+  UNMATCH_PREFIX: '❌ ',
+} as const;
+
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
+
+function isSupportedLanguage(languageId: string): languageId is SupportedLanguage {
+  return (SUPPORTED_LANGUAGES as readonly string[]).includes(languageId);
+}
+
+function isAllowedJsonFile(fileName: string): boolean {
+  const baseName = fileName.split('/').pop() || fileName;
+  return (ALLOWED_JSON_FILES as readonly string[]).includes(baseName);
+}
+
+function configShouldProcessFile(languageId: string, fileName: string): boolean {
+  if (languageId === 'json' || languageId === 'jsonc') {
+    return isAllowedJsonFile(fileName);
+  }
+  return isSupportedLanguage(languageId);
+}
 
 /**
  * WORD LIMITS - Controls how many words are displayed
@@ -55,7 +86,7 @@ export const FILTER_RULES: FilterRules = {
 };
 
 // Re-export constants for backward compatibility
-export { SUPPORTED_LANGUAGES, ALLOWED_JSON_FILES } from './config';
+export { SUPPORTED_LANGUAGES, ALLOWED_JSON_FILES } from '../core/utils';
 export const { MAX_HEADER_WORDS, MAX_EXCEPTION_WORDS, MAX_CSS_WORDS } = WORD_LIMITS;
 export const { EXCEPTION_WORDS, CSS_RELATED_WORDS, TRY_CATCH_KEYWORDS, IF_ELSE_KEYWORDS } = KEYWORDS;
 

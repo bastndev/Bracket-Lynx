@@ -28,6 +28,53 @@ export const CACHE_CONFIG = {
   MAX_MEMORY_USAGE: 500,
 } as const;
 
+
+// ============================================================================
+// LANGUAGE AND FILE CONFIGURATION
+// ============================================================================
+
+export const SUPPORTED_LANGUAGES = [
+  'astro',
+  'css',
+  'html',
+  'javascript',
+  'javascriptreact',
+  'json',
+  'jsonc',
+  'less',
+  'sass',
+  'scss',
+  'svelte',
+  'typescript',
+  'typescriptreact',
+  'vue',
+] as const;
+
+export const ALLOWED_JSON_FILES = ['package.json'] as const;
+
+export const PROBLEMATIC_LANGUAGES = [
+  'astro',
+  'html',
+  'vue',
+  'svelte',
+  'javascriptreact',
+  'typescriptreact',
+] as const;
+
+export const PROBLEMATIC_EXTENSIONS = [
+  '.astro',
+  '.html',
+  '.vue',
+  '.svelte',
+  '.jsx',
+  '.tsx',
+] as const;
+
+export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
+export type ProblematicLanguage = (typeof PROBLEMATIC_LANGUAGES)[number];
+export type AllowedJsonFile = (typeof ALLOWED_JSON_FILES)[number];
+
+
 // ============================================================================
 // STRING UTILITIES
 // ============================================================================
