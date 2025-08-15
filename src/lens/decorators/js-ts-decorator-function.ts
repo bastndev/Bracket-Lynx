@@ -1,15 +1,3 @@
-// ============================================================================
-// 🎯 SYMBOL CONFIGURATION - CHANGE SYMBOLS HERE TO UPDATE ALL DECORATIONS
-// ============================================================================
-// 
-// Para cambiar los símbolos de las decoraciones, modifica SOLO estos valores:
-// - arrowFunctionSymbol: Para funciones flecha (export const func = () => {})
-// - asyncFunctionSymbol: Para funciones async (async function, export async)  
-// - complexFunctionSymbol: Para funciones complejas (con React types, generics)
-//
-// Los cambios se aplicarán automáticamente en toda la extensión.
-// ============================================================================
-
 /**
  * Function symbols configuration - centralized symbol management
  */
