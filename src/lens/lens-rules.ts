@@ -1,15 +1,5 @@
-import {
-  SUPPORTED_LANGUAGES,
-  ALLOWED_JSON_FILES,
-  SupportedLanguage,
-  escapeRegExp,
-} from '../core/utils';
-import { 
-  formatAsyncFunction,
-  formatComplexFunction,
-  isAsyncFunction,
-  isComplexFunction
-} from './decorators/js-ts-decorator-function';
+import { SUPPORTED_LANGUAGES, ALLOWED_JSON_FILES, SupportedLanguage, escapeRegExp } from '../core/utils';
+import { formatAsyncFunction, formatComplexFunction, isAsyncFunction, isComplexFunction } from './decorators/js-ts-decorator-function';
 
 // ============================================================================
 // UTILITY FUNCTIONS
