@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import { AdvancedCacheManager, SmartDebouncer } from '../core/performance-cache';
 import { OptimizedBracketParser } from '../core/performance-parser';
-import { shouldUseOriginalParser } from '../core/parser-exceptions';
 import { PERFORMANCE_LIMITS, DEFAULT_STYLES } from './config';
 import { PositionUtils, regExpExecToArray, makeRegExpPart } from '../core/utils';
 import { LanguageFormatter } from './language-formatter';
@@ -202,7 +201,8 @@ export class DocumentDecorationCacheEntry {
 
   constructor(document: vscode.TextDocument) {
     // Use parser exception manager
-    if (shouldUseOriginalParser(document)) {
+    const optimizedParser = OptimizedBracketParser.getInstance();
+    if (optimizedParser.shouldUseOriginalParser(document)) {
       // Use original parser for problematic files
       this.brackets = BracketParser.parseBrackets(document);
 
@@ -213,13 +213,6 @@ export class DocumentDecorationCacheEntry {
       }
     } else {
       // Use optimized parser for other files
-      const optimizedParser = OptimizedBracketParser.getInstance();
-
-      // Configure fallback parser to avoid circular dependencies
-      optimizedParser.setFallbackParser(
-        BracketParser.parseBrackets.bind(BracketParser)
-      );
-
       this.brackets = optimizedParser.parseBrackets(document);
 
       if (BracketLynxConfig.debug) {
@@ -1482,7 +1475,8 @@ export class BracketLynx {
   ): void {
     try {
       // Use parser exception manager
-      if (shouldUseOriginalParser(document)) {
+      const optimizedParser = OptimizedBracketParser.getInstance();
+      if (optimizedParser.shouldUseOriginalParser(document)) {
         if (BracketLynxConfig.debug) {
           console.log(
             `Bracket Lynx: Skipping incremental parsing for: ${document.fileName}`
@@ -1493,7 +1487,6 @@ export class BracketLynx {
       }
 
       // Use incremental parsing for other files
-      const optimizedParser = OptimizedBracketParser.getInstance();
       const existingCache = CacheManager.documentCache.get(document);
 
       if (existingCache && existingCache.brackets) {
