@@ -8,7 +8,13 @@ import {
   isAllowedJsonFile,
   shouldProcessFile as configShouldProcessFile
 } from './config';
-import { handleArrowFunctionPattern } from './decorators/js-ts-decorator-function';
+import { 
+  handleArrowFunctionPattern,
+  formatAsyncFunction,
+  formatComplexFunction,
+  isAsyncFunction as decoratorIsAsyncFunction,
+  isComplexFunction as decoratorIsComplexFunction
+} from './decorators/js-ts-decorator-function';
 
 // ============================================================================
 // INTERFACES AND TYPES
@@ -86,12 +92,8 @@ export function containsControlFlowKeyword(text: string): boolean {
 }
 
 export function isAsyncFunction(lowerText: string): boolean {
-  // Check for async function patterns only
-  return (
-    lowerText.includes('async function') ||
-    lowerText.includes('async ') ||
-    (lowerText.includes('export') && lowerText.includes('async'))
-  ) && !lowerText.includes('=>'); // Exclude arrow functions
+  // Use the centralized function from decorator
+  return decoratorIsAsyncFunction(lowerText);
 }
 
 export function isArrowFunction(lowerText: string): boolean {
@@ -102,20 +104,9 @@ export function isArrowFunction(lowerText: string): boolean {
   );
 }
 
-
-
 export function isComplexFunction(lowerText: string): boolean {
-  // Check for functions with complex type parameters (React components, etc.)
-  return (
-    (lowerText.includes('function ') || 
-     (lowerText.includes('export') && lowerText.includes('function'))) &&
-    (lowerText.includes('react.') || 
-     lowerText.includes('svgprops') || 
-     lowerText.includes('htmlprops') ||
-     lowerText.includes('<') && lowerText.includes('>')) && // Generic types
-    !lowerText.includes('async') && // Exclude async functions
-    !lowerText.includes('=>') // Exclude arrow functions
-  );
+  // Use the centralized function from decorator
+  return decoratorIsComplexFunction(lowerText);
 }
 
 // ============================================================================
@@ -147,34 +138,16 @@ export function applyWordLimit(text: string, languageId?: string): string {
   const lowerText = text.toLowerCase();
   const words = text.split(/\s+/).filter(word => word.length > 0);
   
-  // Check for async functions only and add ⧘⧙ symbol
+  // Check for async functions only and add symbol
   if (isAsyncFunction(lowerText)) {
-    if (words.length >= 3) {
-      // Take first 2 words and add the symbol (removing the last word)
-      return `${words.slice(0, 2).join(' ')} ⧘⧙`;
-    } else if (words.length === 2) {
-      // If only 2 words, add the symbol
-      return `${words.join(' ')} ⧘⧙`;
-    } else if (words.length === 1) {
-      // If only 1 word, add the symbol
-      return `${words[0]} ⧘⧙`;
-    }
+    return formatAsyncFunction(words);
   }
 
 
 
-  // Check for complex functions (with React types, generics, etc.) and add ⇄ symbol
+  // Check for complex functions (with React types, generics, etc.) and add symbol
   if (isComplexFunction(lowerText)) {
-    if (words.length >= 3) {
-      // Take first 2 words and add the symbol (removing the last word)
-      return `${words.slice(0, 2).join(' ')} ⇄`;
-    } else if (words.length === 2) {
-      // If only 2 words, add the symbol
-      return `${words.join(' ')} ⇄`;
-    } else if (words.length === 1) {
-      // If only 1 word, add the symbol
-      return `${words[0]} ⇄`;
-    }
+    return formatComplexFunction(words);
   }
 
 
