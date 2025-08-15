@@ -35,7 +35,6 @@ import {
   ProblematicLanguage,
   AllowedJsonFile,
 } from '../core/utils';
-import { DEFAULT_STYLES } from './lens-rules';
 
 // ============================================================================
 // RE-EXPORT CONSTANTS FOR EASY ACCESS
@@ -50,7 +49,6 @@ export {
   ProblematicLanguage,
   AllowedJsonFile,
 } from '../core/utils';
-export { DEFAULT_STYLES } from './lens-rules';
 
 // ============================================================================
 // CONFIGURATION UTILITY FUNCTIONS
@@ -179,25 +177,22 @@ export class BracketLynxConfig {
     }
 
     try {
-      return this.getConfig().get('color', DEFAULT_STYLES.COLOR);
+      return this.getConfig().get('color', '#515151');
     } catch {
-      return DEFAULT_STYLES.COLOR;
+      return '#515151';
     }
   }
 
   static get fontStyle(): string {
-    return this.getConfig().get('fontStyle', DEFAULT_STYLES.FONT_STYLE);
+    return this.getConfig().get('fontStyle', 'italic');
   }
 
   static get prefix(): string {
-    return this.getConfig().get('prefix', DEFAULT_STYLES.PREFIX);
+    return this.getConfig().get('prefix', '‹~ ');
   }
 
   static get unmatchBracketsPrefix(): string {
-    return this.getConfig().get(
-      'unmatchBracketsPrefix',
-      DEFAULT_STYLES.UNMATCH_PREFIX
-    );
+    return this.getConfig().get('unmatchBracketsPrefix', '❌ ');
   }
 
   static get maxBracketHeaderLength(): number {
