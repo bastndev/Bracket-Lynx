@@ -2,6 +2,35 @@ import { SUPPORTED_LANGUAGES, ALLOWED_JSON_FILES, SupportedLanguage, escapeRegEx
 import { formatAsyncFunction, formatComplexFunction, isAsyncFunction, isComplexFunction } from './decorators/js-ts-decorator-function';
 
 // ============================================================================
+// 🎯 CONFIGURATION CONSTANTS - Easy to edit at the top!
+// ============================================================================
+
+/**
+ * WORD LIMITS - Controls how many words are displayed
+ */
+export const WORD_LIMITS = {
+  MAX_HEADER_WORDS: 1,
+  MAX_EXCEPTION_WORDS: 2,
+  MAX_CSS_WORDS: 2,
+} as const;
+
+export const EXCLUDED_SYMBOLS = [
+  '!', '"', '#', '$', '%', '&', "'", ',', '.', '/', ';', '<', '?', '@', 
+  '[', '\\', ']', '^', '_', '`', '{', '|', '}','//', '---', '--', '...',
+  ':', '(', ')', '=', '>', 'MARK',
+] as const;
+
+/**
+ * KEYWORDS - For content analysis and pattern detection
+ */
+export const KEYWORDS = {
+  EXCEPTION_WORDS: ['export'] as const,
+  CSS_RELATED_WORDS: ['style', 'styles', 'css'] as const,
+  TRY_CATCH_KEYWORDS: ['try', 'catch', 'finally'] as const,
+  IF_ELSE_KEYWORDS: ['if', 'else', 'switch', 'case'] as const,
+} as const;
+
+// ============================================================================
 // UTILITY FUNCTIONS
 // ============================================================================
 
@@ -21,21 +50,6 @@ function configShouldProcessFile(languageId: string, fileName: string): boolean 
   return isSupportedLanguage(languageId);
 }
 
-/**
- * WORD LIMITS - Controls how many words are displayed
- */
-export const WORD_LIMITS = {
-  MAX_HEADER_WORDS: 1,
-  MAX_EXCEPTION_WORDS: 2,
-  MAX_CSS_WORDS: 2,
-} as const;
-
-export const EXCLUDED_SYMBOLS = [
-  '!', '"', '#', '$', '%', '&', "'", ',', '.', '/', ';', '<', '?', '@', 
-  '[', '\\', ']', '^', '_', '`', '{', '|', '}','//', '---', '--', '...',
-  ':', '(', ')', '=', '>', 'MARK',
-] as const;
-
 // Optimized Set for O(1) lookups
 const EXCLUDED_SYMBOLS_SET = new Set<string>(EXCLUDED_SYMBOLS);
 
@@ -49,16 +63,6 @@ function getCachedRegex(pattern: string, flags: string = 'g'): RegExp {
   }
   return REGEX_CACHE.get(key)!;
 }
-
-/**
- * KEYWORDS - For content analysis and pattern detection
- */
-export const KEYWORDS = {
-  EXCEPTION_WORDS: ['export'] as const,
-  CSS_RELATED_WORDS: ['style', 'styles', 'css'] as const,
-  TRY_CATCH_KEYWORDS: ['try', 'catch', 'finally'] as const,
-  IF_ELSE_KEYWORDS: ['if', 'else', 'switch', 'case'] as const,
-} as const;
 
 // Optimized Sets for O(1) lookups
 const CSS_RELATED_WORDS_SET = new Set<string>(KEYWORDS.CSS_RELATED_WORDS);
