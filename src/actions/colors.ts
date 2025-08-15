@@ -8,11 +8,8 @@ interface ColorOption extends vscode.QuickPickItem {
 export interface IBracketLynxProvider {
     clearAllDecorations(): void;
     updateAllDecoration(): void;
-    forceUpdateEditor(editor: vscode.TextEditor): void;
-    clearDecorationCache?(document: vscode.TextDocument): void;
     clearEditorDecorations?(editor: vscode.TextEditor): void;
     onDidChangeConfiguration?(): void;
-    forceColorRefresh?(): void;
 }
 
 let bracketLynxProvider: IBracketLynxProvider | undefined = undefined;
@@ -166,38 +163,17 @@ async function recreateAllBracketLynxDecorations(overrideColor?: string): Promis
             currentColor = overrideColor;
         }
         
-        if (typeof bracketLynxProvider.forceColorRefresh === 'function') {
-            bracketLynxProvider.forceColorRefresh();
-        } else {
-            bracketLynxProvider.clearAllDecorations();
-            await new Promise(resolve => setTimeout(resolve, 50));
+                bracketLynxProvider.clearAllDecorations();
+        await new Promise(resolve => setTimeout(resolve, 50));
 
-            if (bracketLynxProvider.clearDecorationCache) {
-                vscode.window.visibleTextEditors.forEach(editor => {
-                    if (editor.document && bracketLynxProvider) {
-                        bracketLynxProvider.clearDecorationCache!(editor.document);
-                    }
-                });
-                await new Promise(resolve => setTimeout(resolve, 50));
-            }
-
-            if (bracketLynxProvider.onDidChangeConfiguration) {
-                bracketLynxProvider.onDidChangeConfiguration();
-                await new Promise(resolve => setTimeout(resolve, 100));
-            }
-
-            bracketLynxProvider.updateAllDecoration();
-
-            const activeEditor = vscode.window.activeTextEditor;
-            if (activeEditor && isEditorEnabled(activeEditor)) {
-                bracketLynxProvider.forceUpdateEditor(activeEditor);
-            }
+        if (bracketLynxProvider.onDidChangeConfiguration) {
+          bracketLynxProvider.onDidChangeConfiguration();
+          await new Promise(resolve => setTimeout(resolve, 100));
         }
+
+        bracketLynxProvider.updateAllDecoration();
         
-        // Also refresh Astro decorations
-        if (astroDecorator && typeof astroDecorator.forceColorRefresh === 'function') {
-            astroDecorator.forceColorRefresh();
-        }
+        
     } catch (error) {
         console.error('🎨 Error recreating decorations:', error);
         throw error;

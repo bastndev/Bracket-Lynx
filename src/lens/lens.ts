@@ -369,31 +369,7 @@ export class CacheManager {
     }
   };
 
-  static clearDecorationCache = (document?: vscode.TextDocument): void => {
-    this.advancedCache.clearDocumentCache(document);
 
-    // RESTORE: Clear optimized parser cache for specific document
-    if (document) {
-      const optimizedParser = OptimizedBracketParser.getInstance();
-      optimizedParser.clearFileCache(document.uri.toString());
-    }
-
-    // Keep legacy behavior for compatibility
-    if (document) {
-      this.documentCache.delete(document);
-      for (const textEditor of this.editorCache.keys()) {
-        if (document === textEditor.document) {
-          this.editorCache.get(textEditor)?.setDirty();
-        }
-      }
-    }
-    for (const textEditor of this.editorCache.keys()) {
-      if (vscode.window.visibleTextEditors.indexOf(textEditor) < 0) {
-        this.editorCache.get(textEditor)?.dispose();
-        this.editorCache.delete(textEditor);
-      }
-    }
-  };
 
   // New methods for performance monitoring
   static getCacheMetrics() {
@@ -1371,7 +1347,7 @@ export class BracketLynx {
 
   static forceUpdate(textEditor: vscode.TextEditor): void {
     // Clear cache and force update
-    CacheManager.clearDecorationCache(textEditor.document);
+    CacheManager.clearAllDecorationCache();
     this.updateDecoration(textEditor);
   }
 
@@ -1472,7 +1448,7 @@ export class BracketLynx {
   }
 
   static onDidChangeActiveTextEditor(): void {
-    CacheManager.clearDecorationCache();
+    CacheManager.clearAllDecorationCache();
     const activeEditor = vscode.window.activeTextEditor;
     if (activeEditor && isExtensionEnabled() && isEditorEnabled(activeEditor)) {
       this.delayUpdateDecoration(activeEditor);
@@ -1520,7 +1496,7 @@ export class BracketLynx {
     if (changes && changes.length > 0) {
       this.handleIncrementalChanges(document, changes);
     } else {
-      CacheManager.clearDecorationCache(document);
+      CacheManager.clearAllDecorationCache();
     }
 
     if ('auto' === BracketLynxConfig.mode) {
@@ -1544,7 +1520,7 @@ export class BracketLynx {
             `Bracket Lynx: Skipping incremental parsing for: ${document.fileName}`
           );
         }
-        CacheManager.clearDecorationCache(document);
+        CacheManager.clearAllDecorationCache();
         return;
       }
 
@@ -1583,7 +1559,7 @@ export class BracketLynx {
     }
 
     // Fallback to full cache clear
-    CacheManager.clearDecorationCache(document);
+    CacheManager.clearAllDecorationCache();
   }
 
   /**
@@ -1641,14 +1617,7 @@ export class BracketLynx {
     CacheManager.editorCache.delete(textEditor);
   }
 
-  /**
-   * Force update decorations for a specific editor (used by toggle system)
-   */
-  static forceUpdateEditor(textEditor: vscode.TextEditor): void {
-    // Clear cache and force update
-    CacheManager.clearDecorationCache(textEditor.document);
-    this.updateDecoration(textEditor);
-  }
+
 
   /**
    * Dispose and cleanup all resources
@@ -1663,16 +1632,5 @@ export class BracketLynx {
     // Advanced cache cleanup is handled automatically
   }
 
-  /**
-   * Force refresh color for all decorations - called by color system
-   */
-  static forceColorRefresh(): void {
-    console.log('🎨 Force refreshing colors for all decorations');
 
-    // Clear all caches to force recreation with new color
-    CacheManager.clearAllDecorationCache();
-
-    // Update all visible editors
-    this.updateAllDecoration();
-  }
 }

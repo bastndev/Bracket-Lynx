@@ -348,31 +348,6 @@ export class UniversalDecorator {
   }
 
   /**
-   * Force refresh all decorations
-   */
-  public static forceRefresh(): void {
-    if (this.decorationType) {
-      this.decorationType.dispose();
-      this.decorationType = undefined;
-    }
-
-    if (isExtensionEnabled()) {
-      vscode.window.visibleTextEditors
-        .filter(editor => this.isSupportedFile(editor.document))
-        .forEach(editor => this.updateDecorations(editor));
-    }
-  }
-
-  /**
-   * Force update decorations for a specific editor
-   */
-  public static forceUpdateEditor(editor: vscode.TextEditor): void {
-    if (this.isSupportedFile(editor.document)) {
-      this.updateDecorations(editor);
-    }
-  }
-
-  /**
    * Handle configuration changes
    */
   public static onDidChangeConfiguration(): void {
@@ -380,15 +355,6 @@ export class UniversalDecorator {
       this.decorationType.dispose();
       this.decorationType = undefined;
     }
-    
-    this.forceRefresh();
-  }
-
-  /**
-   * Handle color refresh
-   */
-  public static forceColorRefresh(): void {
-    this.forceRefresh();
   }
 
   /**

@@ -28,11 +28,6 @@ const MENU_OPTIONS = [
     description: 'Change decoration color with preview',
     action: 'color',
   },
-  {
-    label: '♻️ Refresh',
-    description: 'Update decorations for current file',
-    action: 'refresh',
-  },
 ];
 
 let isEnabled = true;
@@ -99,12 +94,6 @@ export async function toggleCurrentEditor(): Promise<void> {
   if (isCurrentlyDisabled) {
     disabledEditors.delete(editorKey);
     await saveDisabledFilesState();
-    if (bracketLynxProvider) {
-      bracketLynxProvider.forceUpdateEditor?.(activeEditor);
-    }
-    if (astroDecorator) {
-      astroDecorator.forceUpdateEditor?.(activeEditor);
-    }
     vscode.window.showInformationMessage(
       '📝 Bracket Lynx: Enabled for current file'
     );
@@ -123,42 +112,7 @@ export async function toggleCurrentEditor(): Promise<void> {
   }
 }
 
-export function refreshBrackets(): void {
-  const activeEditor = vscode.window.activeTextEditor;
-  if (!activeEditor) {
-    vscode.window.showWarningMessage('♻️ No active editor to refresh');
-    return;
-  }
 
-  if (bracketLynxProvider && isEditorEnabled(activeEditor)) {
-    forceSyncColorWithConfiguration()
-      .then(() => {
-        bracketLynxProvider.clearDecorationCache?.(activeEditor.document);
-        bracketLynxProvider.forceUpdateEditor?.(activeEditor);
-
-        if (astroDecorator) {
-          astroDecorator.forceUpdateEditor?.(activeEditor);
-        }
-        vscode.window.showInformationMessage('♻️ Bracket Lynx: Refreshed');
-      })
-      .catch((error: any) => {
-        console.error('♻️ Error during refresh:', error);
-        bracketLynxProvider.clearDecorationCache?.(activeEditor.document);
-        bracketLynxProvider.forceUpdateEditor?.(activeEditor);
-
-        if (astroDecorator) {
-          astroDecorator.forceUpdateEditor?.(activeEditor);
-        }
-        vscode.window.showInformationMessage(
-          '♻️ Bracket Lynx: Refreshed (with warnings)'
-        );
-      });
-  } else {
-    vscode.window.showInformationMessage(
-      '♻️ Bracket Lynx: Cannot refresh (disabled)'
-    );
-  }
-}
 
 export function setBracketLynxProvider(provider: any): void {
   bracketLynxProvider = provider;
@@ -187,9 +141,6 @@ export function showBracketLynxMenu(): void {
         case 'current':
           await toggleCurrentEditor();
           break;
-        case 'refresh':
-          refreshBrackets();
-          break;
         case 'color':
           changeDecorationColor();
           break;
@@ -200,9 +151,6 @@ export function showBracketLynxMenu(): void {
 function reactivateExtension(): void {
   if (bracketLynxProvider) {
     bracketLynxProvider.updateAllDecoration?.();
-  }
-  if (astroDecorator) {
-    astroDecorator.forceRefresh?.();
   }
 }
 
