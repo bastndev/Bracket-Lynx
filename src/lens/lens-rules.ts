@@ -8,8 +8,8 @@ import {
 import { 
   formatAsyncFunction,
   formatComplexFunction,
-  isAsyncFunction as decoratorIsAsyncFunction,
-  isComplexFunction as decoratorIsComplexFunction
+  isAsyncFunction,
+  isComplexFunction
 } from './decorators/js-ts-decorator-function';
 
 // ============================================================================
@@ -132,10 +132,8 @@ export function containsControlFlowKeyword(text: string): boolean {
   return containsTryCatchKeyword(text) || containsIfElseKeyword(text);
 }
 
-export function isAsyncFunction(lowerText: string): boolean {
-  // Use the centralized function from decorator
-  return decoratorIsAsyncFunction(lowerText);
-}
+// Re-export validation functions from decorator to avoid duplication
+export { isAsyncFunction, isComplexFunction };
 
 export function isArrowFunction(lowerText: string): boolean {
   // Check for arrow function patterns only
@@ -143,11 +141,6 @@ export function isArrowFunction(lowerText: string): boolean {
     lowerText.includes('=>') &&
     (lowerText.includes('export') || lowerText.includes('const') || lowerText.includes('let') || lowerText.includes('var'))
   );
-}
-
-export function isComplexFunction(lowerText: string): boolean {
-  // Use the centralized function from decorator
-  return decoratorIsComplexFunction(lowerText);
 }
 
 // ============================================================================

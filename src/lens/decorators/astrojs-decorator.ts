@@ -2,7 +2,6 @@ import * as vscode from 'vscode';
 import { getCurrentColor } from '../../actions/colors';
 import { isEditorEnabled, isExtensionEnabled } from '../../actions/toggle';
 import { BracketLynxConfig } from '../lens';
-import { AdvancedCacheManager } from '../../core/performance-cache';
 
 export interface ComponentRange {
   name: string;
@@ -14,7 +13,6 @@ export interface ComponentRange {
 
 export class UniversalDecorator {
   private static decorationType: vscode.TextEditorDecorationType | undefined;
-  private static cache = AdvancedCacheManager.getInstance();
   private static readonly SUPPORTED_EXTENSIONS = ['.astro', '.html'];
   private static readonly SUPPORTED_LANGUAGE_IDS = ['astro', 'html'];
   
@@ -180,7 +178,7 @@ export class UniversalDecorator {
 
     const astroElements = [
       'Fragment', 'Astro', 'Code', 'Markdown', 'Debug',
-      'slot', 'Fragment', 'Component'
+      'slot', 'Component'
     ];
     
     return astroElements.includes(tagName);

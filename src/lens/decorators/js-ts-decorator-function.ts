@@ -93,11 +93,9 @@ export function handleArrowFunctionPattern(text: string): string | null {
 }
 
 /**
- * Format async function with symbol
+ * Internal unified formatter - reduces code duplication
  */
-export function formatAsyncFunction(words: string[]): string {
-  const symbol = FunctionSymbols.getAsyncSymbol();
-
+function formatFunctionWithSymbol(words: string[], symbol: string): string {
   if (words.length >= 3) {
     // Take first 2 words and add the symbol (removing the last word)
     return `${words.slice(0, 2).join(' ')} ${symbol}`;
@@ -113,23 +111,17 @@ export function formatAsyncFunction(words: string[]): string {
 }
 
 /**
+ * Format async function with symbol
+ */
+export function formatAsyncFunction(words: string[]): string {
+  return formatFunctionWithSymbol(words, FunctionSymbols.getAsyncSymbol());
+}
+
+/**
  * Format complex function with symbol
  */
 export function formatComplexFunction(words: string[]): string {
-  const symbol = FunctionSymbols.getComplexSymbol();
-
-  if (words.length >= 3) {
-    // Take first 2 words and add the symbol (removing the last word)
-    return `${words.slice(0, 2).join(' ')} ${symbol}`;
-  } else if (words.length === 2) {
-    // If only 2 words, add the symbol
-    return `${words.join(' ')} ${symbol}`;
-  } else if (words.length === 1) {
-    // If only 1 word, add the symbol
-    return `${words[0]} ${symbol}`;
-  }
-
-  return words.join(' ');
+  return formatFunctionWithSymbol(words, FunctionSymbols.getComplexSymbol());
 }
 
 // Legacy classes and interfaces removed - use FunctionSymbols and individual functions instead
