@@ -1,16 +1,19 @@
 import * as vscode from 'vscode';
 import {
-  forceSyncColorWithConfiguration,
   setBracketLynxProviderForColors,
   initializeColorSystem,
   changeDecorationColor,
 } from './colors';
 
-// Configuration keys
+// Configuration constants
 const CONFIG_SECTION = 'bracketLynx';
 const GLOBAL_ENABLED_KEY = 'globalEnabled';
 const DISABLED_FILES_KEY = 'disabledFiles';
 const INDIVIDUALLY_ENABLED_FILES_KEY = 'individuallyEnabledFiles';
+
+// Timing constants
+const DECORATION_UPDATE_DELAY_SHORT = 50;
+const DECORATION_UPDATE_DELAY_LONG = 200;
 
 // Quick Pick Options
 function getMenuOptions(): any[] {
@@ -117,32 +120,24 @@ export function isDocumentEnabled(document: vscode.TextDocument): boolean {
   }
 }
 
-// Debug function to check current state
-export function getCurrentState(): any {
+/**
+ * Get current extension state for debugging
+ */
+export function getCurrentState(): {
+  isEnabled: boolean;
+  isExtensionEnabled: boolean;
+  activeEditorEnabled: boolean | null;
+  disabledFilesCount: number;
+  individuallyEnabledFilesCount: number;
+} {
   const activeEditor = vscode.window.activeTextEditor;
-  const activeEditorKey = activeEditor ? getEditorKey(activeEditor) : null;
   
   return {
     isEnabled,
     isExtensionEnabled: isExtensionEnabled(),
-    activeEditor: activeEditor ? {
-      uri: activeEditor.document.uri.toString(),
-      languageId: activeEditor.document.languageId,
-      fileName: activeEditor.document.fileName,
-      key: activeEditorKey
-    } : null,
-    isActiveEditorEnabled: activeEditor ? isEditorEnabled(activeEditor) : null,
-    isActiveEditorInDisabledList: activeEditorKey ? disabledEditors.has(activeEditorKey) : null,
-    isActiveEditorInIndividualList: activeEditorKey ? individuallyEnabledEditors.has(activeEditorKey) : null,
-    disabledEditors: Array.from(disabledEditors.keys()),
-    individuallyEnabledEditors: Array.from(individuallyEnabledEditors.keys()),
-    hasBracketProvider: !!bracketLynxProvider,
-    hasAstroDecorator: !!astroDecorator,
-    bracketProviderMethods: bracketLynxProvider ? {
-      hasUpdateDecoration: !!bracketLynxProvider.updateDecoration,
-      hasDelayUpdateDecoration: !!bracketLynxProvider.delayUpdateDecoration,
-      hasClearEditorDecorations: !!bracketLynxProvider.clearEditorDecorations
-    } : null
+    activeEditorEnabled: activeEditor ? isEditorEnabled(activeEditor) : null,
+    disabledFilesCount: disabledEditors.size,
+    individuallyEnabledFilesCount: individuallyEnabledEditors.size,
   };
 }
 
@@ -154,17 +149,6 @@ export async function toggleCurrentEditor(): Promise<void> {
   }
 
   const editorKey = getEditorKey(activeEditor);
-  
-  // Debug logging
-  console.log(`🔄 Toggle Current Editor:`, {
-    editorKey,
-    isEnabled,
-    isCurrentlyEnabled: isEditorEnabled(activeEditor),
-    disabledEditorsSize: disabledEditors.size,
-    individuallyEnabledEditorsSize: individuallyEnabledEditors.size,
-    hasBracketProvider: !!bracketLynxProvider,
-    hasAstroDecorator: !!astroDecorator
-  });
   
   if (isEnabled) {
     // Global mode: toggle individual file in disabledEditors
@@ -230,8 +214,8 @@ export async function toggleCurrentEditor(): Promise<void> {
         updateEditorDecorations(activeEditor);
         
         // Force multiple updates to ensure decorations appear
-        setTimeout(() => updateEditorDecorations(activeEditor), 50);
-        setTimeout(() => updateEditorDecorations(activeEditor), 200);
+        setTimeout(() => updateEditorDecorations(activeEditor), DECORATION_UPDATE_DELAY_SHORT);
+        setTimeout(() => updateEditorDecorations(activeEditor), DECORATION_UPDATE_DELAY_LONG);
         
         vscode.window.showInformationMessage(
           '📝 Bracket Lynx: Enabled for current file (individual mode)'

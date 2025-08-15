@@ -1,6 +1,11 @@
 import * as vscode from 'vscode';
 import { isExtensionEnabled } from './toggle';
 
+// Configuration constants
+const DEFAULT_COLOR = '#515151';
+const DECORATION_CLEAR_DELAY = 50;
+const INITIALIZATION_DELAY = 100;
+
 interface ColorOption extends vscode.QuickPickItem {
   value: string;
 }
@@ -15,9 +20,7 @@ export interface IBracketLynxProvider {
 
 let bracketLynxProvider: IBracketLynxProvider | undefined = undefined;
 let astroDecorator: any = undefined;
-let currentColor: string = '#515151';
-let isPreviewMode: boolean = false;
-let originalColorBeforePreview: string = '#515151';
+let currentColor: string = DEFAULT_COLOR;
 
 /**
  * Get available color presets for the color picker
@@ -97,21 +100,27 @@ export function changeDecorationColor(): void {
   quickPick.placeholder = 'Choose a color for bracket decorations';
   quickPick.canSelectMany = false;
 
+  let previewState: { isActive: boolean; originalColor: string } = {
+    isActive: false,
+    originalColor: currentColor,
+  };
+
   const applyColorToDecorations = async (
     color: string,
     isPreview: boolean = false
   ): Promise<boolean> => {
     try {
-      if (isPreview && !isPreviewMode) {
-        // Store original color before starting preview
-        originalColorBeforePreview = currentColor;
-        isPreviewMode = true;
+      if (isPreview && !previewState.isActive) {
+        previewState = { isActive: true, originalColor: currentColor };
+      }
+
+      if (!isPreview) {
+        previewState.isActive = false;
       }
 
       currentColor = color;
 
       if (bracketLynxProvider && isExtensionEnabled()) {
-        // Force immediate color refresh for preview
         await recreateAllBracketLynxDecorations(color);
         return true;
       }
@@ -124,10 +133,10 @@ export function changeDecorationColor(): void {
   };
 
   const restoreOriginalColor = async (): Promise<void> => {
-    if (isPreviewMode) {
-      currentColor = originalColorBeforePreview;
-      isPreviewMode = false;
-      await recreateAllBracketLynxDecorations(originalColorBeforePreview);
+    if (previewState.isActive) {
+      currentColor = previewState.originalColor;
+      previewState.isActive = false;
+      await recreateAllBracketLynxDecorations(previewState.originalColor);
     }
   };
 
@@ -175,7 +184,6 @@ export function changeDecorationColor(): void {
       }
 
       // Apply final color (not preview)
-      isPreviewMode = false;
       const success = await applyColorToDecorations(customColor, false);
       if (success) {
         await saveColorToConfiguration(customColor);
@@ -190,7 +198,6 @@ export function changeDecorationColor(): void {
       quickPick.dispose();
 
       // Apply final color (not preview)
-      isPreviewMode = false;
       const finalColor = selectedItem.value;
       const success = await applyColorToDecorations(finalColor, false);
       if (success) {
@@ -239,7 +246,7 @@ async function recreateAllBracketLynxDecorations(
     bracketLynxProvider.clearAllDecorations();
 
     // Small delay to ensure decorations are cleared
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await new Promise((resolve) => setTimeout(resolve, DECORATION_CLEAR_DELAY));
 
     // Force color refresh if available (this should handle the cache clearing and updating)
     if (bracketLynxProvider.forceColorRefresh) {
@@ -250,7 +257,9 @@ async function recreateAllBracketLynxDecorations(
         bracketLynxProvider.onDidChangeConfiguration();
       }
 
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await new Promise((resolve) =>
+        setTimeout(resolve, DECORATION_CLEAR_DELAY)
+      );
 
       // Update all decorations with new color
       bracketLynxProvider.updateAllDecoration();
@@ -265,18 +274,12 @@ async function recreateAllBracketLynxDecorations(
 // CONFIGURATION MANAGEMENT
 // ============================================================================
 async function saveColorToConfiguration(color: string): Promise<void> {
+  const config = vscode.workspace.getConfiguration('bracketLynx');
   try {
-    // First, try saving to Global to ensure persistence after git reset
-    const config = vscode.workspace.getConfiguration('bracketLynx');
     await config.update('color', color, vscode.ConfigurationTarget.Global);
   } catch (error) {
-    try {
-      // If Global fails, use Workspace as a fallback
-      const config = vscode.workspace.getConfiguration('bracketLynx');
-      await config.update('color', color, vscode.ConfigurationTarget.Workspace);
-    } catch (workspaceError) {
-      console.warn(`🎨 Failed to save color to configuration:`, workspaceError);
-    }
+    console.warn(`🎨 Failed to save color to configuration:`, error);
+    throw error;
   }
 }
 
@@ -292,7 +295,7 @@ function loadColorFromConfiguration(): string {
     console.warn('🎨 Could not load color from configuration:', error);
   }
 
-  return '#515151';
+  return DEFAULT_COLOR;
 }
 
 // ============================================================================
@@ -328,7 +331,7 @@ export function initializeColorSystem(): void {
       } catch (error) {
         console.error('🎨 Error applying initial color decorations:', error);
       }
-    }, 100);
+    }, INITIALIZATION_DELAY);
   }
 }
 
@@ -394,7 +397,7 @@ export async function onConfigurationChanged(): Promise<void> {
     // If the color is invalid, keep the current color and save a valid one
     const fallbackColor = isValidHexColor(currentColor)
       ? currentColor
-      : '#515151';
+      : DEFAULT_COLOR;
     currentColor = fallbackColor;
 
     // Save the valid color back to the configuration

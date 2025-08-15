@@ -26,9 +26,9 @@ export const activate = async (context: vscode.ExtensionContext) => {
         vscode.commands.registerCommand('bracketLynx.debug', () => {
             const state = getCurrentState();
             console.log('🔍 Bracket Lynx Debug State:', state);
-            vscode.window.showInformationMessage(
-                `🔍 Debug: Global=${state.isEnabled ? 'ON' : 'OFF'}, Current=${state.isActiveEditorEnabled ? 'ON' : 'OFF'}`
-            );
+            // vscode.window.showInformationMessage(
+            //     `🔍 Debug: Global=${state.isEnabled ? 'ON' : 'OFF'}, Current=${state.isActiveEditorEnabled ? 'ON' : 'OFF'}`
+            // );
         }),
         vscode.commands.registerCommand('bracketLynx.restoreColor', async () => {
             const { restoreColorFromGlobal } = await import('./actions/colors.js');
