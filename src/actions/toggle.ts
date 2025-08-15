@@ -181,12 +181,7 @@ export async function toggleCurrentEditor(): Promise<void> {
       await saveDisabledFilesState();
       
       try {
-        if (bracketLynxProvider && bracketLynxProvider.clearEditorDecorations) {
-          bracketLynxProvider.clearEditorDecorations(activeEditor);
-        }
-        if (astroDecorator && astroDecorator.clearDecorations) {
-          astroDecorator.clearDecorations(activeEditor);
-        }
+        clearEditorDecorations(activeEditor);
         vscode.window.showInformationMessage(
           '📝 Bracket Lynx: Disabled for current file'
         );
@@ -206,12 +201,7 @@ export async function toggleCurrentEditor(): Promise<void> {
       await saveIndividuallyEnabledFilesState();
       
       try {
-        if (bracketLynxProvider && bracketLynxProvider.clearEditorDecorations) {
-          bracketLynxProvider.clearEditorDecorations(activeEditor);
-        }
-        if (astroDecorator && astroDecorator.clearDecorations) {
-          astroDecorator.clearDecorations(activeEditor);
-        }
+        clearEditorDecorations(activeEditor);
         vscode.window.showInformationMessage(
           '📝 Bracket Lynx: Disabled for current file'
         );
@@ -236,29 +226,12 @@ export async function toggleCurrentEditor(): Promise<void> {
           }
         }
         
-        // Force immediate update for astro decorations
-        if (astroDecorator && astroDecorator.updateDecorations) {
-          astroDecorator.updateDecorations(activeEditor);
-        }
+        // Initial update
+        updateEditorDecorations(activeEditor);
         
         // Force multiple updates to ensure decorations appear
-        setTimeout(() => {
-          if (bracketLynxProvider && bracketLynxProvider.updateDecoration) {
-            bracketLynxProvider.updateDecoration(activeEditor);
-          }
-          if (astroDecorator && astroDecorator.updateDecorations) {
-            astroDecorator.updateDecorations(activeEditor);
-          }
-        }, 50);
-        
-        setTimeout(() => {
-          if (bracketLynxProvider && bracketLynxProvider.updateDecoration) {
-            bracketLynxProvider.updateDecoration(activeEditor);
-          }
-          if (astroDecorator && astroDecorator.updateDecorations) {
-            astroDecorator.updateDecorations(activeEditor);
-          }
-        }, 200);
+        setTimeout(() => updateEditorDecorations(activeEditor), 50);
+        setTimeout(() => updateEditorDecorations(activeEditor), 200);
         
         vscode.window.showInformationMessage(
           '📝 Bracket Lynx: Enabled for current file (individual mode)'
@@ -320,12 +293,7 @@ function reactivateExtension(): void {
     // Force update for all visible editors
     vscode.window.visibleTextEditors.forEach(editor => {
       if (isEditorEnabled(editor)) {
-        if (bracketLynxProvider && bracketLynxProvider.updateDecoration) {
-          bracketLynxProvider.updateDecoration(editor);
-        }
-        if (astroDecorator && astroDecorator.updateDecorations) {
-          astroDecorator.updateDecorations(editor);
-        }
+        updateEditorDecorations(editor);
       }
     });
   } catch (error) {
@@ -342,47 +310,66 @@ function deactivateExtension(): void {
   }
 }
 
+/**
+ * Helper function to update decorations for a specific editor
+ */
+function updateEditorDecorations(editor: vscode.TextEditor): void {
+  if (bracketLynxProvider && bracketLynxProvider.updateDecoration) {
+    bracketLynxProvider.updateDecoration(editor);
+  }
+  if (astroDecorator && astroDecorator.updateDecorations) {
+    astroDecorator.updateDecorations(editor);
+  }
+}
+
+/**
+ * Helper function to clear decorations for a specific editor
+ */
+function clearEditorDecorations(editor: vscode.TextEditor): void {
+  if (bracketLynxProvider && bracketLynxProvider.clearEditorDecorations) {
+    bracketLynxProvider.clearEditorDecorations(editor);
+  }
+  if (astroDecorator && astroDecorator.clearDecorations) {
+    astroDecorator.clearDecorations(editor);
+  }
+}
+
 function getEditorKey(editor: vscode.TextEditor): string {
   return editor.document.uri.toString();
 }
 
+/**
+ * Clean up editor references when a document is closed
+ */
 export async function cleanupClosedEditor(document: vscode.TextDocument): Promise<void> {
   const documentUri = document.uri.toString();
   let hasChanges = false;
 
-  // Clean up from disabledEditors
+  // Helper function to clean up legacy keys from a Map
+  const cleanupLegacyKeys = (map: Map<string, boolean>): string[] => {
+    const keysToDelete: string[] = [];
+    for (const [key] of map) {
+      if (key.startsWith(documentUri + ':') || key.includes(documentUri)) {
+        keysToDelete.push(key);
+      }
+    }
+    keysToDelete.forEach((key) => map.delete(key));
+    return keysToDelete;
+  };
+
+  // Clean up from both Maps
   if (disabledEditors.delete(documentUri)) {
     hasChanges = true;
   }
-
-  // Clean up from individuallyEnabledEditors
   if (individuallyEnabledEditors.delete(documentUri)) {
     hasChanges = true;
   }
 
-  // Clean up legacy keys from disabledEditors
-  const legacyDisabledKeysToDelete: string[] = [];
-  for (const [key] of disabledEditors) {
-    if (key.startsWith(documentUri + ':') || key.includes(documentUri)) {
-      legacyDisabledKeysToDelete.push(key);
-    }
-  }
+  // Clean up legacy keys from both Maps
+  const legacyDisabledKeys = cleanupLegacyKeys(disabledEditors);
+  const legacyIndividualKeys = cleanupLegacyKeys(individuallyEnabledEditors);
   
-  if (legacyDisabledKeysToDelete.length > 0) {
-    legacyDisabledKeysToDelete.forEach((key) => disabledEditors.delete(key));
-    hasChanges = true;
-  }
-
-  // Clean up legacy keys from individuallyEnabledEditors
-  const legacyIndividualKeysToDelete: string[] = [];
-  for (const [key] of individuallyEnabledEditors) {
-    if (key.startsWith(documentUri + ':') || key.includes(documentUri)) {
-      legacyIndividualKeysToDelete.push(key);
-    }
-  }
-  
-  if (legacyIndividualKeysToDelete.length > 0) {
-    legacyIndividualKeysToDelete.forEach((key) => individuallyEnabledEditors.delete(key));
+  if (legacyDisabledKeys.length > 0 || legacyIndividualKeys.length > 0) {
     hasChanges = true;
   }
 

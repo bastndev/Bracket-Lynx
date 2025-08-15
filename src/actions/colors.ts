@@ -18,8 +18,9 @@ let astroDecorator: any = undefined;
 let currentColor: string = '#515151';
 let isPreviewMode: boolean = false;
 let originalColorBeforePreview: string = '#515151';
+
 /**
- * Available color presets
+ * Get available color presets for the color picker
  */
 function getAvailableColors(): ColorOption[] {
   return [
@@ -217,6 +218,9 @@ export function changeDecorationColor(): void {
   quickPick.show();
 }
 
+/**
+ * Recreate all bracket decorations with the specified color
+ */
 async function recreateAllBracketLynxDecorations(
   overrideColor?: string
 ): Promise<void> {
@@ -245,9 +249,9 @@ async function recreateAllBracketLynxDecorations(
       if (bracketLynxProvider.onDidChangeConfiguration) {
         bracketLynxProvider.onDidChangeConfiguration();
       }
-      
+
       await new Promise((resolve) => setTimeout(resolve, 50));
-      
+
       // Update all decorations with new color
       bracketLynxProvider.updateAllDecoration();
     }
@@ -360,13 +364,19 @@ export function isValidHexColor(color: string): boolean {
 
 export async function onConfigurationChanged(): Promise<void> {
   const newColor = loadColorFromConfiguration();
-  console.log(`🎨 Configuration changed - new color: ${newColor}, current color: ${currentColor}`);
+  console.log(
+    `🎨 Configuration changed - new color: ${newColor}, current color: ${currentColor}`
+  );
 
   if (isValidHexColor(newColor)) {
     const wasColorChanged = newColor !== currentColor;
     currentColor = newColor;
-    
-    console.log(`🎨 Color ${wasColorChanged ? 'changed' : 'unchanged'} - updating to: ${currentColor}`);
+
+    console.log(
+      `🎨 Color ${
+        wasColorChanged ? 'changed' : 'unchanged'
+      } - updating to: ${currentColor}`
+    );
 
     if (bracketLynxProvider && wasColorChanged) {
       try {
