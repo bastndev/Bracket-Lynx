@@ -969,14 +969,25 @@ export class BracketHeaderGenerator {
 
       // FIRST: Check for arrow functions before filtering (to preserve 'const')
       const lowerText = result.toLowerCase();
-      if (
-        lowerText.includes('=>') &&
-        (lowerText.includes('export') || lowerText.includes('const'))
-      ) {
+      if (lowerText.includes('=>')) {
+        // Check for different types of arrow functions
         const words = result.split(/\s+/).filter(Boolean);
-        const functionName = this.getFirstMeaningfulWord(words);
-        if (functionName) {
-          return `export ${functionName} ❨❩➤`;
+        
+        // Case 1: Export const arrow functions (normal arrow functions)
+        if (lowerText.includes('export') || lowerText.includes('const')) {
+          if (words.length >= 2) {
+            const firstTwoWords = words.slice(0, 2).join(' ');
+            return `${firstTwoWords} ❨❩➤`;
+          } else if (words.length === 1) {
+            return `${words[0]} ❨❩➤`;
+          }
+        }
+        
+        // Case 2: Arrow functions in collections/objects (like Icon.Sun, Icon.Moon)
+        // Look for patterns like "Sun: ({ ...props }) =>" or "Moon: ({ ...props }) =>"
+        if (words.length >= 1 && lowerText.includes(':')) {
+          const functionName = words[0];
+          return `${functionName} ⮞`;
         }
       }
 

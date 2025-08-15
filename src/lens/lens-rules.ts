@@ -6,6 +6,8 @@ export const WORD_LIMITS = {
   MAX_HEADER_WORDS: 1,
   MAX_EXCEPTION_WORDS: 2,
   MAX_CSS_WORDS: 2,
+  MAX_ARROW_WORDS: 3,
+  MAX_COLLECTION_ARROW_WORDS: 1,
 } as const;
 
 export const EXCLUDED_SYMBOLS = [
@@ -70,8 +72,8 @@ const CSS_LANGUAGES_SET = new Set<string>(['css', 'scss', 'sass', 'less']);
 
 export type ExcludedSymbol = typeof EXCLUDED_SYMBOLS[number];
 export type CssLanguage = 'css' | 'scss' | 'sass' | 'less';
-export type WordLimitType = 'header' | 'exception' | 'css';
-export type ContentType = 'async' | 'complex' | 'arrow' | 'css' | 'exception' | 'control-flow';
+export type WordLimitType = 'header' | 'exception' | 'css' | 'arrow';
+export type ContentType = 'async' | 'complex' | 'arrow' | 'collection-arrow' | 'css' | 'exception' | 'control-flow';
 
 // Smart union types for better intellisense
 export type LanguageContext = {
@@ -104,7 +106,7 @@ export const FILTER_RULES: FilterRules = {
 
 // Re-export constants for backward compatibility
 export { SUPPORTED_LANGUAGES, ALLOWED_JSON_FILES } from '../core/utils';
-export const { MAX_HEADER_WORDS, MAX_EXCEPTION_WORDS, MAX_CSS_WORDS } = WORD_LIMITS;
+export const { MAX_HEADER_WORDS, MAX_EXCEPTION_WORDS, MAX_CSS_WORDS, MAX_ARROW_WORDS, MAX_COLLECTION_ARROW_WORDS } = WORD_LIMITS;
 export const { EXCEPTION_WORDS, CSS_RELATED_WORDS, TRY_CATCH_KEYWORDS, IF_ELSE_KEYWORDS } = KEYWORDS;
 
 // ============================================================================
@@ -203,6 +205,25 @@ export function isArrowFunction(lowerText: string): boolean {
   );
 }
 
+export function isCollectionArrowFunction(lowerText: string): boolean {
+  // Check for arrow functions in collections/objects (like Icon.Sun, Icon.Moon)
+  return (
+    lowerText.includes('=>') &&
+    lowerText.includes(':') &&
+    !lowerText.includes('export') &&
+    !lowerText.includes('const') &&
+    !lowerText.includes('let') &&
+    !lowerText.includes('var')
+  );
+}
+
+export function formatCollectionArrowFunction(words: string[]): string {
+  if (words.length >= 1) {
+    return `${words[0]} ⮞`;
+  }
+  return words.join(' ');
+}
+
 // ============================================================================
 // CONTENT FILTERING AND FORMATTING
 // ============================================================================
@@ -242,7 +263,11 @@ function analyzeContentSmart(text: string, languageId?: string): ContentAnalysis
   }
   
   if (lowerText.includes('=>') && (lowerText.includes('export') || lowerText.includes('const'))) {
-    return { contentType: 'arrow', maxWords: 3, requiresSymbol: false, isOptimized: true };
+    return { contentType: 'arrow', maxWords: MAX_ARROW_WORDS, requiresSymbol: false, isOptimized: true };
+  }
+  
+  if (isCollectionArrowFunction(lowerText)) {
+    return { contentType: 'collection-arrow', maxWords: MAX_COLLECTION_ARROW_WORDS, requiresSymbol: true, isOptimized: true };
   }
   
   if (containsExceptionWord(lowerText)) {
@@ -273,6 +298,7 @@ export function applyWordLimit(text: string, languageId?: string): string {
     switch (analysis.contentType) {
       case 'async': return formatAsyncFunction(words);
       case 'complex': return formatComplexFunction(words);
+      case 'collection-arrow': return formatCollectionArrowFunction(words);
     }
   }
   
