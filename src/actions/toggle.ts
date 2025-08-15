@@ -14,7 +14,7 @@ const INDIVIDUALLY_ENABLED_FILES_KEY = 'individuallyEnabledFiles';
 
 // Quick Pick Options
 function getMenuOptions(): any[] {
-  const globalStatus = isEnabled ? '🟢 Active' : '🔴 Inactive';
+  const globalStatus = isEnabled ? '🟢' : '🔴';
   const currentFileStatus = getCurrentFileStatus();
   
   return [
@@ -43,7 +43,7 @@ function getCurrentFileStatus(): string {
   }
   
   const isCurrentEnabled = isEditorEnabled(activeEditor);
-  return isCurrentEnabled ? '🟢 Active' : '🔴 Inactive';
+  return isCurrentEnabled ? '🟢' : '🔴';
 }
 
 function getCurrentFileDescription(): string {
