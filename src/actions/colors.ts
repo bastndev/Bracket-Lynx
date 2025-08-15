@@ -6,49 +6,6 @@ const DEFAULT_COLOR = '#515151';
 const DECORATION_CLEAR_DELAY = 50;
 const INITIALIZATION_DELAY = 100;
 
-/**
- * Get available color presets for the color picker
- */
-function getAvailableColors(): ColorOption[] {
-  return [
-    {
-      label: '⚫ Default Gray',
-      value: '#515151',
-      description: 'Default bracket color',
-    },
-    {
-      label: '⚪ Light Gray',
-      value: '#adb5bd',
-      description: 'Light gray decorations',
-    },
-    {
-      label: '🔵 Dark Blue',
-      value: '#4a4d66',
-      description: 'Dark blue decorations',
-    },
-    {
-      label: '🟡 Muted Yellow',
-      value: '#9d956b',
-      description: 'Subtle yellow-beige',
-    },
-    {
-      label: '🟢 Sage Green',
-      value: '#6b7c5d',
-      description: 'Muted sage green decorations',
-    },
-    {
-      label: '🟣 Dusty Purple',
-      value: '#6d5d73',
-      description: 'Soft purple-gray decorations',
-    },
-    {
-      label: '✏️ Write Custom',
-      value: 'write-custom',
-      description: 'Enter your own hex color',
-    },
-  ];
-}
-
 interface ColorOption extends vscode.QuickPickItem {
   value: string;
 }
@@ -65,7 +22,20 @@ let bracketLynxProvider: IBracketLynxProvider | undefined = undefined;
 let astroDecorator: any = undefined;
 let currentColor: string = DEFAULT_COLOR;
 
-
+/**
+ * Get available color presets for the color picker
+ */
+function getAvailableColors(): ColorOption[] {
+  return [
+    { label: '⚫ Default Gray', value: '#515151', description: 'Default bracket color' },
+    { label: '⚪ Light Gray', value: '#adb5bd', description: 'Light gray decorations' },
+    { label: '🔵 Dark Blue', value: '#4a4d66', description: 'Dark blue decorations' },
+    { label: '🟡 Muted Yellow', value: '#9d956b', description: 'Subtle yellow-beige' },
+    { label: '🟢 Sage Green', value: '#6b7c5d', description: 'Muted sage green decorations' },
+    { label: '🟣 Dusty Purple', value: '#6d5d73', description: 'Soft purple-gray decorations' },
+    { label: '✏️ Write Custom', value: 'write-custom', description: 'Enter your own hex color' },
+  ];
+}
 
 export function setBracketLynxProviderForColors(
   provider: IBracketLynxProvider
