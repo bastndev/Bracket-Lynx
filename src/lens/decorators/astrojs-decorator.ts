@@ -370,12 +370,7 @@ export class UniversalDecorator {
     }
   }
 
-  /**
-   * @deprecated Use updateDecorations instead
-   */
-  public static updateAstroDecorations(editor: vscode.TextEditor): void {
-    this.updateDecorations(editor);
-  }
+  // updateAstroDecorations method removed - use updateDecorations instead
 }
 
 export const AstroDecorator = UniversalDecorator;

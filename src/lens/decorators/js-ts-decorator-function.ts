@@ -64,7 +64,7 @@ class FunctionSymbols {
   }
 }
 
-// getFirstMeaningfulWord function removed - not used in this file
+
 
 /**
  * Handles the decoration for exported arrow functions.
@@ -132,127 +132,7 @@ export function formatComplexFunction(words: string[]): string {
   return words.join(' ');
 }
 
-/**
- * ArrowFunctionDecorator class for managing function decorations
- * @deprecated Use FunctionSymbols and individual functions instead
- */
-export class ArrowFunctionDecorator {
-  /**
-   * Get the current arrow function symbol (backward compatibility)
-   */
-  static getSymbol(): string {
-    return FunctionSymbols.getArrowSymbol();
-  }
-
-  /**
-   * Get the current symbols
-   */
-  static getSymbols(): {
-    arrow: string;
-    async: string;
-    complex: string;
-  } {
-    return FunctionSymbols.getAllSymbols();
-  }
-
-  /**
-   * Change the arrow function symbol
-   */
-  static changeArrowFunctionSymbol(newSymbol: string): void {
-    FunctionSymbols.setArrowSymbol(newSymbol);
-  }
-
-  /**
-   * Change the async function symbol
-   */
-  static changeAsyncFunctionSymbol(newSymbol: string): void {
-    FunctionSymbols.setAsyncSymbol(newSymbol);
-  }
-
-  /**
-   * Change the complex function symbol
-   */
-  static changeComplexFunctionSymbol(newSymbol: string): void {
-    FunctionSymbols.setComplexSymbol(newSymbol);
-  }
-
-  /**
-   * Get arrow function configuration
-   */
-  static getArrowFunctionConfig(): { symbol: string } {
-    return {
-      symbol: FunctionSymbols.getArrowSymbol(),
-    };
-  }
-
-  /**
-   * Main function to detect and decorate arrow functions
-   * Returns: "functionName ✅" if arrow function detected, original text otherwise
-   */
-  static detectAndDecorate(content: string): string {
-    const arrowResult = handleArrowFunctionPattern(content);
-    if (arrowResult) {
-      return arrowResult;
-    }
-    return content;
-  }
-
-  /**
-   * Check if content contains an arrow function
-   */
-  static isArrowFunction(content: string): boolean {
-    const lowerText = content.toLowerCase();
-    // Must contain '=>' to be considered an arrow function
-    return lowerText.includes('=>');
-  }
-
-  /**
-   * Check if content contains an async function
-   */
-  static isAsyncFunction(content: string): boolean {
-    const lowerText = content.toLowerCase();
-    return (
-      (lowerText.includes('async function') ||
-        lowerText.includes('async ') ||
-        (lowerText.includes('export') && lowerText.includes('async'))) &&
-      !lowerText.includes('=>')
-    );
-  }
-
-  /**
-   * Check if content contains a complex function (with React types, generics, etc.)
-   */
-  static isComplexFunction(content: string): boolean {
-    const lowerText = content.toLowerCase();
-    return (
-      (lowerText.includes('function ') ||
-        (lowerText.includes('export') && lowerText.includes('function'))) &&
-      (lowerText.includes('react.') ||
-        lowerText.includes('svgprops') ||
-        lowerText.includes('htmlprops') ||
-        (lowerText.includes('<') && lowerText.includes('>'))) &&
-      !lowerText.includes('async') &&
-      !lowerText.includes('=>')
-    );
-  }
-
-  /**
-   * Get max words allowed
-   */
-  static getMaxWords(): number {
-    return 3;
-  }
-}
-
-/**
- * Interface for arrow function detection results
- */
-export interface ArrowFunctionResult {
-  isArrowFunction: boolean;
-  functionName?: string;
-  originalText: string;
-  decoratedText: string;
-}
+// Legacy classes and interfaces removed - use FunctionSymbols and individual functions instead
 
 /**
  * Main function to detect and decorate functions (arrow, regular, async, methods)

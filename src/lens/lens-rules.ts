@@ -3,6 +3,7 @@ import {
   ALLOWED_JSON_FILES,
   SupportedLanguage,
   AllowedJsonFile,
+  escapeRegExp,
 } from '../core/utils';
 import { 
   formatAsyncFunction,
@@ -217,12 +218,6 @@ export function applyWordLimit(text: string, languageId?: string): string {
 // ============================================================================
 // UTILITY FUNCTIONS
 // ============================================================================
-
-// Removed duplicate getFirstMeaningfulWord function - using the one from js-ts-decorator-function.ts
-
-function escapeRegExp(string: string): string {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
 
 function isCssLanguage(languageId?: string): boolean {
   if (!languageId) {
