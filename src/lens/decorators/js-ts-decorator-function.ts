@@ -1,4 +1,4 @@
-import { KEYWORDS } from '../../core/config';
+import { KEYWORDS } from '../config';
 
 /**
  * Get the first meaningful word (skip common prefixes/symbols)

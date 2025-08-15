@@ -7,7 +7,7 @@ import {
   isSupportedLanguage,
   isAllowedJsonFile,
   shouldProcessFile as configShouldProcessFile
-} from '../core/config';
+} from './config';
 import { handleArrowFunctionPattern } from './decorators/js-ts-decorator-function';
 
 // ============================================================================
@@ -29,7 +29,7 @@ export const FILTER_RULES: FilterRules = {
 };
 
 // Re-export constants for backward compatibility
-export { EXCLUDED_SYMBOLS, SUPPORTED_LANGUAGES, ALLOWED_JSON_FILES } from '../core/config';
+export { EXCLUDED_SYMBOLS, SUPPORTED_LANGUAGES, ALLOWED_JSON_FILES } from './config';
 export const { MAX_HEADER_WORDS, MAX_EXCEPTION_WORDS, MAX_CSS_WORDS } = WORD_LIMITS;
 export const { EXCEPTION_WORDS, CSS_RELATED_WORDS, TRY_CATCH_KEYWORDS, IF_ELSE_KEYWORDS } = KEYWORDS;
 

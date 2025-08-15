@@ -21,7 +21,7 @@ import {
   isSupportedLanguage,
   isAllowedJsonFile,
   shouldProcessFile
-} from '../core/config';
+} from '../lens/config';
 
 suite('Bracket Lynx Core Tests', () => {
 	console.log('🧪 Starting Bracket Lynx core tests...');

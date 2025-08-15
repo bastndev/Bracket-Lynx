@@ -4,7 +4,7 @@ import {
   PROBLEMATIC_EXTENSIONS, 
   PERFORMANCE_LIMITS,
   isProblematicLanguage 
-} from './config';
+} from '../lens/config';
 
 export interface ParserExceptionConfig {
   problematicLanguages: string[];

@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { AdvancedCacheManager, SmartDebouncer } from '../core/performance-cache';
 import { OptimizedBracketParser } from '../core/performance-parser';
 import { shouldUseOriginalParser } from '../core/parser-exceptions';
-import { PERFORMANCE_LIMITS, DEFAULT_STYLES } from '../core/config';
+import { PERFORMANCE_LIMITS, DEFAULT_STYLES } from './config';
 import { PositionUtils, regExpExecToArray, makeRegExpPart } from '../core/utils';
 import { LanguageFormatter } from './language-formatter';
 import {

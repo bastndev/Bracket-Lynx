@@ -7,7 +7,7 @@ import {
   HeaderMode,
 } from '../lens/lens';
 import { containsControlFlowKeyword } from '../lens/lens-rules';
-import { PERFORMANCE_LIMITS } from './config';
+import { PERFORMANCE_LIMITS } from '../lens/config';
 
 // ============================================================================
 // PARSING STATE INTERFACES
