@@ -155,14 +155,16 @@
     }
   },
   "scripts": {
-    "compile": "npm run check-types && npm run lint && node esbuild.js",
-    "watch": "npm-run-all -p watch:*",
-    "watch:esbuild": "node esbuild.js --watch",
-    "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
-    "check-types": "tsc --noEmit",
-    "lint": "eslint src",
-    "test": "node ./node_modules/mocha/bin/mocha -r ts-node/register src/__test__/**/*.test.ts",
-    "watch-tests": "npm run test -- --watch"
+  "compile": "npm run check-types && npm run lint && node esbuild.js",
+  "watch": "npm-run-all -p watch:*",
+  "watch:esbuild": "node esbuild.js --watch",
+  "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
+  "check-types": "tsc --noEmit",
+  "lint": "eslint src",
+  "test": "mocha -r ts-node/register src/__test__/**/*.test.ts",
+  "test:single": "mocha -r ts-node/register src/__test__/extension.test.ts",
+  "test:all": "mocha -r ts-node/register src/__test__/**/*.test.ts",
+  "test:watch": "mocha -r ts-node/register --watch src/__test__/**/*.test.ts"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
