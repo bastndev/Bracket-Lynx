@@ -74,7 +74,7 @@ export async function toggleBracketLynx(): Promise<void> {
   await saveGlobalEnabledState(isEnabled);
 
   if (isEnabled) {
-    // When activating globally, clear individually enabled files and reactivate all except disabled ones
+    // Notification in bottom Right
     individuallyEnabledEditors.clear();
     await saveIndividuallyEnabledFilesState();
     reactivateExtension();
@@ -100,10 +100,8 @@ export function isEditorEnabled(editor: vscode.TextEditor): boolean {
   const editorKey = getEditorKey(editor);
   
   if (isEnabled) {
-    // Global mode: enabled for all files except those in disabledEditors
     return !disabledEditors.get(editorKey);
   } else {
-    // Individual mode: only enabled for files in individuallyEnabledEditors
     return individuallyEnabledEditors.get(editorKey) || false;
   }
 }
@@ -112,10 +110,8 @@ export function isDocumentEnabled(document: vscode.TextDocument): boolean {
   const documentUri = document.uri.toString();
   
   if (isEnabled) {
-    // Global mode: enabled for all files except those in disabledEditors
     return !disabledEditors.get(documentUri);
   } else {
-    // Individual mode: only enabled for files in individuallyEnabledEditors
     return individuallyEnabledEditors.get(documentUri) || false;
   }
 }
@@ -201,7 +197,6 @@ export async function toggleCurrentEditor(): Promise<void> {
       
       // Activate decorations for this specific file
       try {
-        // Force immediate update for bracket decorations
         if (bracketLynxProvider) {
           if (bracketLynxProvider.updateDecoration) {
             bracketLynxProvider.updateDecoration(activeEditor);
@@ -229,7 +224,6 @@ export async function toggleCurrentEditor(): Promise<void> {
     }
   }
 }
-
 
 
 export function setBracketLynxProvider(provider: any): void {
@@ -362,9 +356,6 @@ export async function cleanupClosedEditor(document: vscode.TextDocument): Promis
     await saveIndividuallyEnabledFilesState();
   }
 }
-
-
-
 
 
 // ============================================================================
