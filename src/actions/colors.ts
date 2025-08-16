@@ -20,6 +20,7 @@ export interface IBracketLynxProvider {
 
 let bracketLynxProvider: IBracketLynxProvider | undefined = undefined;
 let astroDecorator: any = undefined;
+let vueDecorator: any = undefined;
 let currentColor: string = DEFAULT_COLOR;
 
 /**
@@ -45,6 +46,10 @@ export function setBracketLynxProviderForColors(
 
 export function setAstroDecoratorForColors(decorator: any): void {
   astroDecorator = decorator;
+}
+
+export function setVueDecoratorForColors(decorator: any): void {
+  vueDecorator = decorator;
 }
 
 export function changeDecorationColor(): void {

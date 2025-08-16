@@ -16,6 +16,7 @@ const DECORATION_UPDATE_DELAY_LONG = 200;
 let isEnabled = true;
 let bracketLynxProvider: any = undefined;
 let astroDecorator: any = undefined;
+let vueDecorator: any = undefined;
 const disabledEditors = new Map<string, boolean>();
 const individuallyEnabledEditors = new Map<string, boolean>();
 
@@ -357,6 +358,10 @@ export function setBracketLynxProvider(provider: any): void {
 
 export function setAstroDecorator(decorator: any): void {
   astroDecorator = decorator;
+}
+
+export function setVueDecorator(decorator: any): void {
+  vueDecorator = decorator;
 }
 
 export function showBracketLynxMenu(): void {
