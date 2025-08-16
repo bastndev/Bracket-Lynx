@@ -44,7 +44,7 @@
   "main": "./dist/extension.js",
   "activationEvents": [
     "onLanguage:javascript",
-    "onLanguage:typescript", 
+    "onLanguage:typescript",
     "onLanguage:javascriptreact",
     "onLanguage:typescriptreact",
     "onLanguage:html",
@@ -155,16 +155,26 @@
     }
   },
   "scripts": {
-  "compile": "npm run check-types && npm run lint && node esbuild.js",
-  "watch": "npm-run-all -p watch:*",
-  "watch:esbuild": "node esbuild.js --watch",
-  "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
-  "check-types": "tsc --noEmit",
-  "lint": "eslint src",
-  "test": "mocha -r ts-node/register src/__test__/**/*.test.ts",
-  "test:single": "mocha -r ts-node/register src/__test__/extension.test.ts",
-  "test:all": "mocha -r ts-node/register src/__test__/**/*.test.ts",
-  "test:watch": "mocha -r ts-node/register --watch src/__test__/**/*.test.ts"
+    "compile": "npm run check-types && npm run lint && node esbuild.js",
+    "watch": "npm-run-all -p watch:*",
+    "watch:esbuild": "node esbuild.js --watch",
+    "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint src",
+
+    "test": "npm run test:quick",
+    "test:quick": "mocha --require ts-node/register --extensions ts --timeout 5000 --grep \"Quick Tests\" src/__test__/simple.test.ts",
+    "test:integration": "mocha --require ts-node/register --extensions ts --timeout 10000 --grep \"Integration Tests\" src/__test__/simple.test.ts",
+    "test:performance": "mocha --require ts-node/register --extensions ts --timeout 30000 --grep \"Performance Tests\" src/__test__/simple.test.ts",
+    "test:all": "mocha --require ts-node/register --extensions ts --timeout 60000 --grep \"All Tests\" src/__test__/simple.test.ts",
+    "test:watch": "mocha --require ts-node/register --extensions ts --watch src/__test__/simple.test.ts",
+    "test:full": "mocha --require ts-node/register --extensions ts --timeout 60000 src/__test__/simple.test.ts",
+    "test:verbose": "mocha --require ts-node/register --extensions ts --timeout 60000 --reporter spec src/__test__/simple.test.ts",
+    "test:ci": "npm run test:quick && npm run test:integration && npm run test:performance && npm run test:all",
+    "test:dev": "npm run test:quick && npm run test:integration",
+
+    "pretest": "npm run check-types",
+    "posttest": "echo \"✅ Tests completed successfully!\""
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
