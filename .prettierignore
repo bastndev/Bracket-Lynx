@@ -4,4 +4,5 @@ tsconfig.json
 
 src/core
 src/lens
+src/actions
 src/extension.ts

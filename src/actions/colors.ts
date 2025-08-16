@@ -29,10 +29,10 @@ function getAvailableColors(): ColorOption[] {
   return [
     { label: '⚫ Default Gray', value: '#515151', description: 'Default bracket color' },
     { label: '⚪ Light Gray', value: '#adb5bd', description: 'Light gray decorations' },
-    { label: '🔵 Dark Blue', value: '#4a4d66', description: 'Dark blue decorations' },
-    { label: '🟡 Muted Yellow', value: '#9d956b', description: 'Subtle yellow-beige' },
-    { label: '🟢 Sage Green', value: '#6b7c5d', description: 'Muted sage green decorations' },
-    { label: '🟣 Dusty Purple', value: '#6d5d73', description: 'Soft purple-gray decorations' },
+    { label: '🔵 Blue', value: '#4a4d66', description: 'Dark blue decorations' },
+    { label: '🟡 Yellow', value: '#9d956b', description: 'Subtle yellow-beige' },
+    { label: '🟢 Green', value: '#6b7c5d', description: 'Muted sage green decorations' },
+    { label: '🟣 Purple', value: '#6d5d73', description: 'Soft purple-gray decorations' },
     { label: '✏️ Write Custom', value: 'write-custom', description: 'Enter your own hex color' },
   ];
 }
