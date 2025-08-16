@@ -4,6 +4,15 @@ import {
   initializeColorSystem,
   changeDecorationColor,
 } from './colors';
+import { 
+  safeExecute, 
+  safeExecuteAsync, 
+  validateTextEditor, 
+  validateDocument,
+  ConfigurationError,
+  logger, 
+  LogCategory
+} from '../core/performance-config';
 
 // Configuration constants
 const CONFIG_SECTION = 'bracketLynx';
@@ -363,30 +372,51 @@ export function setAstroDecorator(decorator: any): void {
 }
 
 export function showBracketLynxMenu(): void {
-  vscode.window
-    .showQuickPick(getMenuOptions(), {
-      placeHolder: 'Choose Bracket Lynx action...',
-    })
-    .then(async (selected) => {
-      if (!selected) {
-        return;
-      }
+  safeExecute(
+    () => {
+      vscode.window
+        .showQuickPick(getMenuOptions(), {
+          placeHolder: 'Choose Bracket Lynx action...',
+        })
+        .then(async (selected) => {
+          if (!selected) {
+            return;
+          }
 
-      switch (selected.action) {
-        case 'global':
-          await toggleBracketLynx();
-          break;
-        case 'current':
-          await toggleCurrentEditor();
-          break;
-        case 'color':
-          changeDecorationColor();
-          break;
-        case 'reset-to-default':
-          await resetToDefault();
-          break;
-      }
-    });
+          await safeExecuteAsync(
+            async () => {
+              switch (selected.action) {
+                case 'global':
+                  await toggleBracketLynx();
+                  break;
+                case 'current':
+                  await toggleCurrentEditor();
+                  break;
+                case 'color':
+                  changeDecorationColor();
+                  break;
+                case 'reset-to-default':
+                  await resetToDefault();
+                  break;
+                default:
+                  logger.warn(`Unknown menu action: ${selected.action}`, 
+                    { action: selected.action }, LogCategory.TOGGLE);
+              }
+            },
+            undefined,
+            `Executing menu action: ${selected.action}`,
+            LogCategory.TOGGLE
+          );
+        }, (error: any) => {
+          logger.error('Failed to show Bracket Lynx menu', { 
+            error: error instanceof Error ? error.message : String(error) 
+          }, LogCategory.TOGGLE);
+        });
+    },
+    undefined,
+    'Showing Bracket Lynx menu',
+    LogCategory.TOGGLE
+  );
 }
 
 // ============================================================================
@@ -570,10 +600,6 @@ function loadIndividuallyEnabledFilesState(): void {
 // PUBLIC API - INITIALIZATION
 // ============================================================================
 
-/**
- * Initialize state from persisted configuration
- * This should be called when the extension activates
- */
 export function initializePersistedState(): void {
   isEnabled = loadGlobalEnabledState();
   loadDisabledFilesState();

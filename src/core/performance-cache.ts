@@ -5,7 +5,17 @@ import {
   BracketEntry,
   BracketDecorationSource,
 } from '../lens/lens';
-import { CACHE_CONFIG, createHash } from './performance-config';
+import { 
+  CACHE_CONFIG, 
+  createHash,
+  safeExecute, 
+  safeExecuteAsync, 
+  CacheError, 
+  PerformanceError,
+  logger, 
+  LogCategory,
+  validateDocument
+} from './performance-config';
 
 // ============================================================================
 // 🎯 UNIFIED CACHE INTERFACES - Clean and Simple
