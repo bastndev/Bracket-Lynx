@@ -7,101 +7,172 @@ import {
   HeaderMode,
 } from '../lens/lens';
 import { containsControlFlowKeyword } from '../lens/lens-rules';
-import { PROBLEMATIC_LANGUAGES, PROBLEMATIC_EXTENSIONS } from './performance-config';
-import { PERFORMANCE_LIMITS } from './performance-config';
+import { 
+  PROBLEMATIC_LANGUAGES, 
+  PROBLEMATIC_EXTENSIONS,
+  PERFORMANCE_LIMITS,
+  createHash
+} from './performance-config';
 
 // ============================================================================
-// PARSER EXCEPTION CONFIGURATION
+// 🚀 OPTIMIZED INTERFACES - Unified and Clean
 // ============================================================================
 
 export interface ParserExceptionConfig {
-  problematicLanguages: string[];
-  problematicExtensions: string[];
-  enableContentDetection: boolean;
-  maxContentAnalysisSize: number;
+  readonly problematicLanguages: readonly string[];
+  readonly problematicExtensions: readonly string[];
+  readonly enableContentDetection: boolean;
+  readonly maxContentAnalysisSize: number;
 }
-
-const DEFAULT_PARSER_EXCEPTION_CONFIG: ParserExceptionConfig = {
-  problematicLanguages: [...PROBLEMATIC_LANGUAGES],
-  problematicExtensions: [...PROBLEMATIC_EXTENSIONS],
-  enableContentDetection: true,
-  maxContentAnalysisSize: PERFORMANCE_LIMITS.MAX_CONTENT_ANALYSIS_SIZE,
-};
-
-// ============================================================================
-// PARSING STATE INTERFACES
-// ============================================================================
 
 export interface ParseState {
-  position: number;
-  inString: boolean;
-  inSingleQuote: boolean;
-  inDoubleQuote: boolean;
-  inTemplateString: boolean;
-  inBlockComment: boolean;
-  inLineComment: boolean;
-  stringEscapeNext: boolean;
+  readonly position: number;
+  readonly inString: boolean;
+  readonly inSingleQuote: boolean;
+  readonly inDoubleQuote: boolean;
+  readonly inTemplateString: boolean;
+  readonly inBlockComment: boolean;
+  readonly inLineComment: boolean;
+  readonly stringEscapeNext: boolean;
 }
 
-export interface ParseStateCache {
-  textHash: string;
-  states: ParseState[];
-  timestamp: number;
-  fileSize: number;
-}
-
-export interface IncrementalParseResult {
-  brackets: BracketEntry[];
-  affectedRegions: ChangeRegion[];
-  parseTime: number;
+export interface CacheEntry<T> {
+  readonly data: T;
+  readonly textHash: string;
+  readonly timestamp: number;
+  readonly fileSize: number;
+  readonly languageId?: string;
 }
 
 export interface ChangeRegion {
-  startLine: number;
-  endLine: number;
-  startChar: number;
-  endChar: number;
+  readonly startLine: number;
+  readonly endLine: number;
+  readonly startChar: number;
+  readonly endChar: number;
 }
 
-export interface TokenCacheEntry {
-  tokens: { index: number; token: string }[];
-  pattern: string;
-  languageId: string;
-  timestamp: number;
+export interface ParseResult {
+  readonly brackets: BracketEntry[];
+  readonly affectedRegions: ChangeRegion[];
+  readonly parseTime: number;
+  readonly cacheHit: boolean;
+}
+
+export interface PerformanceFilterResult {
+  readonly shouldSkip: boolean;
+  readonly reason?: string;
+  readonly performanceMode: 'normal' | 'performance' | 'minimal';
 }
 
 // ============================================================================
-// OPTIMIZED BRACKET PARSER
+// 🎯 UNIFIED CACHE MANAGER - Single Source of Truth
+// ============================================================================
+
+class UnifiedCacheManager<T> {
+  private cache = new Map<string, CacheEntry<T>>();
+  
+  constructor(
+    private readonly maxSize: number = 30,
+    private readonly maxAge: number = 5 * 60 * 1000 // 5 minutes
+  ) {}
+
+  get(key: string, textHash: string): T | null {
+    const entry = this.cache.get(key);
+    
+    if (!entry) {return null;}
+    
+    // Check if expired or content changed
+    if (
+      Date.now() - entry.timestamp > this.maxAge ||
+      entry.textHash !== textHash
+    ) {
+      this.cache.delete(key);
+      return null;
+    }
+    
+    return entry.data;
+  }
+
+  set(key: string, data: T, textHash: string, fileSize: number, languageId?: string): void {
+    // Enforce size limit with LRU eviction
+    if (this.cache.size >= this.maxSize) {
+      const oldestKey = this.cache.keys().next().value;
+      if (oldestKey) {
+        this.cache.delete(oldestKey);
+      }
+    }
+
+    this.cache.set(key, {
+      data,
+      textHash,
+      timestamp: Date.now(),
+      fileSize,
+      languageId
+    });
+  }
+
+  clear(): void {
+    this.cache.clear();
+  }
+
+  delete(key: string): boolean {
+    return this.cache.delete(key);
+  }
+
+  size(): number {
+    return this.cache.size;
+  }
+
+  // 🧹 Cleanup expired entries
+  cleanup(): number {
+    const now = Date.now();
+    let cleanedCount = 0;
+    
+    for (const [key, entry] of this.cache) {
+      if (now - entry.timestamp > this.maxAge) {
+        this.cache.delete(key);
+        cleanedCount++;
+      }
+    }
+    
+    return cleanedCount;
+  }
+}
+
+// ============================================================================
+// 🔥 OPTIMIZED BRACKET PARSER - Clean and Fast
 // ============================================================================
 
 export class OptimizedBracketParser {
   private static instance: OptimizedBracketParser;
-
-  // Cache for parsing states
-  private parseStateCache = new Map<string, ParseStateCache>();
-  private tokenCache = new Map<string, TokenCacheEntry>();
-  private parserExceptionConfig: ParserExceptionConfig = { ...DEFAULT_PARSER_EXCEPTION_CONFIG };
-
-  // Fallback parser to avoid circular dependencies
-  private fallbackParser?: (document: vscode.TextDocument) => BracketEntry[];
-
+  
+  // 🎯 Unified cache system
+  private parseStateCache = new UnifiedCacheManager<ParseState[]>(30, 2 * 60 * 1000);
+  private tokenCache = new UnifiedCacheManager<{ index: number; token: string }[]>(30, 5 * 60 * 1000);
+  
   // Configuration
-  private readonly PARSE_CACHE_INTERVAL = 100; // Cache state every 100 characters
-  private readonly PARSE_CACHE_MAX_AGE = 2 * 60 * 1000; // 2 minutes
-  private readonly TOKEN_CACHE_MAX_AGE = 5 * 60 * 1000; // 5 minutes
-  private readonly CACHE_MAX_SIZE = 30; // Maximum 30 files in cache
-  private readonly MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB limit
-
-  // Performance filter configuration
-  private readonly PERFORMANCE_FILTERS = {
-    MAX_SAFE_FILE_SIZE: PERFORMANCE_LIMITS.MAX_FILE_SIZE, // 5MB - switch to performance mode
-    MAX_EXTREME_FILE_SIZE: PERFORMANCE_LIMITS.MAX_FILE_SIZE * 4, // 20MB - disable completely
-    MIN_BRACKET_LINES: PERFORMANCE_LIMITS.MIN_BRACKET_SCOPE_LINES, // Minimum lines to show decoration
-    MAX_DECORATIONS_PER_FILE: PERFORMANCE_LIMITS.MAX_DECORATIONS_PER_FILE, // Maximum decorations per file
-    MIN_BRACKET_CONTENT_LENGTH: 10, // Minimum content length to show
-    SKIP_LARGE_BRACKETS: 1000, // Skip brackets with >1000 lines
-    MAX_NESTED_DEPTH: 20, // Maximum nesting depth to process
+  private parserExceptionConfig: ParserExceptionConfig = {
+    problematicLanguages: [...PROBLEMATIC_LANGUAGES],
+    problematicExtensions: [...PROBLEMATIC_EXTENSIONS],
+    enableContentDetection: true,
+    maxContentAnalysisSize: PERFORMANCE_LIMITS.MAX_CONTENT_ANALYSIS_SIZE,
   };
+  
+  // Fallback parser
+  private fallbackParser?: (document: vscode.TextDocument) => BracketEntry[];
+  
+  // 🚀 Performance constants
+  private static readonly CONSTANTS = {
+    PARSE_CACHE_INTERVAL: 100,
+    MAX_FILE_SIZE: 10 * 1024 * 1024, // 10MB
+    MAX_SAFE_FILE_SIZE: PERFORMANCE_LIMITS.MAX_FILE_SIZE,
+    MAX_EXTREME_FILE_SIZE: PERFORMANCE_LIMITS.MAX_FILE_SIZE * 4,
+    MIN_BRACKET_LINES: PERFORMANCE_LIMITS.MIN_BRACKET_SCOPE_LINES,
+    MAX_DECORATIONS_PER_FILE: PERFORMANCE_LIMITS.MAX_DECORATIONS_PER_FILE,
+    MIN_BRACKET_CONTENT_LENGTH: 10,
+    SKIP_LARGE_BRACKETS: 1000,
+    MAX_NESTED_DEPTH: 20,
+  } as const;
 
   private constructor() {}
 
@@ -112,42 +183,33 @@ export class OptimizedBracketParser {
     return OptimizedBracketParser.instance;
   }
 
-  /**
-   * Set fallback parser to avoid circular dependencies
-   */
-  setFallbackParser(
-    parser: (document: vscode.TextDocument) => BracketEntry[]
-  ): void {
-    this.fallbackParser = parser;
+  // ============================================================================
+  // 🎯 PUBLIC API - Clean and Simple
+  // ============================================================================
 
+  setFallbackParser(parser: (document: vscode.TextDocument) => BracketEntry[]): void {
+    this.fallbackParser = parser;
+    
     if (BracketLynxConfig.debug) {
-      console.log('Bracket Lynx: Fallback parser configured successfully');
+      console.log('🔧 Bracket Lynx: Fallback parser configured');
     }
   }
 
-  // ============================================================================
-  // MAIN PARSING METHODS
-  // ============================================================================
-
-  /**
-   * Parse brackets with optimizations and performance filters
-   */
   parseBrackets(document: vscode.TextDocument): BracketEntry[] {
     const text = document.getText();
     const fileUri = document.uri.toString();
+    const textHash = createHash(text);
 
-    // Apply performance filters
+    // 🚀 Apply performance filters first
     const filterResult = this.applyPerformanceFilters(document, text);
     if (filterResult.shouldSkip) {
       if (BracketLynxConfig.debug) {
-        console.log(
-          `Bracket Lynx: Skipping file due to performance filters: ${filterResult.reason}`
-        );
+        console.log(`⚡ Skipping file: ${filterResult.reason}`);
       }
       return [];
     }
 
-    // Check if we should use the original parser for this document
+    // 🎯 Check if we should use fallback parser
     if (this.shouldUseOriginalParser(document)) {
       return this.fallbackParsing(document);
     }
@@ -155,177 +217,127 @@ export class OptimizedBracketParser {
     const startTime = Date.now();
 
     try {
-      // Get or create parsing state cache
-      const parseCache = this.getOrCreateParseStateCache(text, fileUri);
+      // 🚀 Get cached data or create new
+      const parseStates = this.getOrCreateParseStates(text, fileUri, textHash);
+      const tokens = this.getOrCreateTokens(document, text, textHash);
 
-      // Get or create token cache
-      const tokens = this.getOrCreateTokenCache(document, text);
+      // 🎯 Parse with optimized state detection
+      let brackets = this.parseTokensOptimized(document, tokens, parseStates);
 
-      // Parse with optimized state detection
-      let brackets = this.parseTokensOptimized(document, tokens, parseCache);
-
-      // Apply post-parsing filters
-      brackets = this.applyPostParsingFilters(
-        brackets,
-        document,
-        filterResult.performanceMode
-      );
+      // 🔧 Apply post-parsing filters
+      brackets = this.applyPostParsingFilters(brackets, document, filterResult.performanceMode);
 
       const parseTime = Date.now() - startTime;
 
       if (BracketLynxConfig.debug) {
-        console.log(
-          `Bracket Lynx: Optimized parsing completed in ${parseTime}ms, ${brackets.length} brackets found`
-        );
+        console.log(`⚡ Parsing completed: ${parseTime}ms, ${brackets.length} brackets`);
       }
 
       return brackets;
     } catch (error) {
-      console.error(
-        'Bracket Lynx: Error in optimized parsing, falling back:',
-        error
-      );
+      console.error('🚨 Parsing error, using fallback:', error);
       return this.fallbackParsing(document);
     }
   }
 
-  /**
-   * Incremental parsing for document changes
-   */
   parseIncremental(
     document: vscode.TextDocument,
     changes: readonly vscode.TextDocumentContentChangeEvent[],
     existingBrackets: BracketEntry[]
-  ): IncrementalParseResult {
+  ): ParseResult {
     const startTime = Date.now();
     const text = document.getText();
     const fileUri = document.uri.toString();
 
     try {
-      // Detect change regions
+      // 🎯 Detect and expand change regions
       const changeRegions = this.detectChangeRegions(document, changes);
-
-      // Expand regions to include potentially affected brackets
-      const expandedRegions = changeRegions.map((region) =>
+      const expandedRegions = changeRegions.map(region =>
         this.expandChangeRegion(region, document, existingBrackets)
       );
 
-      // Parse only affected regions
+      // 🚀 Process only affected regions
       let resultBrackets = existingBrackets;
 
       for (const region of expandedRegions) {
-        // Remove brackets in affected region
         resultBrackets = this.removeBracketsInRegion(resultBrackets, region);
-
-        // Parse new brackets in region
         const newBrackets = this.parseBracketsInRegion(document, region);
-
-        // Merge with existing brackets
         resultBrackets = this.mergeBrackets(resultBrackets, newBrackets);
       }
 
-      // Update parse state cache
-      this.updateParseStateCache(text, fileUri);
+      // 🧹 Invalidate cache for changed file
+      this.parseStateCache.delete(fileUri);
 
       const parseTime = Date.now() - startTime;
 
       if (BracketLynxConfig.debug) {
-        console.log(
-          `Bracket Lynx: Incremental parsing completed in ${parseTime}ms, affected ${expandedRegions.length} regions`
-        );
+        console.log(`🔄 Incremental parsing: ${parseTime}ms, ${expandedRegions.length} regions`);
       }
 
       return {
         brackets: resultBrackets,
         affectedRegions: expandedRegions,
         parseTime,
+        cacheHit: false
       };
     } catch (error) {
-      console.error(
-        'Bracket Lynx: Error in incremental parsing, falling back to full parse:',
-        error
-      );
-
-      // Try optimized parsing first, then fallback if needed
-      let fallbackBrackets: BracketEntry[] = [];
-      try {
-        fallbackBrackets = this.parseBrackets(document);
-      } catch (parseError) {
-        console.error(
-          'Bracket Lynx: Error in optimized parsing, using fallback:',
-          parseError
-        );
-        fallbackBrackets = this.fallbackParsing(document);
-      }
-
+      console.error('🚨 Incremental parsing error, using full parse:', error);
+      
+      const fallbackBrackets = this.parseBrackets(document);
       return {
         brackets: fallbackBrackets,
         affectedRegions: [],
         parseTime: Date.now() - startTime,
+        cacheHit: false
       };
     }
   }
 
   // ============================================================================
-  // PARSE STATE CACHE METHODS
+  // 🎯 CACHE MANAGEMENT - Unified and Efficient
   // ============================================================================
 
-  /**
-   * Generate hash for text content
-   */
-  private generateTextHash(text: string): string {
-    let hash = 0;
-    for (let i = 0; i < text.length; i++) {
-      const char = text.charCodeAt(i);
-      hash = (hash << 5) - hash + char;
-      hash = hash & hash; // Convert to 32-bit integer
-    }
-    return hash.toString();
-  }
-
-  /**
-   * Get or create parsing state cache
-   */
-  private getOrCreateParseStateCache(
-    text: string,
-    fileUri: string
-  ): ParseStateCache {
-    const textHash = this.generateTextHash(text);
-    const cached = this.parseStateCache.get(fileUri);
-
-    // Check if cache is valid
-    if (
-      cached &&
-      cached.textHash === textHash &&
-      Date.now() - cached.timestamp < this.PARSE_CACHE_MAX_AGE
-    ) {
+  private getOrCreateParseStates(text: string, fileUri: string, textHash: string): ParseState[] {
+    // 🚀 Try cache first
+    const cached = this.parseStateCache.get(fileUri, textHash);
+    if (cached) {
       return cached;
     }
 
-    // Create new cache
+    // 🔧 Build new parse states
     const states = this.buildParseStates(text);
-    const newCache: ParseStateCache = {
-      textHash,
-      states,
-      timestamp: Date.now(),
-      fileSize: text.length,
-    };
-
-    // Enforce cache size limit
-    if (this.parseStateCache.size >= this.CACHE_MAX_SIZE) {
-      const oldestKey = this.parseStateCache.keys().next().value;
-      if (oldestKey) {
-        this.parseStateCache.delete(oldestKey);
-      }
-    }
-
-    this.parseStateCache.set(fileUri, newCache);
-    return newCache;
+    this.parseStateCache.set(fileUri, states, textHash, text.length);
+    
+    return states;
   }
 
-  /**
-   * Build parsing states at intervals
-   */
+  private getOrCreateTokens(
+    document: vscode.TextDocument, 
+    text: string, 
+    textHash: string
+  ): { index: number; token: string }[] {
+    const fileUri = document.uri.toString();
+    
+    // 🚀 Try cache first
+    const cached = this.tokenCache.get(fileUri, textHash);
+    if (cached) {
+      return cached;
+    }
+
+    // 🔧 Create new tokens
+    const languageConfiguration = BracketLynxConfig.languageConfiguration;
+    const pattern = this.createTokenPattern(languageConfiguration);
+    const tokens = this.tokenizeDocument(text, pattern, languageConfiguration.ignoreCase);
+    
+    this.tokenCache.set(fileUri, tokens, textHash, text.length, document.languageId);
+    
+    return tokens;
+  }
+
+  // ============================================================================
+  // 🔧 PARSING LOGIC - Optimized and Clean
+  // ============================================================================
+
   private buildParseStates(text: string): ParseState[] {
     const states: ParseState[] = [];
     let inString = false;
@@ -338,10 +350,9 @@ export class OptimizedBracketParser {
 
     for (let i = 0; i < text.length; i++) {
       const char = text[i];
-      const prevChar = i > 0 ? text[i - 1] : '';
       const nextChar = i < text.length - 1 ? text[i + 1] : '';
 
-      // Handle escape sequences in strings
+      // 🎯 Handle escape sequences
       if (inString && stringEscapeNext) {
         stringEscapeNext = false;
         continue;
@@ -352,14 +363,13 @@ export class OptimizedBracketParser {
         continue;
       }
 
-      // Handle line comments
+      // 🔧 Handle comments
       if (!inString && !inBlockComment && char === '/' && nextChar === '/') {
         inLineComment = true;
       } else if (inLineComment && char === '\n') {
         inLineComment = false;
       }
 
-      // Handle block comments
       if (!inString && !inLineComment && char === '/' && nextChar === '*') {
         inBlockComment = true;
       } else if (inBlockComment && char === '*' && nextChar === '/') {
@@ -368,7 +378,7 @@ export class OptimizedBracketParser {
         continue;
       }
 
-      // Handle strings (only if not in comments)
+      // 🎯 Handle strings (only if not in comments)
       if (!inBlockComment && !inLineComment) {
         if (char === '"' && !inSingleQuote && !inTemplateString) {
           inDoubleQuote = !inDoubleQuote;
@@ -381,8 +391,8 @@ export class OptimizedBracketParser {
 
       inString = inSingleQuote || inDoubleQuote || inTemplateString;
 
-      // Cache state at intervals
-      if (i % this.PARSE_CACHE_INTERVAL === 0 || i === text.length - 1) {
+      // 🚀 Cache state at intervals
+      if (i % OptimizedBracketParser.CONSTANTS.PARSE_CACHE_INTERVAL === 0 || i === text.length - 1) {
         states.push({
           position: i,
           inString,
@@ -399,13 +409,7 @@ export class OptimizedBracketParser {
     return states;
   }
 
-  /**
-   * Find closest cached state before position
-   */
-  private findClosestState(
-    states: ParseState[],
-    position: number
-  ): ParseState | null {
+  private findClosestState(states: ParseState[], position: number): ParseState | null {
     let closest: ParseState | null = null;
 
     for (const state of states) {
@@ -419,9 +423,6 @@ export class OptimizedBracketParser {
     return closest;
   }
 
-  /**
-   * Calculate parsing state from starting point to target position
-   */
   private calculateStateFromPosition(
     text: string,
     startState: ParseState,
@@ -492,118 +493,62 @@ export class OptimizedBracketParser {
     };
   }
 
-  // ============================================================================
-  // TOKEN CACHE METHODS
-  // ============================================================================
+  private isInsideCommentOrString(position: number, text: string, parseStates: ParseState[]): boolean {
+    const closestState = this.findClosestState(parseStates, position);
 
-  /**
-   * Get or create token cache
-   */
-  private getOrCreateTokenCache(
-    document: vscode.TextDocument,
-    text: string
-  ): { index: number; token: string }[] {
-    const fileUri = document.uri.toString();
-    const languageId = document.languageId;
-    const textHash = this.generateTextHash(text);
-    const cached = this.tokenCache.get(fileUri);
-
-    // Check if cache is valid
-    if (
-      cached &&
-      cached.languageId === languageId &&
-      Date.now() - cached.timestamp < this.TOKEN_CACHE_MAX_AGE
-    ) {
-      return cached.tokens;
+    if (!closestState) {
+      return false;
     }
 
-    // Create new token cache
-    const languageConfiguration = BracketLynxConfig.languageConfiguration;
-    const pattern = this.createTokenPattern(languageConfiguration);
-    const tokens = this.tokenizeDocument(
-      text,
-      pattern,
-      languageConfiguration.ignoreCase
+    if (closestState.position === position) {
+      return (
+        closestState.inString ||
+        closestState.inBlockComment ||
+        closestState.inLineComment
+      );
+    }
+
+    const currentState = this.calculateStateFromPosition(text, closestState, position);
+    return (
+      currentState.inString ||
+      currentState.inBlockComment ||
+      currentState.inLineComment
     );
-
-    const newCache: TokenCacheEntry = {
-      tokens,
-      pattern,
-      languageId,
-      timestamp: Date.now(),
-    };
-
-    // Enforce cache size limit
-    if (this.tokenCache.size >= this.CACHE_MAX_SIZE) {
-      const oldestKey = this.tokenCache.keys().next().value;
-      if (oldestKey) {
-        this.tokenCache.delete(oldestKey);
-      }
-    }
-
-    this.tokenCache.set(fileUri, newCache);
-    return tokens;
   }
 
-  /**
-   * Create token pattern (reused from original parser)
-   */
-  private createTokenPattern(
-    languageConfiguration: LanguageConfiguration
-  ): string {
+  // ============================================================================
+  // 🎯 TOKEN PROCESSING - Optimized
+  // ============================================================================
+
+  private createTokenPattern(languageConfiguration: LanguageConfiguration): string {
     const regulate = languageConfiguration.ignoreCase
       ? (text: string) => text.replace(/\s+/, ' ').toLowerCase()
       : (text: string) => text.replace(/\s+/, ' ');
 
     const tokens = [
       ...(languageConfiguration.ignoreSymbols?.map(regulate) ?? []),
-      ...(languageConfiguration.comments?.block?.map((i) =>
-        regulate(i.opening)
-      ) ?? []),
-      ...(languageConfiguration.comments?.block?.map((i) =>
-        regulate(i.closing)
-      ) ?? []),
+      ...(languageConfiguration.comments?.block?.map((i) => regulate(i.opening)) ?? []),
+      ...(languageConfiguration.comments?.block?.map((i) => regulate(i.closing)) ?? []),
       ...(languageConfiguration.comments?.line?.map(regulate) ?? []),
-      ...(languageConfiguration.brackets?.symbol?.map((i) =>
-        regulate(i.opening)
-      ) ?? []),
-      ...(languageConfiguration.brackets?.symbol?.map((i) =>
-        regulate(i.closing)
-      ) ?? []),
-      ...(languageConfiguration.brackets?.word?.map((i) =>
-        regulate(i.opening)
-      ) ?? []),
-      ...(languageConfiguration.brackets?.word?.map((i) =>
-        regulate(i.closing)
-      ) ?? []),
-      ...(languageConfiguration.strings?.inline?.map((i) =>
-        regulate(i.opening)
-      ) ?? []),
-      ...(languageConfiguration.strings?.inline?.map((i) =>
-        regulate(i.closing)
-      ) ?? []),
-      ...(languageConfiguration.strings?.multiline?.map((i) =>
-        regulate(i.opening)
-      ) ?? []),
-      ...(languageConfiguration.strings?.multiline?.map((i) =>
-        regulate(i.closing)
-      ) ?? []),
+      ...(languageConfiguration.brackets?.symbol?.map((i) => regulate(i.opening)) ?? []),
+      ...(languageConfiguration.brackets?.symbol?.map((i) => regulate(i.closing)) ?? []),
+      ...(languageConfiguration.brackets?.word?.map((i) => regulate(i.opening)) ?? []),
+      ...(languageConfiguration.brackets?.word?.map((i) => regulate(i.closing)) ?? []),
+      ...(languageConfiguration.strings?.inline?.map((i) => regulate(i.opening)) ?? []),
+      ...(languageConfiguration.strings?.inline?.map((i) => regulate(i.closing)) ?? []),
+      ...(languageConfiguration.strings?.multiline?.map((i) => regulate(i.opening)) ?? []),
+      ...(languageConfiguration.strings?.multiline?.map((i) => regulate(i.closing)) ?? []),
     ];
 
     const makeRegExpPart = (text: string) =>
       text.replace(/([\\\/\*\[\]\(\)\{\}\|])/gmu, '\\$1').replace(/\s+/, '\\s');
 
     return tokens
-      .filter(
-        (entry, index, array) => '' !== entry && index === array.indexOf(entry)
-      )
+      .filter((entry, index, array) => '' !== entry && index === array.indexOf(entry))
       .map((i) => `${makeRegExpPart(i)}`)
       .join('|');
   }
 
-  /**
-   * Tokenize document (reused from original parser)
-   */
   private tokenizeDocument(
     text: string,
     pattern: string,
@@ -626,51 +571,10 @@ export class OptimizedBracketParser {
     return result;
   }
 
-  // ============================================================================
-  // OPTIMIZED PARSING METHODS
-  // ============================================================================
-
-  /**
-   * Check if position is inside comment or string using cached states
-   */
-  private isInsideCommentOrString(
-    position: number,
-    text: string,
-    parseCache: ParseStateCache
-  ): boolean {
-    const closestState = this.findClosestState(parseCache.states, position);
-
-    if (!closestState) {
-      return false;
-    }
-
-    if (closestState.position === position) {
-      return (
-        closestState.inString ||
-        closestState.inBlockComment ||
-        closestState.inLineComment
-      );
-    }
-
-    const currentState = this.calculateStateFromPosition(
-      text,
-      closestState,
-      position
-    );
-    return (
-      currentState.inString ||
-      currentState.inBlockComment ||
-      currentState.inLineComment
-    );
-  }
-
-  /**
-   * Parse tokens with optimized state detection
-   */
   private parseTokensOptimized(
     document: vscode.TextDocument,
     tokens: { index: number; token: string }[],
-    parseCache: ParseStateCache
+    parseStates: ParseState[]
   ): BracketEntry[] {
     const result: BracketEntry[] = [];
     const text = document.getText();
@@ -679,17 +583,10 @@ export class OptimizedBracketParser {
       ? (text: string) => text.replace(/\s+/, ' ').toLowerCase()
       : (text: string) => text.replace(/\s+/, ' ');
 
-    // Extract language tokens (simplified version)
-    const openingSymbolBrackets =
-      languageConfiguration.brackets?.symbol?.map((i) => regulate(i.opening)) ??
-      [];
-    const closingSymbolBrackets =
-      languageConfiguration.brackets?.symbol?.map((i) => regulate(i.closing)) ??
-      [];
-    const symbolBracketsHeader =
-      languageConfiguration.brackets?.symbol?.map(
-        (i) => i.headerMode ?? 'smart'
-      ) ?? [];
+    // 🎯 Extract language tokens (simplified)
+    const openingSymbolBrackets = languageConfiguration.brackets?.symbol?.map((i) => regulate(i.opening)) ?? [];
+    const closingSymbolBrackets = languageConfiguration.brackets?.symbol?.map((i) => regulate(i.closing)) ?? [];
+    const symbolBracketsHeader = languageConfiguration.brackets?.symbol?.map((i) => i.headerMode ?? 'smart') ?? [];
 
     let scopeStack: {
       start: TokenEntry;
@@ -699,8 +596,7 @@ export class OptimizedBracketParser {
     }[] = [];
 
     const writeCore = (entry: BracketEntry) => {
-      const isInlineScope =
-        entry.end.position.line <= entry.start.position.line;
+      const isInlineScope = entry.end.position.line <= entry.start.position.line;
       if (!isInlineScope || entry.isUnmatchBrackets) {
         const parent = scopeStack[scopeStack.length - 1];
         if (parent) {
@@ -717,9 +613,7 @@ export class OptimizedBracketParser {
         writeCore({
           start: scope.start,
           end: {
-            position: document.positionAt(
-              closingToken.index + closingToken.token.length
-            ),
+            position: document.positionAt(closingToken.index + closingToken.token.length),
             token: closingToken.token,
           },
           headerMode: scope.headerMode,
@@ -734,9 +628,7 @@ export class OptimizedBracketParser {
             token: closingToken.token,
           },
           end: {
-            position: document.positionAt(
-              closingToken.index + closingToken.token.length
-            ),
+            position: document.positionAt(closingToken.index + closingToken.token.length),
             token: closingToken.token,
           },
           headerMode: 'smart',
@@ -746,12 +638,12 @@ export class OptimizedBracketParser {
       }
     };
 
-    // Process tokens with optimized state checking
+    // 🚀 Process tokens with optimized state checking
     for (const tokenData of tokens) {
       const token = regulate(tokenData.token);
 
       // Skip if inside comment or string (optimized check)
-      if (this.isInsideCommentOrString(tokenData.index, text, parseCache)) {
+      if (this.isInsideCommentOrString(tokenData.index, text, parseStates)) {
         continue;
       }
 
@@ -785,38 +677,103 @@ export class OptimizedBracketParser {
     return result;
   }
 
-  /**
-   * Fallback to original parsing method
-   */
-  private fallbackParsing(document: vscode.TextDocument): BracketEntry[] {
-    if (!this.fallbackParser) {
-      console.error(
-        'Bracket Lynx: No fallback parser configured! This may cause parsing issues.'
-      );
-      return [];
+  // ============================================================================
+  // 🔧 PERFORMANCE FILTERS - Optimized
+  // ============================================================================
+
+  private applyPerformanceFilters(document: vscode.TextDocument, text: string): PerformanceFilterResult {
+    const fileSize = text.length;
+    const lineCount = document.lineCount;
+    const fileName = document.fileName.toLowerCase();
+
+    // 🚨 Check extreme file size - completely skip
+    if (fileSize > OptimizedBracketParser.CONSTANTS.MAX_EXTREME_FILE_SIZE) {
+      return {
+        shouldSkip: true,
+        reason: `File too large (${Math.round(fileSize / 1024 / 1024)}MB)`,
+        performanceMode: 'minimal',
+      };
     }
 
-    if (BracketLynxConfig.debug) {
-      console.log(
-        `Bracket Lynx: Using fallback parser for: ${document.fileName}`
-      );
+    // 🎯 Check if file is likely minified
+    const avgLineLength = fileSize / lineCount;
+    if (avgLineLength > 500) {
+      return {
+        shouldSkip: true,
+        reason: `Likely minified file (avg line length: ${Math.round(avgLineLength)} chars)`,
+        performanceMode: 'minimal',
+      };
     }
 
-    try {
-      return this.fallbackParser(document);
-    } catch (error) {
-      console.error('Bracket Lynx: Error in fallback parsing:', error);
-      return [];
+    // 🔧 Check for problematic file types
+    const problematicExtensions = ['.min.js', '.min.css', '.bundle.js', '.chunk.js'];
+    if (problematicExtensions.some((ext) => fileName.endsWith(ext))) {
+      return {
+        shouldSkip: true,
+        reason: `Problematic file type: ${fileName}`,
+        performanceMode: 'minimal',
+      };
+    }
+
+    // 🎯 Determine performance mode
+    if (fileSize > OptimizedBracketParser.CONSTANTS.MAX_SAFE_FILE_SIZE) {
+      return {
+        shouldSkip: false,
+        performanceMode: 'performance',
+      };
+    }
+
+    return {
+      shouldSkip: false,
+      performanceMode: 'normal',
+    };
+  }
+
+  private applyPostParsingFilters(
+    brackets: BracketEntry[],
+    document: vscode.TextDocument,
+    performanceMode: 'normal' | 'performance' | 'minimal'
+  ): BracketEntry[] {
+    switch (performanceMode) {
+      case 'minimal':
+        return this.applyMinimalFilters(brackets, document);
+      case 'performance':
+        return this.applyPerformanceModeFilters(brackets, document);
+      case 'normal':
+      default:
+        return this.applyNormalFilters(brackets, document);
     }
   }
 
+  private applyNormalFilters(brackets: BracketEntry[], document: vscode.TextDocument): BracketEntry[] {
+    return brackets.filter((bracket) => {
+      const lineSpan = bracket.end.position.line - bracket.start.position.line;
+      return lineSpan >= OptimizedBracketParser.CONSTANTS.MIN_BRACKET_LINES;
+    });
+  }
+
+  private applyPerformanceModeFilters(brackets: BracketEntry[], document: vscode.TextDocument): BracketEntry[] {
+    return brackets
+      .filter((bracket) => {
+        const lineSpan = bracket.end.position.line - bracket.start.position.line;
+        return lineSpan >= OptimizedBracketParser.CONSTANTS.MIN_BRACKET_LINES + 2;
+      })
+      .slice(0, Math.floor(OptimizedBracketParser.CONSTANTS.MAX_DECORATIONS_PER_FILE * 0.7));
+  }
+
+  private applyMinimalFilters(brackets: BracketEntry[], document: vscode.TextDocument): BracketEntry[] {
+    return brackets
+      .filter((bracket) => {
+        const lineSpan = bracket.end.position.line - bracket.start.position.line;
+        return lineSpan >= OptimizedBracketParser.CONSTANTS.MIN_BRACKET_LINES + 5;
+      })
+      .slice(0, Math.floor(OptimizedBracketParser.CONSTANTS.MAX_DECORATIONS_PER_FILE * 0.3));
+  }
+
   // ============================================================================
-  // INCREMENTAL PARSING METHODS
+  // 🔄 INCREMENTAL PARSING HELPERS
   // ============================================================================
 
-  /**
-   * Detect change regions from document changes
-   */
   private detectChangeRegions(
     document: vscode.TextDocument,
     changes: readonly vscode.TextDocumentContentChangeEvent[]
@@ -826,14 +783,12 @@ export class OptimizedBracketParser {
     for (const change of changes) {
       if (!change.range) {
         // If no range, entire document changed
-        return [
-          {
-            startLine: 0,
-            endLine: document.lineCount - 1,
-            startChar: 0,
-            endChar: document.getText().length,
-          },
-        ];
+        return [{
+          startLine: 0,
+          endLine: document.lineCount - 1,
+          startChar: 0,
+          endChar: document.getText().length,
+        }];
       }
 
       const startLine = change.range.start.line;
@@ -843,10 +798,7 @@ export class OptimizedBracketParser {
 
       regions.push({
         startLine,
-        endLine: Math.max(
-          endLine,
-          startLine + change.text.split('\n').length - 1
-        ),
+        endLine: Math.max(endLine, startLine + change.text.split('\n').length - 1),
         startChar,
         endChar: startChar + change.text.length,
       });
@@ -855,9 +807,6 @@ export class OptimizedBracketParser {
     return regions;
   }
 
-  /**
-   * Expand change region to include potentially affected brackets
-   */
   private expandChangeRegion(
     region: ChangeRegion,
     document: vscode.TextDocument,
@@ -874,8 +823,7 @@ export class OptimizedBracketParser {
 
       // If bracket spans across or near the change region
       if (
-        (openPos >= region.startChar - 200 &&
-          openPos <= region.endChar + 200) ||
+        (openPos >= region.startChar - 200 && openPos <= region.endChar + 200) ||
         (closePos >= region.startChar - 200 && closePos <= region.endChar + 200)
       ) {
         minStart = Math.min(minStart, openPos - 100);
@@ -887,14 +835,8 @@ export class OptimizedBracketParser {
     minStart = Math.max(0, minStart);
     maxEnd = Math.min(text.length, maxEnd);
 
-    const expandedStartLine = Math.max(
-      0,
-      document.positionAt(minStart).line - 1
-    );
-    const expandedEndLine = Math.min(
-      document.lineCount - 1,
-      document.positionAt(maxEnd).line + 1
-    );
+    const expandedStartLine = Math.max(0, document.positionAt(minStart).line - 1);
+    const expandedEndLine = Math.min(document.lineCount - 1, document.positionAt(maxEnd).line + 1);
 
     return {
       startLine: expandedStartLine,
@@ -904,15 +846,8 @@ export class OptimizedBracketParser {
     };
   }
 
-  /**
-   * Remove brackets that are in the affected region
-   */
-  private removeBracketsInRegion(
-    brackets: BracketEntry[],
-    region: ChangeRegion
-  ): BracketEntry[] {
+  private removeBracketsInRegion(brackets: BracketEntry[], region: ChangeRegion): BracketEntry[] {
     return brackets.filter((bracket) => {
-      // Simple check - if bracket overlaps with region, remove it
       return !(
         bracket.start.position.line >= region.startLine &&
         bracket.end.position.line <= region.endLine
@@ -920,13 +855,7 @@ export class OptimizedBracketParser {
     });
   }
 
-  /**
-   * Parse brackets in a specific region
-   */
-  private parseBracketsInRegion(
-    document: vscode.TextDocument,
-    region: ChangeRegion
-  ): BracketEntry[] {
+  private parseBracketsInRegion(document: vscode.TextDocument, region: ChangeRegion): BracketEntry[] {
     // For now, use full parsing - this could be optimized further
     return this.parseBrackets(document).filter((bracket) => {
       return (
@@ -936,13 +865,7 @@ export class OptimizedBracketParser {
     });
   }
 
-  /**
-   * Merge new brackets with existing brackets
-   */
-  private mergeBrackets(
-    existingBrackets: BracketEntry[],
-    newBrackets: BracketEntry[]
-  ): BracketEntry[] {
+  private mergeBrackets(existingBrackets: BracketEntry[], newBrackets: BracketEntry[]): BracketEntry[] {
     const allBrackets = [...existingBrackets, ...newBrackets];
 
     // Sort by opening position
@@ -956,411 +879,20 @@ export class OptimizedBracketParser {
     return allBrackets;
   }
 
-  /**
-   * Update parse state cache after changes
-   */
-  private updateParseStateCache(text: string, fileUri: string): void {
-    // Invalidate cache to force rebuild on next access
-    this.parseStateCache.delete(fileUri);
-  }
-
   // ============================================================================
-  // PERFORMANCE FILTERS
+  // 🎯 UTILITY METHODS
   // ============================================================================
 
-  /**
-   * Apply performance filters to determine if file should be processed
-   */
-  private applyPerformanceFilters(
-    document: vscode.TextDocument,
-    text: string
-  ): {
-    shouldSkip: boolean;
-    reason?: string;
-    performanceMode: 'normal' | 'performance' | 'minimal';
-  } {
-    const fileSize = text.length;
-    const lineCount = document.lineCount;
-    const languageId = document.languageId;
-
-    // Check extreme file size - completely skip
-    if (fileSize > this.PERFORMANCE_FILTERS.MAX_EXTREME_FILE_SIZE) {
-      return {
-        shouldSkip: true,
-        reason: `File too large (${Math.round(
-          fileSize / 1024 / 1024
-        )}MB > ${Math.round(
-          this.PERFORMANCE_FILTERS.MAX_EXTREME_FILE_SIZE / 1024 / 1024
-        )}MB)`,
-        performanceMode: 'minimal',
-      };
-    }
-
-    // Check if file is likely problematic (very long lines, minified, etc.)
-    const avgLineLength = fileSize / lineCount;
-    if (avgLineLength > 500) {
-      return {
-        shouldSkip: true,
-        reason: `Likely minified file (avg line length: ${Math.round(
-          avgLineLength
-        )} chars)`,
-        performanceMode: 'minimal',
-      };
-    }
-
-    // Check for known problematic file types
-    const problematicExtensions = [
-      '.min.js',
-      '.min.css',
-      '.bundle.js',
-      '.chunk.js',
-    ];
-    const fileName = document.fileName.toLowerCase();
-    if (problematicExtensions.some((ext) => fileName.endsWith(ext))) {
-      return {
-        shouldSkip: true,
-        reason: `Problematic file type detected: ${fileName}`,
-        performanceMode: 'minimal',
-      };
-    }
-
-    // Determine performance mode
-    let performanceMode: 'normal' | 'performance' | 'minimal' = 'normal';
-
-    if (fileSize > this.PERFORMANCE_FILTERS.MAX_SAFE_FILE_SIZE) {
-      performanceMode = 'performance';
-    }
-
-    // Special handling for certain languages
-    const heavyLanguages = ['json', 'xml', 'html', 'svg'];
-    if (heavyLanguages.includes(languageId) && fileSize > 1024 * 1024) {
-      // 1MB
-      performanceMode = 'performance';
-    }
-
-    return {
-      shouldSkip: false,
-      performanceMode,
-    };
-  }
-
-  /**
-   * Apply filters after parsing to reduce decorations
-   */
-  private applyPostParsingFilters(
-    brackets: BracketEntry[],
-    document: vscode.TextDocument,
-    performanceMode: 'normal' | 'performance' | 'minimal'
-  ): BracketEntry[] {
-    if (performanceMode === 'normal') {
-      return this.applyNormalFilters(brackets, document);
-    } else if (performanceMode === 'performance') {
-      return this.applyPerformanceModeFilters(brackets, document);
-    } else {
-      return this.applyMinimalFilters(brackets, document);
-    }
-  }
-
-  /**
-   * Apply normal filters (standard behavior)
-   */
-  private applyNormalFilters(
-    brackets: BracketEntry[],
-    document: vscode.TextDocument
-  ): BracketEntry[] {
-    const minBracketScopeLines = BracketLynxConfig.minBracketScopeLines;
-
-    return brackets.filter((bracket) => {
-      // Get bracket content once for efficiency
-      const content = this.getBracketContent(bracket, document);
-
-      // Apply minimum line requirement with control flow exception (try-catch, if-else)
-      const lineSpan =
-        bracket.end.position.line - bracket.start.position.line + 1;
-      if (lineSpan < minBracketScopeLines && !bracket.isUnmatchBrackets) {
-        // Check if this bracket contains control flow keywords - if so, allow it
-        if (!containsControlFlowKeyword(content)) {
-          return false;
-        }
-      }
-
-      // Skip brackets with very little content
-      if (
-        content.trim().length <
-        this.PERFORMANCE_FILTERS.MIN_BRACKET_CONTENT_LENGTH
-      ) {
-        return false;
-      }
-
-      // Skip if decoration would be in middle of line with content
-      if (this.hasContentAfterClosingBracket(bracket, document)) {
-        return false;
-      }
-
-      return true;
-    });
-  }
-
-  /**
-   * Apply performance mode filters (more aggressive)
-   */
-  private applyPerformanceModeFilters(
-    brackets: BracketEntry[],
-    document: vscode.TextDocument
-  ): BracketEntry[] {
-    const filtered = brackets.filter((bracket) => {
-      // Get bracket content once for efficiency
-      const content = this.getBracketContent(bracket, document);
-      const lineSpan =
-        bracket.end.position.line - bracket.start.position.line + 1;
-
-      // More strict line requirement with control flow exception (try-catch, if-else)
-      if (
-        lineSpan < Math.max(5, BracketLynxConfig.minBracketScopeLines) &&
-        !bracket.isUnmatchBrackets
-      ) {
-        // Check if this bracket contains control flow keywords - if so, allow it
-        if (!containsControlFlowKeyword(content)) {
-          return false;
-        }
-      }
-
-      // Skip very large brackets
-      if (lineSpan > this.PERFORMANCE_FILTERS.SKIP_LARGE_BRACKETS) {
-        return false;
-      }
-
-      // Skip deeply nested brackets
-      const depth = this.calculateNestingDepth(bracket);
-      if (depth > this.PERFORMANCE_FILTERS.MAX_NESTED_DEPTH) {
-        return false;
-      }
-
-      // Skip brackets with minimal content
-      if (
-        content.trim().length <
-        this.PERFORMANCE_FILTERS.MIN_BRACKET_CONTENT_LENGTH * 2
-      ) {
-        return false;
-      }
-
-      return true;
-    });
-
-    // Limit total number of decorations
-    if (filtered.length > this.PERFORMANCE_FILTERS.MAX_DECORATIONS_PER_FILE) {
-      // Keep only the most significant brackets (largest ones)
-      return filtered
-        .sort((a, b) => {
-          const aSpan = a.end.position.line - a.start.position.line;
-          const bSpan = b.end.position.line - b.start.position.line;
-          return bSpan - aSpan;
-        })
-        .slice(0, this.PERFORMANCE_FILTERS.MAX_DECORATIONS_PER_FILE);
-    }
-
-    return filtered;
-  }
-
-  /**
-   * Apply minimal filters (most aggressive)
-   */
-  private applyMinimalFilters(
-    brackets: BracketEntry[],
-    document: vscode.TextDocument
-  ): BracketEntry[] {
-    // Only show unmatched brackets and very large brackets
-    return brackets
-      .filter((bracket) => {
-        if (bracket.isUnmatchBrackets) {
-          return true;
-        }
-
-        const lineSpan =
-          bracket.end.position.line - bracket.start.position.line + 1;
-        return lineSpan > 50; // Only very large brackets
-      })
-      .slice(0, 50); // Maximum 50 decorations
-  }
-
-  /**
-   * Get content inside bracket
-   */
-  private getBracketContent(
-    bracket: BracketEntry,
-    document: vscode.TextDocument
-  ): string {
-    try {
-      const startPos = bracket.start.position;
-      const endPos = bracket.end.position;
-
-      // Limit content extraction to avoid performance issues
-      const maxLines = 10;
-      const actualEndPos =
-        startPos.line + maxLines < endPos.line
-          ? new vscode.Position(startPos.line + maxLines, 0)
-          : endPos;
-
-      return document.getText(new vscode.Range(startPos, actualEndPos));
-    } catch (error) {
-      return '';
-    }
-  }
-
-  /**
-   * Check if there's content after closing bracket on same line
-   */
-  private hasContentAfterClosingBracket(
-    bracket: BracketEntry,
-    document: vscode.TextDocument
-  ): boolean {
-    try {
-      const endLine = document.lineAt(bracket.end.position.line);
-      const afterBracket = endLine.text.substring(
-        bracket.end.position.character
-      );
-
-      // Remove whitespace and common trailing characters
-      const cleaned = afterBracket.replace(/^\s*[,;]?\s*$/, '');
-      return cleaned.length > 0;
-    } catch (error) {
-      return false;
-    }
-  }
-
-  /**
-   * Calculate nesting depth of bracket
-   */
-  private calculateNestingDepth(bracket: BracketEntry): number {
-    let maxDepth = 0;
-
-    const calculateDepth = (
-      items: BracketEntry[],
-      currentDepth: number
-    ): void => {
-      maxDepth = Math.max(maxDepth, currentDepth);
-
-      for (const item of items) {
-        calculateDepth(item.items, currentDepth + 1);
-      }
-    };
-
-    calculateDepth(bracket.items, 1);
-    return maxDepth;
-  }
-
-  // ============================================================================
-  // CACHE MANAGEMENT
-  // ============================================================================
-
-  /**
-   * Clear cache for specific file
-   */
-  clearFileCache(fileUri: string): void {
-    this.parseStateCache.delete(fileUri);
-    this.tokenCache.delete(fileUri);
-  }
-
-  /**
-   * Clear all caches
-   */
-  clearAllCache(): void {
-    this.parseStateCache.clear();
-    this.tokenCache.clear();
-  }
-
-  /**
-   * Get cache statistics
-   */
-  getCacheStats() {
-    return {
-      parseStateCacheSize: this.parseStateCache.size,
-      tokenCacheSize: this.tokenCache.size,
-      maxCacheSize: this.CACHE_MAX_SIZE,
-      performanceFilters: this.PERFORMANCE_FILTERS,
-      hasFallbackParser: !!this.fallbackParser,
-    };
-  }
-
-  /**
-   * Check if fallback parser is configured
-   */
-  hasFallbackParser(): boolean {
-    return !!this.fallbackParser;
-  }
-
-  /**
-   * Get performance filter statistics
-   */
-  getPerformanceStats() {
-    return {
-      maxSafeFileSize: `${Math.round(
-        this.PERFORMANCE_FILTERS.MAX_SAFE_FILE_SIZE / 1024 / 1024
-      )}MB`,
-      maxExtremeFileSize: `${Math.round(
-        this.PERFORMANCE_FILTERS.MAX_EXTREME_FILE_SIZE / 1024 / 1024
-      )}MB`,
-      maxDecorationsPerFile: this.PERFORMANCE_FILTERS.MAX_DECORATIONS_PER_FILE,
-      minBracketLines: this.PERFORMANCE_FILTERS.MIN_BRACKET_LINES,
-      maxNestedDepth: this.PERFORMANCE_FILTERS.MAX_NESTED_DEPTH,
-    };
-  }
-
-  /**
-   * Cleanup expired cache entries
-   */
-  cleanup(): void {
-    const now = Date.now();
-    let cleanedCount = 0;
-
-    // Clean parse state cache
-    for (const [key, entry] of this.parseStateCache) {
-      if (now - entry.timestamp > this.PARSE_CACHE_MAX_AGE) {
-        this.parseStateCache.delete(key);
-        cleanedCount++;
-      }
-    }
-
-    // Clean token cache
-    for (const [key, entry] of this.tokenCache) {
-      if (now - entry.timestamp > this.TOKEN_CACHE_MAX_AGE) {
-        this.tokenCache.delete(key);
-        cleanedCount++;
-      }
-    }
-
-    if (cleanedCount > 0 && BracketLynxConfig.debug) {
-      console.log(
-        `Bracket Lynx Parser: Cleaned up ${cleanedCount} expired cache entries`
-      );
-    }
-  }
-
-
-
-  /**
-   * Dispose and cleanup
-   */
-  dispose(): void {
-    this.clearAllCache();
-    this.fallbackParser = undefined;
-
-    if (BracketLynxConfig.debug) {
-      console.log('Bracket Lynx: OptimizedBracketParser disposed successfully');
-    }
-  }
-
-  /**
-   * Check if we should use the original parser for this document
-   */
   shouldUseOriginalParser(document: vscode.TextDocument): boolean {
-    // Check if language is in problematic list
-    if (this.isProblematicLanguage(document.languageId)) {
+    const languageId = document.languageId;
+    const fileName = document.fileName.toLowerCase();
+
+    // Check if language is problematic
+    if (this.parserExceptionConfig.problematicLanguages.includes(languageId)) {
       return true;
     }
 
-    // Check file extension
-    const fileName = document.fileName.toLowerCase();
+    // Check if file extension is problematic
     if (this.parserExceptionConfig.problematicExtensions.some(ext => fileName.endsWith(ext))) {
       return true;
     }
@@ -1373,81 +905,154 @@ export class OptimizedBracketParser {
     return false;
   }
 
-  /**
-   * Check if a language is considered problematic
-   */
-  private isProblematicLanguage(languageId: string): boolean {
-    return this.parserExceptionConfig.problematicLanguages.includes(languageId);
-  }
-
-  /**
-   * Check for mixed content that might cause parsing issues
-   */
   private hasMixedContent(document: vscode.TextDocument): boolean {
-    const content = document.getText();
-    if (content.length > this.parserExceptionConfig.maxContentAnalysisSize) {
-      return false; // Skip check for very large files
-    }
+    const text = document.getText();
+    const sampleSize = Math.min(text.length, this.parserExceptionConfig.maxContentAnalysisSize);
+    const sample = text.substring(0, sampleSize);
 
-    // Simple check for mixed content (e.g., HTML with embedded scripts/styles)
-    const mixedContentPatterns = [
-      /<script\b[^>]*>([\s\S]*?)<\/script>/gi,
-      /<style\b[^>]*>([\s\S]*?)<\/style>/gi,
-    ];
+    // Simple heuristic: check for mixed HTML/JS/CSS patterns
+    const hasHtmlTags = /<[^>]+>/.test(sample);
+    const hasJsPatterns = /(?:function|const|let|var|=>)/.test(sample);
+    const hasCssPatterns = /(?:\{[^}]*:[^}]*\}|@media|@import)/.test(sample);
 
-    return mixedContentPatterns.some(pattern => pattern.test(content));
+    // If we have multiple content types, it's mixed
+    const contentTypes = [hasHtmlTags, hasJsPatterns, hasCssPatterns].filter(Boolean).length;
+    return contentTypes > 1;
   }
 
-  /**
-   * Add language to exception list
-   */
-  addLanguageException(languageId: string): void {
-    if (!this.parserExceptionConfig.problematicLanguages.includes(languageId)) {
-      this.parserExceptionConfig.problematicLanguages.push(languageId);
+  private fallbackParsing(document: vscode.TextDocument): BracketEntry[] {
+    if (!this.fallbackParser) {
+      console.error('🚨 No fallback parser configured!');
+      return [];
+    }
+
+    if (BracketLynxConfig.debug) {
+      console.log(`🔄 Using fallback parser for: ${document.fileName}`);
+    }
+
+    try {
+      return this.fallbackParser(document);
+    } catch (error) {
+      console.error('🚨 Fallback parsing error:', error);
+      return [];
     }
   }
 
-  /**
-   * Add extension to exception list
-   */
-  addExtensionException(extension: string): void {
-    if (!extension.startsWith('.')) {
-      extension = '.' + extension;
-    }
+  // ============================================================================
+  // 🧹 CACHE MANAGEMENT
+  // ============================================================================
+
+  clearAllCache(): void {
+    this.parseStateCache.clear();
+    this.tokenCache.clear();
+  }
+
+  clearFileCache(fileUri: string): void {
+    this.parseStateCache.delete(fileUri);
+    this.tokenCache.delete(fileUri);
+  }
+
+  cleanup(): void {
+    const parseStatesCleanedCount = this.parseStateCache.cleanup();
+    const tokensCleanedCount = this.tokenCache.cleanup();
     
-    if (!this.parserExceptionConfig.problematicExtensions.includes(extension)) {
-      this.parserExceptionConfig.problematicExtensions.push(extension);
+    if (BracketLynxConfig.debug && (parseStatesCleanedCount > 0 || tokensCleanedCount > 0)) {
+      console.log(`🧹 Cache cleanup: ${parseStatesCleanedCount + tokensCleanedCount} entries removed`);
     }
   }
 
-  /**
-   * Remove language from exception list
-   */
-  removeLanguageException(languageId: string): void {
-    const index = this.parserExceptionConfig.problematicLanguages.indexOf(languageId);
-    if (index > -1) {
-      this.parserExceptionConfig.problematicLanguages.splice(index, 1);
-    }
+  getCacheStats(): {
+    parseStatesSize: number;
+    tokensSize: number;
+    totalSize: number;
+  } {
+    return {
+      parseStatesSize: this.parseStateCache.size(),
+      tokensSize: this.tokenCache.size(),
+      totalSize: this.parseStateCache.size() + this.tokenCache.size(),
+    };
   }
 
-  /**
-   * Remove extension from exception list
-   */
-  removeExtensionException(extension: string): void {
-    if (!extension.startsWith('.')) {
-      extension = '.' + extension;
-    }
+  getMemoryUsage(): number {
+    // Rough estimation in MB
+    const avgEntrySize = 1024; // 1KB per entry estimate
+    const totalEntries = this.parseStateCache.size() + this.tokenCache.size();
+    return (totalEntries * avgEntrySize) / (1024 * 1024);
+  }
+
+  aggressiveCleanup(): void {
+    this.clearAllCache();
     
-    const index = this.parserExceptionConfig.problematicExtensions.indexOf(extension);
-    if (index > -1) {
-      this.parserExceptionConfig.problematicExtensions.splice(index, 1);
+    if (BracketLynxConfig.debug) {
+      console.log('🧹 Aggressive cache cleanup completed');
     }
   }
 
-  /**
-   * Update parser exception configuration
-   */
+  dispose(): void {
+    this.clearAllCache();
+  }
+
+  // ============================================================================
+  // 🎯 CONFIGURATION MANAGEMENT
+  // ============================================================================
+
   updateParserExceptionConfig(newConfig: Partial<ParserExceptionConfig>): void {
     this.parserExceptionConfig = { ...this.parserExceptionConfig, ...newConfig };
+    
+    if (BracketLynxConfig.debug) {
+      console.log('🔧 Parser exception config updated');
+    }
+  }
+
+  addLanguageException(languageId: string): void {
+    if (!this.parserExceptionConfig.problematicLanguages.includes(languageId)) {
+      this.parserExceptionConfig = {
+        ...this.parserExceptionConfig,
+        problematicLanguages: [...this.parserExceptionConfig.problematicLanguages, languageId]
+      };
+    }
+  }
+
+  removeLanguageException(languageId: string): void {
+    this.parserExceptionConfig = {
+      ...this.parserExceptionConfig,
+      problematicLanguages: this.parserExceptionConfig.problematicLanguages.filter(lang => lang !== languageId)
+    };
+  }
+
+  addExtensionException(extension: string): void {
+    if (!this.parserExceptionConfig.problematicExtensions.includes(extension)) {
+      this.parserExceptionConfig = {
+        ...this.parserExceptionConfig,
+        problematicExtensions: [...this.parserExceptionConfig.problematicExtensions, extension]
+      };
+    }
+  }
+
+  removeExtensionException(extension: string): void {
+    this.parserExceptionConfig = {
+      ...this.parserExceptionConfig,
+      problematicExtensions: this.parserExceptionConfig.problematicExtensions.filter(ext => ext !== extension)
+    };
+  }
+
+  hasFallbackParser(): boolean {
+    return !!this.fallbackParser;
+  }
+
+  getPerformanceStats(): {
+    cacheStats: {
+      parseStatesSize: number;
+      tokensSize: number;
+      totalSize: number;
+    };
+    memoryUsage: number;
+    config: ParserExceptionConfig;
+  } {
+    return {
+      cacheStats: this.getCacheStats(),
+      memoryUsage: this.getMemoryUsage(),
+      config: this.parserExceptionConfig,
+    };
   }
 }
