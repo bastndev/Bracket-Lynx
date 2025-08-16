@@ -17,6 +17,7 @@ let isEnabled = true;
 let bracketLynxProvider: any = undefined;
 let astroDecorator: any = undefined;
 let vueDecorator: any = undefined;
+let svelteDecorator: any = undefined;
 const disabledEditors = new Map<string, boolean>();
 const individuallyEnabledEditors = new Map<string, boolean>();
 
@@ -364,6 +365,10 @@ export function setVueDecorator(decorator: any): void {
   vueDecorator = decorator;
 }
 
+export function setSvelteDecorator(decorator: any): void {
+  svelteDecorator = decorator;
+}
+
 export function showBracketLynxMenu(): void {
   safeExecute(
     () => {
@@ -487,6 +492,12 @@ function deactivateExtension(): void {
   if (astroDecorator) {
     astroDecorator.clearAllDecorations?.();
   }
+  if (vueDecorator) {
+    vueDecorator.clearAllDecorations?.();
+  }
+  if (svelteDecorator) {
+    svelteDecorator.clearAllDecorations?.();
+  }
 }
 
 /**
@@ -499,6 +510,12 @@ function updateEditorDecorations(editor: vscode.TextEditor): void {
   if (astroDecorator && astroDecorator.updateDecorations) {
     astroDecorator.updateDecorations(editor);
   }
+  if (vueDecorator && vueDecorator.updateDecorations) {
+    vueDecorator.updateDecorations(editor);
+  }
+  if (svelteDecorator && svelteDecorator.updateDecorations) {
+    svelteDecorator.updateDecorations(editor);
+  }
 }
 
 /**
@@ -510,6 +527,12 @@ function clearEditorDecorations(editor: vscode.TextEditor): void {
   }
   if (astroDecorator && astroDecorator.clearDecorations) {
     astroDecorator.clearDecorations(editor);
+  }
+  if (vueDecorator && vueDecorator.clearDecorations) {
+    vueDecorator.clearDecorations(editor);
+  }
+  if (svelteDecorator && svelteDecorator.clearDecorations) {
+    svelteDecorator.clearDecorations(editor);
   }
 }
 

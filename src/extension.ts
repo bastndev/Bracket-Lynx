@@ -2,7 +2,8 @@ import * as vscode from 'vscode';
 import { BracketLynx } from './lens/lens';
 import { AstroDecorator } from './lens/decorators/astrojs-decorator';
 import { VueDecorator } from './lens/decorators/vue.decorator';
-import { setBracketLynxProviderForColors, setAstroDecoratorForColors, setVueDecoratorForColors } from './actions/colors';
+import SvelteDecorator from './lens/decorators/svelte.decorator';
+import { setBracketLynxProviderForColors, setAstroDecoratorForColors, setVueDecoratorForColors, setSvelteDecoratorForColors } from './actions/colors';
 import { showBracketLynxMenu, setBracketLynxProvider, setAstroDecorator, setVueDecorator, cleanupClosedEditor, initializePersistedState } from './actions/toggle';
 import { initializeErrorHandling, LogLevel, logger } from './core/performance-config';
 
@@ -14,6 +15,8 @@ const updateUniversalDecorations = (editor?: vscode.TextEditor) => {
             AstroDecorator.updateDecorations(editor);
         } else if (editor.document.languageId === 'vue') {
             VueDecorator.updateDecorations(editor);
+        } else if (editor.document.languageId === 'svelte') {
+            SvelteDecorator.updateDecorations(editor);
         }
     }
 };
@@ -35,6 +38,7 @@ export const activate = async (context: vscode.ExtensionContext) => {
     setBracketLynxProvider(BracketLynx);
     setAstroDecorator(AstroDecorator);
     setVueDecorator(VueDecorator);
+    setSvelteDecoratorForColors(SvelteDecorator);
     setBracketLynxProviderForColors(BracketLynx);
     setAstroDecoratorForColors(AstroDecorator);
     setVueDecoratorForColors(VueDecorator);
@@ -46,8 +50,8 @@ export const activate = async (context: vscode.ExtensionContext) => {
     registerEventListeners(context);
 
     vscode.window.visibleTextEditors.forEach(editor => {
-        BracketLynx.delayUpdateDecoration(editor);
-        updateUniversalDecorations(editor);
+    BracketLynx.delayUpdateDecoration(editor);
+    updateUniversalDecorations(editor);
     });
 };
 
@@ -75,9 +79,10 @@ function registerEventListeners(context: vscode.ExtensionContext) {
 
 async function handleConfigurationChange(event: vscode.ConfigurationChangeEvent) {
     if (event.affectsConfiguration('bracketLynx')) {
-        BracketLynx.onDidChangeConfiguration();
-        AstroDecorator.onDidChangeConfiguration();
-        VueDecorator.onDidChangeConfiguration();
+    BracketLynx.onDidChangeConfiguration();
+    AstroDecorator.onDidChangeConfiguration();
+    VueDecorator.onDidChangeConfiguration();
+    SvelteDecorator.onDidChangeConfiguration();
         const { onConfigurationChanged } = await import('./actions/colors.js');
         await onConfigurationChanged();
     }
@@ -87,6 +92,7 @@ function handleWorkspaceFoldersChange() {
     BracketLynx.onDidChangeConfiguration();
     AstroDecorator.onDidChangeConfiguration();
     VueDecorator.onDidChangeConfiguration();
+    SvelteDecorator.onDidChangeConfiguration();
 }
 
 function handleTextDocumentChange(event: vscode.TextDocumentChangeEvent) {
@@ -131,5 +137,6 @@ function handleActiveTextEditorChange(editor?: vscode.TextEditor) {
 export const deactivate = () => {
     AstroDecorator.dispose();
     VueDecorator.dispose();
+    SvelteDecorator.dispose();
     console.log('🧹 Bracket Lynx: Extension deactivated');
 };

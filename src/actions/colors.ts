@@ -21,6 +21,10 @@ export interface IBracketLynxProvider {
 let bracketLynxProvider: IBracketLynxProvider | undefined = undefined;
 let astroDecorator: any = undefined;
 let vueDecorator: any = undefined;
+let svelteDecorator: any = undefined;
+export function setSvelteDecoratorForColors(decorator: any): void {
+  svelteDecorator = decorator;
+}
 let currentColor: string = DEFAULT_COLOR;
 
 /**
