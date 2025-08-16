@@ -1,21 +1,6 @@
 import * as vscode from 'vscode';
-import {
-  DocumentDecorationCacheEntry,
-  EditorDecorationCacheEntry,
-  BracketEntry,
-  BracketDecorationSource,
-} from '../lens/lens';
-import { 
-  CACHE_CONFIG, 
-  createHash,
-  safeExecute, 
-  safeExecuteAsync, 
-  CacheError, 
-  PerformanceError,
-  logger, 
-  LogCategory,
-  validateDocument
-} from './performance-config';
+import { DocumentDecorationCacheEntry,EditorDecorationCacheEntry,BracketEntry,BracketDecorationSource,} from '../lens/lens';
+import { CACHE_CONFIG, createHash,safeExecute, safeExecuteAsync, CacheError, PerformanceError,logger, LogCategory,validateDocument} from './performance-config';
 
 // ============================================================================
 // 🎯 UNIFIED CACHE INTERFACES - Clean and Simple

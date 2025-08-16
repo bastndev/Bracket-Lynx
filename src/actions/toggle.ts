@@ -1,18 +1,6 @@
 import * as vscode from 'vscode';
-import {
-  setBracketLynxProviderForColors,
-  initializeColorSystem,
-  changeDecorationColor,
-} from './colors';
-import { 
-  safeExecute, 
-  safeExecuteAsync, 
-  validateTextEditor, 
-  validateDocument,
-  ConfigurationError,
-  logger, 
-  LogCategory
-} from '../core/performance-config';
+import { setBracketLynxProviderForColors,initializeColorSystem,changeDecorationColor,} from './colors';
+import { safeExecute, safeExecuteAsync, validateTextEditor, validateDocument,ConfigurationError,logger, LogCategory} from '../core/performance-config';
 
 // Configuration constants
 const CONFIG_SECTION = 'bracketLynx';

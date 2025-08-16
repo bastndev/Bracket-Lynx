@@ -1,13 +1,6 @@
-/**
- * Utility functions used across the Bracket Lynx extension
- */
-
 import * as vscode from 'vscode';
 
-// ============================================================================
 // PERFORMANCE CONFIGURATION
-// ============================================================================
-
 export const PERFORMANCE_LIMITS = {
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   MAX_DECORATIONS_PER_FILE: 300,

@@ -1,18 +1,7 @@
 import * as vscode from 'vscode';
-import {
-  BracketEntry,
-  TokenEntry,
-  LanguageConfiguration,
-  BracketLynxConfig,
-  HeaderMode,
-} from '../lens/lens';
+import { BracketEntry,TokenEntry,LanguageConfiguration,BracketLynxConfig,HeaderMode,} from '../lens/lens';
 import { containsControlFlowKeyword } from '../lens/lens-rules';
-import { 
-  PROBLEMATIC_LANGUAGES, 
-  PROBLEMATIC_EXTENSIONS,
-  PERFORMANCE_LIMITS,
-  createHash
-} from './performance-config';
+import { PROBLEMATIC_LANGUAGES, PROBLEMATIC_EXTENSIONS,PERFORMANCE_LIMITS,createHash} from './performance-config';
 
 // ============================================================================
 // 🚀 OPTIMIZED INTERFACES - Unified and Clean
