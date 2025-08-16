@@ -31,7 +31,10 @@ const mockVscode = {
       public character: number,
     ) {}
     isBefore(other: any): boolean {
-      return this.line < other.line || (this.line === other.line && this.character < other.character);
+      return (
+        this.line < other.line ||
+        (this.line === other.line && this.character < other.character)
+      );
     }
     isBeforeOrEqual(other: any): boolean {
       return this.isBefore(other) || this.isEqual(other);
@@ -46,22 +49,30 @@ const mockVscode = {
       return this.line === other.line && this.character === other.character;
     }
     compareTo(other: any): number {
-      if (this.line < other.line) return -1;
-      if (this.line > other.line) return 1;
-      if (this.character < other.character) return -1;
-      if (this.character > other.character) return 1;
+      if (this.line < other.line) {
+        return -1;
+      }
+      if (this.line > other.line) {
+        return 1;
+      }
+      if (this.character < other.character) {
+        return -1;
+      }
+      if (this.character > other.character) {
+        return 1;
+      }
       return 0;
     }
     translate(lineDelta?: number, characterDelta?: number): any {
       return new mockVscode.Position(
         this.line + (lineDelta || 0),
-        this.character + (characterDelta || 0)
+        this.character + (characterDelta || 0),
       );
     }
     with(line?: number, character?: number): any {
       return new mockVscode.Position(
         line !== undefined ? line : this.line,
-        character !== undefined ? character : this.character
+        character !== undefined ? character : this.character,
       );
     }
   },
@@ -127,7 +138,9 @@ const mockVscode = {
           individuallyEnabledFiles: [],
         };
         const fullKey = section ? `${section}.${key}` : key;
-        return defaults[fullKey] !== undefined ? defaults[fullKey] : defaultValue;
+        return defaults[fullKey] !== undefined
+          ? defaults[fullKey]
+          : defaultValue;
       },
       has: (key: string) => true,
       inspect: (key: string) => ({
@@ -155,9 +168,12 @@ const mockVscode = {
 
   // Window and UI
   window: {
-    showInformationMessage: (message: string, ...items: string[]) => Promise.resolve(undefined),
-    showWarningMessage: (message: string, ...items: string[]) => Promise.resolve(undefined),
-    showErrorMessage: (message: string, ...items: string[]) => Promise.resolve(undefined),
+    showInformationMessage: (message: string, ...items: string[]) =>
+      Promise.resolve(undefined),
+    showWarningMessage: (message: string, ...items: string[]) =>
+      Promise.resolve(undefined),
+    showErrorMessage: (message: string, ...items: string[]) =>
+      Promise.resolve(undefined),
     showQuickPick: (items: any[]) => Promise.resolve(undefined),
     showInputBox: (options?: any) => Promise.resolve(undefined),
     createOutputChannel: (name: string) => ({
@@ -174,7 +190,9 @@ const mockVscode = {
     onDidChangeTextEditorSelection: () => ({ dispose: () => {} }),
     onDidChangeTextEditorVisibleRanges: () => ({ dispose: () => {} }),
     visibleTextEditors: [],
-    setStatusBarMessage: (text: string, hideAfterTimeout?: number) => ({ dispose: () => {} }),
+    setStatusBarMessage: (text: string, hideAfterTimeout?: number) => ({
+      dispose: () => {},
+    }),
     createStatusBarItem: () => ({
       text: '',
       tooltip: '',
@@ -192,8 +210,11 @@ const mockVscode = {
 
   // Commands
   commands: {
-    registerCommand: (command: string, callback: Function) => ({ dispose: () => {} }),
-    executeCommand: (command: string, ...rest: any[]) => Promise.resolve(undefined),
+    registerCommand: (command: string, callback: Function) => ({
+      dispose: () => {},
+    }),
+    executeCommand: (command: string, ...rest: any[]) =>
+      Promise.resolve(undefined),
     getCommands: () => Promise.resolve([]),
   },
 
@@ -333,7 +354,9 @@ const mockVscode = {
     }
 
     getText(range?: any): string {
-      if (!range) return this._content;
+      if (!range) {
+        return this._content;
+      }
       // Simplified range handling
       return this._content.substring(0, 100);
     }
@@ -367,13 +390,14 @@ const mockVscode = {
         text,
         range: new mockVscode.Range(
           new mockVscode.Position(lineNumber, 0),
-          new mockVscode.Position(lineNumber, text.length)
+          new mockVscode.Position(lineNumber, text.length),
         ),
         rangeIncludingLineBreak: new mockVscode.Range(
           new mockVscode.Position(lineNumber, 0),
-          new mockVscode.Position(lineNumber + 1, 0)
+          new mockVscode.Position(lineNumber + 1, 0),
         ),
-        firstNonWhitespaceCharacterIndex: text.search(/\S/) !== -1 ? text.search(/\S/) : text.length,
+        firstNonWhitespaceCharacterIndex:
+          text.search(/\S/) !== -1 ? text.search(/\S/) : text.length,
         isEmptyOrWhitespace: text.trim().length === 0,
       };
     }
@@ -385,14 +409,18 @@ const mockVscode = {
 
     event = (listener: Function) => {
       this._listeners.push(listener);
-      return { dispose: () => {
-        const index = this._listeners.indexOf(listener);
-        if (index > -1) this._listeners.splice(index, 1);
-      }};
+      return {
+        dispose: () => {
+          const index = this._listeners.indexOf(listener);
+          if (index > -1) {
+            this._listeners.splice(index, 1);
+          }
+        },
+      };
     };
 
     fire(data?: any) {
-      this._listeners.forEach(listener => {
+      this._listeners.forEach((listener) => {
         try {
           listener(data);
         } catch (error) {
@@ -418,7 +446,7 @@ const mockVscode = {
 
     static from(...disposableLikes: any[]): any {
       return new mockVscode.Disposable(() => {
-        disposableLikes.forEach(d => {
+        disposableLikes.forEach((d) => {
           if (d && typeof d.dispose === 'function') {
             d.dispose();
           }
@@ -435,7 +463,7 @@ const mockVscode = {
 const Module = require('module');
 const originalRequire = Module.prototype.require;
 
-Module.prototype.require = function(id: string) {
+Module.prototype.require = function (id: string) {
   if (id === 'vscode') {
     return mockVscode;
   }
@@ -449,7 +477,7 @@ export { mockVscode };
 export const createMockDocument = (
   text: string,
   languageId: string = 'typescript',
-  fileName?: string
+  fileName?: string,
 ): any => {
   const uri = mockVscode.Uri.file(fileName || `test.${languageId}`);
   return new mockVscode.TextDocument(uri, text, languageId);
@@ -457,7 +485,10 @@ export const createMockDocument = (
 
 export const createMockTextEditor = (document: any): any => ({
   document,
-  selection: new mockVscode.Range(new mockVscode.Position(0, 0), new mockVscode.Position(0, 0)),
+  selection: new mockVscode.Range(
+    new mockVscode.Position(0, 0),
+    new mockVscode.Position(0, 0),
+  ),
   selections: [],
   visibleRanges: [],
   options: {
@@ -476,7 +507,9 @@ export const createMockTextEditor = (document: any): any => ({
 });
 
 // Performance utilities for tests
-export const measureTime = async <T>(fn: () => Promise<T> | T): Promise<{ result: T; duration: number }> => {
+export const measureTime = async <T>(
+  fn: () => Promise<T> | T,
+): Promise<{ result: T; duration: number }> => {
   const start = performance.now();
   const result = await Promise.resolve(fn());
   const duration = performance.now() - start;
@@ -485,11 +518,17 @@ export const measureTime = async <T>(fn: () => Promise<T> | T): Promise<{ result
 
 // Test data generators
 export const generateLargeCode = (size: number = 1000): string => {
-  return 'const data = {' +
-    Array(size).fill(0).map((_, i) =>
-      `  prop${i}: { value: ${i}, nested: { deep: true, data: [${i}, ${i+1}, ${i+2}] } }`
-    ).join(',\n') +
-    '\n};';
+  return (
+    'const data = {' +
+    Array(size)
+      .fill(0)
+      .map(
+        (_, i) =>
+          `  prop${i}: { value: ${i}, nested: { deep: true, data: [${i}, ${i + 1}, ${i + 2}] } }`,
+      )
+      .join(',\n') +
+    '\n};'
+  );
 };
 
 export const generateDeeplyNested = (depth: number = 10): string => {
@@ -517,7 +556,7 @@ export const captureConsole = () => {
       console.log = originalLog;
       console.error = originalError;
       console.warn = originalWarn;
-    }
+    },
   };
 };
 
