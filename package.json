@@ -47,16 +47,13 @@
     "onLanguage:typescript", 
     "onLanguage:javascriptreact",
     "onLanguage:typescriptreact",
+    "onLanguage:html",
     "onLanguage:css",
     "onLanguage:scss",
-    "onLanguage:sass", 
-    "onLanguage:less",
-    "onLanguage:html",
-    "onLanguage:astro",
     "onLanguage:vue",
+    "onLanguage:astro",
     "onLanguage:svelte",
-    "onLanguage:json",
-    "onLanguage:jsonc"
+    "onLanguage:json"
   ],
   "contributes": {
     "commands": [
