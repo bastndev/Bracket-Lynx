@@ -5,7 +5,7 @@ import {
   BracketEntry,
   BracketDecorationSource,
 } from '../lens/lens';
-import { CACHE_CONFIG } from './utils';
+import { CACHE_CONFIG } from './performance-config';
 
 // ============================================================================
 // PERFORMANCE CACHE INTERFACES
