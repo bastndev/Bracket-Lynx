@@ -191,7 +191,7 @@ export async function resetToDefault(): Promise<void> {
   try {
     // Show confirmation dialog with performance info
     const confirmation = await vscode.window.showWarningMessage(
-      '♻️ Reset Bracket Lynx to factory defaults?\n\nThis will:\n• Enable globally\n• Clear all file-specific settings\n• Reset color to default (#515151)\n• Reset all other settings to defaults\n• 🚀 Clear all performance caches\n• 🧠 Free up memory usage',
+      '♻️ Reset Bracket Lynx to factory defaults?\n\nThis will:\n• Reset all settings and clear files\n• Clear caches and free memory',
       { modal: true },
       'Reset to Default'
     );
