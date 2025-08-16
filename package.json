@@ -68,6 +68,11 @@
     "configuration": {
       "title": "Bracket Lynx",
       "properties": {
+        "bracketLynx.prefix": {
+          "type": "string",
+          "default": "‹~ ",
+          "description": "Prefix shown before bracket headers"
+        },
         "bracketLynx.color": {
           "type": "string",
           "default": "#515151",
@@ -75,12 +80,20 @@
           "pattern": "^#[0-9a-fA-F]{6}$",
           "patternErrorMessage": "Please enter a valid hex color (e.g., #ff6b6b)"
         },
+        "bracketLynx.fontStyle": {
+          "type": "string",
+          "enum": ["normal","italic","bold"],
+          "default": "italic",
+          "description": "Font style for bracket decorations"
+        },
+        "bracketLynx.unmatchBracketsPrefix": {
+          "type": "string",
+          "default": "❌ ",
+          "description": "Prefix shown for unmatched brackets"
+        },
         "bracketLynx.mode": {
           "type": "string",
-          "enum": [
-            "auto",
-            "manual"
-          ],
+          "enum": ["auto","manual"],
           "default": "auto",
           "description": "Mode for bracket highlighting"
         },
@@ -88,26 +101,6 @@
           "type": "boolean",
           "default": false,
           "description": "Enable debug logging"
-        },
-        "bracketLynx.fontStyle": {
-          "type": "string",
-          "enum": [
-            "normal",
-            "italic",
-            "bold"
-          ],
-          "default": "italic",
-          "description": "Font style for bracket decorations"
-        },
-        "bracketLynx.prefix": {
-          "type": "string",
-          "default": "‹~ ",
-          "description": "Prefix shown before bracket headers"
-        },
-        "bracketLynx.unmatchBracketsPrefix": {
-          "type": "string",
-          "default": "❌ ",
-          "description": "Prefix shown for unmatched brackets"
         },
         "bracketLynx.maxBracketHeaderLength": {
           "type": "number",
