@@ -1,25 +1,53 @@
 import * as vscode from 'vscode';
-import { AdvancedCacheManager, SmartDebouncer } from '../core/performance-cache';
-import { OptimizedBracketParser } from '../core/performance-parser';
-import { shouldUseOriginalParser } from '../core/parser-exceptions';
-import { PERFORMANCE_LIMITS, DEFAULT_STYLES } from '../core/config';
-import { PositionUtils, regExpExecToArray, makeRegExpPart } from '../core/utils';
 import { LanguageFormatter } from './language-formatter';
-import {
-  FILTER_RULES,
-  shouldExcludeSymbol,
-  filterContent,
-  isLanguageSupported,
-  shouldProcessFile,
-  applyWordLimit,
-  containsControlFlowKeyword,
-} from './lens-rules';
-import {
-  isExtensionEnabled,
-  isEditorEnabled,
-  isDocumentEnabled,
-} from '../actions/toggle';
+import { OptimizedBracketParser } from '../core/performance-parser';
 import { getEffectiveColor, onConfigurationChanged } from '../actions/colors';
+import { AdvancedCacheManager, SmartDebouncer } from '../core/performance-cache';
+import { isExtensionEnabled, isEditorEnabled, isDocumentEnabled } from '../actions/toggle';
+import { PositionUtils, regExpExecToArray, makeRegExpPart, PERFORMANCE_LIMITS, SUPPORTED_LANGUAGES, ALLOWED_JSON_FILES, PROBLEMATIC_LANGUAGES, PROBLEMATIC_EXTENSIONS, SupportedLanguage, ProblematicLanguage, AllowedJsonFile } from '../core/utils';
+import { FILTER_RULES, shouldExcludeSymbol, filterContent, isLanguageSupported as isLanguageSupportedRules, shouldProcessFile as shouldProcessFileRules, applyWordLimit, containsControlFlowKeyword, formatArrowFunction } from './lens-rules';
+
+// RE-EXPORT CONSTANTS FOR EASY ACCESS
+export {
+  SUPPORTED_LANGUAGES,
+  ALLOWED_JSON_FILES,
+  PROBLEMATIC_LANGUAGES,
+  PROBLEMATIC_EXTENSIONS,
+  SupportedLanguage,
+  ProblematicLanguage,
+  AllowedJsonFile,
+} from '../core/utils';
+
+// ============================================================================
+// CONFIGURATION UTILITY FUNCTIONS
+// ============================================================================
+
+export function isSupportedLanguage(
+  languageId: string
+): languageId is SupportedLanguage {
+  return (SUPPORTED_LANGUAGES as readonly string[]).includes(languageId);
+}
+
+export function isProblematicLanguage(
+  languageId: string
+): languageId is ProblematicLanguage {
+  return (PROBLEMATIC_LANGUAGES as readonly string[]).includes(languageId);
+}
+
+export function isAllowedJsonFile(fileName: string): boolean {
+  const baseName = fileName.split('/').pop() || fileName;
+  return (ALLOWED_JSON_FILES as readonly string[]).includes(baseName);
+}
+
+export function shouldProcessFileConfig(
+  languageId: string,
+  fileName: string
+): boolean {
+  if (languageId === 'json' || languageId === 'jsonc') {
+    return isAllowedJsonFile(fileName);
+  }
+  return isSupportedLanguage(languageId);
+}
 
 // ============================================================================
 // EXPORTED UTILITIES (for backward compatibility)
@@ -117,30 +145,36 @@ export class BracketLynxConfig {
     }
 
     try {
-      return this.getConfig().get('color', DEFAULT_STYLES.COLOR);
+      return this.getConfig().get('color', '#515151');
     } catch {
-      return DEFAULT_STYLES.COLOR;
+      return '#515151';
     }
   }
 
   static get fontStyle(): string {
-    return this.getConfig().get('fontStyle', DEFAULT_STYLES.FONT_STYLE);
+    return this.getConfig().get('fontStyle', 'italic');
   }
 
   static get prefix(): string {
-    return this.getConfig().get('prefix', DEFAULT_STYLES.PREFIX);
+    return this.getConfig().get('prefix', '‹~ ');
   }
 
   static get unmatchBracketsPrefix(): string {
-    return this.getConfig().get('unmatchBracketsPrefix', DEFAULT_STYLES.UNMATCH_PREFIX);
+    return this.getConfig().get('unmatchBracketsPrefix', '❌ ');
   }
 
   static get maxBracketHeaderLength(): number {
-    return this.getConfig().get('maxBracketHeaderLength', PERFORMANCE_LIMITS.MAX_HEADER_LENGTH);
+    return this.getConfig().get(
+      'maxBracketHeaderLength',
+      PERFORMANCE_LIMITS.MAX_HEADER_LENGTH
+    );
   }
 
   static get minBracketScopeLines(): number {
-    return this.getConfig().get('minBracketScopeLines', PERFORMANCE_LIMITS.MIN_BRACKET_SCOPE_LINES);
+    return this.getConfig().get(
+      'minBracketScopeLines',
+      PERFORMANCE_LIMITS.MIN_BRACKET_SCOPE_LINES
+    );
   }
 
   static get enablePerformanceFilters(): boolean {
@@ -148,11 +182,17 @@ export class BracketLynxConfig {
   }
 
   static get maxFileSize(): number {
-    return this.getConfig().get('maxFileSize', PERFORMANCE_LIMITS.MAX_FILE_SIZE);
+    return this.getConfig().get(
+      'maxFileSize',
+      PERFORMANCE_LIMITS.MAX_FILE_SIZE
+    );
   }
 
   static get maxDecorationsPerFile(): number {
-    return this.getConfig().get('maxDecorationsPerFile', PERFORMANCE_LIMITS.MAX_DECORATIONS_PER_FILE);
+    return this.getConfig().get(
+      'maxDecorationsPerFile',
+      PERFORMANCE_LIMITS.MAX_DECORATIONS_PER_FILE
+    );
   }
 
   static get languageConfiguration(): LanguageConfiguration {
@@ -181,16 +221,25 @@ export class BracketLynxConfig {
 // UTILITIES
 // ============================================================================
 
-
-
 const isInlineScope = (bracket: BracketEntry) =>
   bracket.end.position.line <= bracket.start.position.line;
 
-const debug = (output: any) => {
-  if (BracketLynxConfig.debug) {
-    console.debug(output);
-  }
-};
+    interface DebugOutput {
+      message: string;
+      data?: unknown;
+      timestamp: number;
+      context?: string;
+    }
+
+    const debug = (output: DebugOutput | string) => {
+      if (BracketLynxConfig.debug) {
+        if (typeof output === 'string') {
+          console.debug(output);
+        } else {
+          console.debug(`[${output.context || 'BracketLynx'}] ${output.message}`, output.data);
+        }
+      }
+    };
 
 // ============================================================================
 // CACHE MANAGEMENT
@@ -202,7 +251,8 @@ export class DocumentDecorationCacheEntry {
 
   constructor(document: vscode.TextDocument) {
     // Use parser exception manager
-    if (shouldUseOriginalParser(document)) {
+    const optimizedParser = OptimizedBracketParser.getInstance();
+    if (optimizedParser.shouldUseOriginalParser(document)) {
       // Use original parser for problematic files
       this.brackets = BracketParser.parseBrackets(document);
 
@@ -213,13 +263,6 @@ export class DocumentDecorationCacheEntry {
       }
     } else {
       // Use optimized parser for other files
-      const optimizedParser = OptimizedBracketParser.getInstance();
-
-      // Configure fallback parser to avoid circular dependencies
-      optimizedParser.setFallbackParser(
-        BracketParser.parseBrackets.bind(BracketParser)
-      );
-
       this.brackets = optimizedParser.parseBrackets(document);
 
       if (BracketLynxConfig.debug) {
@@ -326,31 +369,7 @@ export class CacheManager {
     }
   };
 
-  static clearDecorationCache = (document?: vscode.TextDocument): void => {
-    this.advancedCache.clearDocumentCache(document);
 
-    // RESTORE: Clear optimized parser cache for specific document
-    if (document) {
-      const optimizedParser = OptimizedBracketParser.getInstance();
-      optimizedParser.clearFileCache(document.uri.toString());
-    }
-
-    // Keep legacy behavior for compatibility
-    if (document) {
-      this.documentCache.delete(document);
-      for (const textEditor of this.editorCache.keys()) {
-        if (document === textEditor.document) {
-          this.editorCache.get(textEditor)?.setDirty();
-        }
-      }
-    }
-    for (const textEditor of this.editorCache.keys()) {
-      if (vscode.window.visibleTextEditors.indexOf(textEditor) < 0) {
-        this.editorCache.get(textEditor)?.dispose();
-        this.editorCache.delete(textEditor);
-      }
-    }
-  };
 
   // New methods for performance monitoring
   static getCacheMetrics() {
@@ -902,6 +921,31 @@ export class BracketHeaderGenerator {
   // NEW: Create language formatter instance
   private static languageFormatter = new LanguageFormatter();
 
+  /**
+   * Get the first meaningful word (skip common prefixes/symbols)
+   */
+  private static getFirstMeaningfulWord(words: string[]): string {
+    const skipWords = [
+      'export',
+      'const',
+      'function',
+      'async',
+      'default',
+      'let',
+      'var',
+    ];
+
+    for (const word of words) {
+      const cleanWord = word.toLowerCase().trim();
+      if (cleanWord && !skipWords.includes(cleanWord)) {
+        return word;
+      }
+    }
+
+    // If no meaningful word found, return the first word
+    return words[0] || '';
+  }
+
   static getBracketHeader(
     document: vscode.TextDocument,
     context: BracketContext
@@ -910,7 +954,13 @@ export class BracketHeaderGenerator {
     const regulateHeader = (text: string) => {
       let result = text.replace(/\s+/gu, ' ').trim();
 
-      // NEW: Apply rules filtering first to remove excluded symbols
+      // FIRST: Check for arrow functions using unified logic
+      const arrowResult = formatArrowFunction(result);
+      if (arrowResult) {
+        return arrowResult;
+      }
+
+      // NEW: Apply rules filtering to remove excluded symbols
       result = filterContent(result);
 
       // NEW: Apply language-specific formatting before length truncation
@@ -1072,18 +1122,21 @@ export class BracketDecorationGenerator {
     };
 
     const scanner = (context: BracketContext) => {
-      const lineSpan = context.entry.end.position.line - context.entry.start.position.line + 1;
+      const lineSpan =
+        context.entry.end.position.line - context.entry.start.position.line + 1;
       const meetsMinLines = minBracketScopeLines <= lineSpan;
-      
+
       // Check if it's a control flow block (exception to minimum lines rule)
       let isControlFlowException = false;
       if (!meetsMinLines) {
         const startLine = context.entry.start.position.line;
         const endLine = context.entry.end.position.line;
-        const content = document.getText(new vscode.Range(startLine, 0, endLine + 1, 0));
+        const content = document.getText(
+          new vscode.Range(startLine, 0, endLine + 1, 0)
+        );
         isControlFlowException = containsControlFlowKeyword(content);
       }
-      
+
       if (meetsMinLines || isControlFlowException) {
         if (
           // Skip if next block starts on same line as closing
@@ -1201,7 +1254,12 @@ export class BracketLynx {
     }
 
     // NEW: Check if language is supported by rules
-    if (!shouldProcessFile(textEditor.document.languageId, textEditor.document.fileName)) {
+    if (
+      !shouldProcessFileConfig(
+        textEditor.document.languageId,
+        textEditor.document.fileName
+      )
+    ) {
       const editorCache = CacheManager.editorCache.get(textEditor);
       editorCache?.dispose();
       CacheManager.editorCache.delete(textEditor);
@@ -1289,7 +1347,7 @@ export class BracketLynx {
 
   static forceUpdate(textEditor: vscode.TextEditor): void {
     // Clear cache and force update
-    CacheManager.clearDecorationCache(textEditor.document);
+    CacheManager.clearAllDecorationCache();
     this.updateDecoration(textEditor);
   }
 
@@ -1330,7 +1388,7 @@ export class BracketLynx {
     }
 
     // NEW: Check if language is supported by rules
-    if (!shouldProcessFile(document.languageId, document.fileName)) {
+    if (!shouldProcessFileConfig(document.languageId, document.fileName)) {
       return;
     }
 
@@ -1346,7 +1404,7 @@ export class BracketLynx {
     }
 
     // NEW: Check if language is supported by rules
-    if (!shouldProcessFile(document.languageId, document.fileName)) {
+    if (!shouldProcessFileConfig(document.languageId, document.fileName)) {
       return;
     }
 
@@ -1390,7 +1448,7 @@ export class BracketLynx {
   }
 
   static onDidChangeActiveTextEditor(): void {
-    CacheManager.clearDecorationCache();
+    CacheManager.clearAllDecorationCache();
     const activeEditor = vscode.window.activeTextEditor;
     if (activeEditor && isExtensionEnabled() && isEditorEnabled(activeEditor)) {
       this.delayUpdateDecoration(activeEditor);
@@ -1402,7 +1460,7 @@ export class BracketLynx {
     if (
       isExtensionEnabled() &&
       isDocumentEnabled(document) &&
-      shouldProcessFile(document.languageId, document.fileName) &&
+      shouldProcessFileConfig(document.languageId, document.fileName) &&
       ('auto' === mode || 'on-save' === mode)
     ) {
       this.delayUpdateDecorationByDocument(document);
@@ -1413,7 +1471,7 @@ export class BracketLynx {
     if (
       isExtensionEnabled() &&
       isDocumentEnabled(document) &&
-      shouldProcessFile(document.languageId, document.fileName) &&
+      shouldProcessFileConfig(document.languageId, document.fileName) &&
       'on-save' === BracketLynxConfig.mode
     ) {
       this.updateDecorationByDocument(document);
@@ -1430,7 +1488,7 @@ export class BracketLynx {
     }
 
     // NEW: Check if language is supported by rules
-    if (!shouldProcessFile(document.languageId, document.fileName)) {
+    if (!shouldProcessFileConfig(document.languageId, document.fileName)) {
       return;
     }
 
@@ -1438,7 +1496,7 @@ export class BracketLynx {
     if (changes && changes.length > 0) {
       this.handleIncrementalChanges(document, changes);
     } else {
-      CacheManager.clearDecorationCache(document);
+      CacheManager.clearAllDecorationCache();
     }
 
     if ('auto' === BracketLynxConfig.mode) {
@@ -1455,18 +1513,18 @@ export class BracketLynx {
   ): void {
     try {
       // Use parser exception manager
-      if (shouldUseOriginalParser(document)) {
+      const optimizedParser = OptimizedBracketParser.getInstance();
+      if (optimizedParser.shouldUseOriginalParser(document)) {
         if (BracketLynxConfig.debug) {
           console.log(
             `Bracket Lynx: Skipping incremental parsing for: ${document.fileName}`
           );
         }
-        CacheManager.clearDecorationCache(document);
+        CacheManager.clearAllDecorationCache();
         return;
       }
 
       // Use incremental parsing for other files
-      const optimizedParser = OptimizedBracketParser.getInstance();
       const existingCache = CacheManager.documentCache.get(document);
 
       if (existingCache && existingCache.brackets) {
@@ -1501,7 +1559,7 @@ export class BracketLynx {
     }
 
     // Fallback to full cache clear
-    CacheManager.clearDecorationCache(document);
+    CacheManager.clearAllDecorationCache();
   }
 
   /**
@@ -1515,11 +1573,11 @@ export class BracketLynx {
     return {
       cache: CacheManager.getCacheMetrics(),
       hitRatio: CacheManager.getCacheHitRatio(),
-      memory: advancedCache.getMemoryMetrics(),
+
       // RESTORE: Parser metrics
       parser: {
         ...optimizedParser.getCacheStats(),
-        memoryUsage: optimizedParser.getMemoryUsage(),
+
       },
       performanceFilters: optimizedParser.getPerformanceStats(),
       config: {
@@ -1533,47 +1591,7 @@ export class BracketLynx {
     };
   }
 
-  /**
-   * Force memory cleanup when under pressure
-   */
-  static forceMemoryCleanup(): void {
-    const advancedCache = AdvancedCacheManager.getInstance();
-    // RESTORE: OptimizedBracketParser cleanup
-    const optimizedParser = OptimizedBracketParser.getInstance();
 
-    // Force aggressive cleanup
-    advancedCache.forceMemoryCleanup();
-    // RESTORE: Parser cleanup
-    optimizedParser.aggressiveCleanup();
-
-    if (BracketLynxConfig.debug) {
-      console.log('Bracket Lynx: Forced memory cleanup completed');
-    }
-  }
-
-  /**
-   * Enable low memory mode
-   */
-  static enableLowMemoryMode(): void {
-    const advancedCache = AdvancedCacheManager.getInstance();
-    advancedCache.updateConfig({ lowMemoryMode: true });
-
-    if (BracketLynxConfig.debug) {
-      console.log('Bracket Lynx: Low memory mode enabled');
-    }
-  }
-
-  /**
-   * Disable low memory mode
-   */
-  static disableLowMemoryMode(): void {
-    const advancedCache = AdvancedCacheManager.getInstance();
-    advancedCache.updateConfig({ lowMemoryMode: false });
-
-    if (BracketLynxConfig.debug) {
-      console.log('Bracket Lynx: Low memory mode disabled');
-    }
-  }
 
   // ============================================================================
   // METHODS FOR TOGGLE SYSTEM INTEGRATION
@@ -1600,13 +1618,32 @@ export class BracketLynx {
   }
 
   /**
-   * Force update decorations for a specific editor (used by toggle system)
+   * Force refresh color for all decorations - called by color system
    */
-  static forceUpdateEditor(textEditor: vscode.TextEditor): void {
-    // Clear cache and force update
-    CacheManager.clearDecorationCache(textEditor.document);
-    this.updateDecoration(textEditor);
+  static forceColorRefresh(): void {
+    if (!isExtensionEnabled()) {
+      return;
+    }
+
+    // Clear all existing decorations first
+    this.clearAllDecorations();
+    
+    // Clear all decoration caches to force recreation with new color
+    CacheManager.clearAllDecorationCache();
+    
+    // Small delay to ensure cleanup is complete
+    setTimeout(() => {
+      // Update all visible editors immediately
+      vscode.window.visibleTextEditors
+        .filter((editor) => isEditorEnabled(editor))
+        .forEach((editor) => {
+          // Force immediate update without debouncing for color changes
+          this.updateDecoration(editor);
+        });
+    }, 50);
   }
+
+
 
   /**
    * Dispose and cleanup all resources
@@ -1621,16 +1658,5 @@ export class BracketLynx {
     // Advanced cache cleanup is handled automatically
   }
 
-  /**
-   * Force refresh color for all decorations - called by color system
-   */
-  static forceColorRefresh(): void {
-    console.log('🎨 Force refreshing colors for all decorations');
 
-    // Clear all caches to force recreation with new color
-    CacheManager.clearAllDecorationCache();
-
-    // Update all visible editors
-    this.updateAllDecoration();
-  }
 }

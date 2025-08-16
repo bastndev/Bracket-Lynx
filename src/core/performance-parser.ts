@@ -7,7 +7,26 @@ import {
   HeaderMode,
 } from '../lens/lens';
 import { containsControlFlowKeyword } from '../lens/lens-rules';
-import { PERFORMANCE_LIMITS } from './config';
+import { PROBLEMATIC_LANGUAGES, PROBLEMATIC_EXTENSIONS } from './utils';
+import { PERFORMANCE_LIMITS } from './utils';
+
+// ============================================================================
+// PARSER EXCEPTION CONFIGURATION
+// ============================================================================
+
+export interface ParserExceptionConfig {
+  problematicLanguages: string[];
+  problematicExtensions: string[];
+  enableContentDetection: boolean;
+  maxContentAnalysisSize: number;
+}
+
+const DEFAULT_PARSER_EXCEPTION_CONFIG: ParserExceptionConfig = {
+  problematicLanguages: [...PROBLEMATIC_LANGUAGES],
+  problematicExtensions: [...PROBLEMATIC_EXTENSIONS],
+  enableContentDetection: true,
+  maxContentAnalysisSize: PERFORMANCE_LIMITS.MAX_CONTENT_ANALYSIS_SIZE,
+};
 
 // ============================================================================
 // PARSING STATE INTERFACES
@@ -61,6 +80,7 @@ export class OptimizedBracketParser {
   // Cache for parsing states
   private parseStateCache = new Map<string, ParseStateCache>();
   private tokenCache = new Map<string, TokenCacheEntry>();
+  private parserExceptionConfig: ParserExceptionConfig = { ...DEFAULT_PARSER_EXCEPTION_CONFIG };
 
   // Fallback parser to avoid circular dependencies
   private fallbackParser?: (document: vscode.TextDocument) => BracketEntry[];
@@ -125,6 +145,11 @@ export class OptimizedBracketParser {
         );
       }
       return [];
+    }
+
+    // Check if we should use the original parser for this document
+    if (this.shouldUseOriginalParser(document)) {
+      return this.fallbackParsing(document);
     }
 
     const startTime = Date.now();
@@ -1311,71 +1336,7 @@ export class OptimizedBracketParser {
     }
   }
 
-  /**
-   * Perform aggressive cleanup for memory pressure
-   */
-  aggressiveCleanup(): void {
-    const now = Date.now();
-    const aggressiveTTL = Math.min(this.PARSE_CACHE_MAX_AGE / 2, 60 * 1000); // 1 minute max
 
-    let cleanedCount = 0;
-
-    // More aggressive cleanup of parse state cache
-    for (const [key, entry] of this.parseStateCache) {
-      if (
-        now - entry.timestamp > aggressiveTTL ||
-        entry.fileSize > 1024 * 1024
-      ) {
-        // Clean large files
-        this.parseStateCache.delete(key);
-        cleanedCount++;
-      }
-    }
-
-    // More aggressive cleanup of token cache
-    for (const [key, entry] of this.tokenCache) {
-      if (now - entry.timestamp > aggressiveTTL) {
-        this.tokenCache.delete(key);
-        cleanedCount++;
-      }
-    }
-
-    console.log(
-      `Bracket Lynx Parser: Aggressive cleanup removed ${cleanedCount} entries`
-    );
-  }
-
-  /**
-   * Get memory usage estimation
-   */
-  getMemoryUsage(): {
-    parseStateCache: string;
-    tokenCache: string;
-    total: string;
-  } {
-    let parseStateMB = 0;
-    let tokenMB = 0;
-
-    // Estimate parse state cache memory
-    for (const [, entry] of this.parseStateCache) {
-      parseStateMB += entry.fileSize || 0;
-      parseStateMB += (entry.states?.length || 0) * 100; // Rough estimate per state
-    }
-
-    // Estimate token cache memory
-    for (const [, entry] of this.tokenCache) {
-      tokenMB += (entry.tokens?.length || 0) * 50; // Rough estimate per token
-      tokenMB += entry.pattern?.length || 0;
-    }
-
-    const totalMB = (parseStateMB + tokenMB) / 1024 / 1024;
-
-    return {
-      parseStateCache: `${Math.round(parseStateMB / 1024 / 1024)}MB`,
-      tokenCache: `${Math.round(tokenMB / 1024 / 1024)}MB`,
-      total: `${Math.round(totalMB)}MB`,
-    };
-  }
 
   /**
    * Dispose and cleanup
@@ -1387,5 +1348,106 @@ export class OptimizedBracketParser {
     if (BracketLynxConfig.debug) {
       console.log('Bracket Lynx: OptimizedBracketParser disposed successfully');
     }
+  }
+
+  /**
+   * Check if we should use the original parser for this document
+   */
+  shouldUseOriginalParser(document: vscode.TextDocument): boolean {
+    // Check if language is in problematic list
+    if (this.isProblematicLanguage(document.languageId)) {
+      return true;
+    }
+
+    // Check file extension
+    const fileName = document.fileName.toLowerCase();
+    if (this.parserExceptionConfig.problematicExtensions.some(ext => fileName.endsWith(ext))) {
+      return true;
+    }
+
+    // Check for mixed content if enabled
+    if (this.parserExceptionConfig.enableContentDetection) {
+      return this.hasMixedContent(document);
+    }
+
+    return false;
+  }
+
+  /**
+   * Check if a language is considered problematic
+   */
+  private isProblematicLanguage(languageId: string): boolean {
+    return this.parserExceptionConfig.problematicLanguages.includes(languageId);
+  }
+
+  /**
+   * Check for mixed content that might cause parsing issues
+   */
+  private hasMixedContent(document: vscode.TextDocument): boolean {
+    const content = document.getText();
+    if (content.length > this.parserExceptionConfig.maxContentAnalysisSize) {
+      return false; // Skip check for very large files
+    }
+
+    // Simple check for mixed content (e.g., HTML with embedded scripts/styles)
+    const mixedContentPatterns = [
+      /<script\b[^>]*>([\s\S]*?)<\/script>/gi,
+      /<style\b[^>]*>([\s\S]*?)<\/style>/gi,
+    ];
+
+    return mixedContentPatterns.some(pattern => pattern.test(content));
+  }
+
+  /**
+   * Add language to exception list
+   */
+  addLanguageException(languageId: string): void {
+    if (!this.parserExceptionConfig.problematicLanguages.includes(languageId)) {
+      this.parserExceptionConfig.problematicLanguages.push(languageId);
+    }
+  }
+
+  /**
+   * Add extension to exception list
+   */
+  addExtensionException(extension: string): void {
+    if (!extension.startsWith('.')) {
+      extension = '.' + extension;
+    }
+    
+    if (!this.parserExceptionConfig.problematicExtensions.includes(extension)) {
+      this.parserExceptionConfig.problematicExtensions.push(extension);
+    }
+  }
+
+  /**
+   * Remove language from exception list
+   */
+  removeLanguageException(languageId: string): void {
+    const index = this.parserExceptionConfig.problematicLanguages.indexOf(languageId);
+    if (index > -1) {
+      this.parserExceptionConfig.problematicLanguages.splice(index, 1);
+    }
+  }
+
+  /**
+   * Remove extension from exception list
+   */
+  removeExtensionException(extension: string): void {
+    if (!extension.startsWith('.')) {
+      extension = '.' + extension;
+    }
+    
+    const index = this.parserExceptionConfig.problematicExtensions.indexOf(extension);
+    if (index > -1) {
+      this.parserExceptionConfig.problematicExtensions.splice(index, 1);
+    }
+  }
+
+  /**
+   * Update parser exception configuration
+   */
+  updateParserExceptionConfig(newConfig: Partial<ParserExceptionConfig>): void {
+    this.parserExceptionConfig = { ...this.parserExceptionConfig, ...newConfig };
   }
 }

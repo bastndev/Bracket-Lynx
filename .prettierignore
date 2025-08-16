@@ -2,5 +2,7 @@
 package.json
 tsconfig.json
 
+src/core
+src/lens
+src/actions
 src/extension.ts
-src/lens/lens-rules.ts
