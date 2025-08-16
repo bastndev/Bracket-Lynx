@@ -1,4 +1,4 @@
-import { SUPPORTED_LANGUAGES, ALLOWED_JSON_FILES, SupportedLanguage, escapeRegExp } from '../core/utils';
+import { SUPPORTED_LANGUAGES, ALLOWED_JSON_FILES, SupportedLanguage, escapeRegExp } from '../core/performance-config';
 import { formatAsyncFunction, formatComplexFunction, isAsyncFunction, isComplexFunction, FUNCTION_SYMBOLS } from './decorators/js-ts-decorator-function';
 
 // WORD LIMITS - Controls how many words are displayed
@@ -110,7 +110,7 @@ export const FILTER_RULES: FilterRules = {
 };
 
 // Re-export constants for backward compatibility
-export { SUPPORTED_LANGUAGES, ALLOWED_JSON_FILES } from '../core/utils';
+export { SUPPORTED_LANGUAGES, ALLOWED_JSON_FILES } from '../core/performance-config';
 export const { MAX_HEADER_WORDS, MAX_EXCEPTION_WORDS, MAX_CSS_WORDS, MAX_ARROW_WORDS, MAX_COLLECTION_ARROW_WORDS } = WORD_LIMITS;
 export { FUNCTION_SYMBOLS };
 export const { EXCEPTION_WORDS, CSS_RELATED_WORDS, TRY_CATCH_KEYWORDS, IF_ELSE_KEYWORDS } = KEYWORDS;
