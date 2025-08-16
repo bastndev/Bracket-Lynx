@@ -17,7 +17,7 @@ When a user activates the **Bracket Lynx** extension in VS Code:
 7. Supporting **Performance Optimizations** ensure smooth operation across different file sizes
 
 > 💡 **Smart Language Detection:**  
-> Bracket Lynx uses intelligent language-specific decorators alongside a universal system, supporting 25+ programming languages with specialized rules for Astro, Vue, Svelte, and JavaScript/TypeScript.
+> Bracket Lynx uses intelligent language-specific decorators alongside a universal system, supporting 11 programming languages and frameworks with specialized rules for Astro, Vue, Svelte, and JavaScript/TypeScript.
 
 ---
 
@@ -232,7 +232,7 @@ The **lens system** provides core bracket detection and decoration:
 - 📊 **Performance Integration**: Cache utilization and optimization
 
 **language-formatter.ts** - Language-specific formatting:
-- 🌐 **Multi-Language Support**: 25+ programming languages
+- 🌐 **Multi-Language Support**: 11 programming languages and frameworks
 - 🎨 **Context-Aware Formatting**: Intelligent header generation
 - 🎯 **Smart Filtering**: Language-specific content rules
 - 📝 **Header Generation**: Meaningful context extraction
@@ -388,17 +388,12 @@ bracket-lynx/
 
 ## 🌐 Language Support & Activation
 
-### Supported Languages (25+)
+### Supported Languages (11)
 
 **Core Web Technologies:**
 ```
 JavaScript • TypeScript • React (JSX/TSX) • Vue.js • Svelte • Astro
-HTML • CSS • SCSS • Sass • Less • JSON • JSONC
-```
-
-**Backend & Systems:**
-```
-Python • Java • C/C++ • C# • Rust • Go • Dart • PHP
+HTML • CSS • SCSS • JSON
 ```
 
 ### Activation Events
@@ -486,7 +481,7 @@ BracketLynxError (base)
 
 - **VS Code**: Version 1.74.0 or higher
 - **Memory**: Optimized for minimal usage with automatic cleanup
-- **Languages**: Supports 25+ programming languages
+- **Languages**: Supports 11 programming languages and frameworks
 
 ### Key Configuration Options
 
@@ -547,7 +542,7 @@ BracketLynxError (base)
 
 - 🎯 **Hybrid System**: Universal + specialized decorators for optimal coverage
 - ⚡ **Performance Core**: Advanced caching and optimized parsing engine
-- 🌐 **Multi-Language**: 25+ languages with specialized framework support
+- 🌐 **Multi-Language**: 11 languages with specialized framework support
 - 🎛️ **Granular Control**: Per-file and global control with persistence
 - 🧪 **Comprehensive Testing**: Multi-level test suite with performance benchmarks
 - 🛡️ **Error Resilience**: Robust error handling and recovery mechanisms
