@@ -2,21 +2,22 @@
 
 ## Overview
 
-**Bracket Lynx** enhances the development experience by displaying a decoration next to each closing parenthesis. This decoration indicates the name of the corresponding block or function, along with its start and end line numbers, providing developers with a clear and immediate understanding of the code's structure and scope.
+**Bracket Lynx** enhances the development experience by displaying intelligent decorations next to each closing parenthesis. These decorations indicate the name of the corresponding block or function, along with its start and end line numbers, providing developers with a clear and immediate understanding of the code's structure and scope.
 
 ## How it Works
 
 When a user activates the **Bracket Lynx** extension in VS Code:
 
 1. The `package.json` file registers commands and configuration through the `contributes` field
-2. The **Core Parser Engine** analyzes document content using optimized parsing algorithms
-3. The **Lens System** generates intelligent bracket decorations with contextual headers
-4. The **Toggle System** provides granular control over decoration visibility and behavior
-5. The **Color System** enables dynamic customization of decoration appearance
-6. Supporting **Performance Optimizations** ensure smooth operation across different file sizes
+2. The **Core Performance Engine** analyzes document content using optimized parsing algorithms
+3. The **Multi-Decorator System** generates intelligent bracket decorations with contextual headers for specific languages
+4. The **Universal Lens System** handles general bracket detection and decoration
+5. The **Toggle & Control System** provides granular control over decoration visibility and behavior
+6. The **Color Management System** enables dynamic customization of decoration appearance
+7. Supporting **Performance Optimizations** ensure smooth operation across different file sizes
 
-> 💡 **Smart Filtering:**  
-> Bracket Lynx uses intelligent content filtering to exclude noise symbols and focus on meaningful code structure, supporting 25+ programming languages with language-specific rules.
+> 💡 **Smart Language Detection:**  
+> Bracket Lynx uses intelligent language-specific decorators alongside a universal system, supporting 25+ programming languages with specialized rules for Astro, Vue, Svelte, and JavaScript/TypeScript.
 
 ---
 
@@ -24,329 +25,468 @@ When a user activates the **Bracket Lynx** extension in VS Code:
 
 ```mermaid
 graph TB
-    subgraph "📦 Bracket Lynx Extension"
+    subgraph "📦 Bracket Lynx Extension v0.7.0"
         direction TB
-        A[package.json<br/>📋 Main Configuration]
+        A[package.json<br/>📋 Extension Configuration]
         
-        subgraph "🔧 Core Engine"
+        subgraph "🚀 Core Entry Point"
             direction TB
-            B[extension.ts<br/>🚀 Entry Point]
-            C[BracketLynx<br/>🎯 Main Controller]
-            
-            subgraph "⚡ Parser System"
-                D[OptimizedBracketParser<br/>🏃 Performance Parser]
-                E[BracketParser<br/>📝 Standard Parser]
-                F[parser-exceptions.ts<br/>🛡️ Exception Handler]
-            end
-            
-            subgraph "🎨 Lens System"
-                G[lens.ts<br/>👁️ Core Lens Logic]
-                H[BracketHeaderGenerator<br/>📄 Header Creation]
-                I[BracketDecorationGenerator<br/>✨ Decoration Engine]
-                J[language-formatter.ts<br/>🌐 Language Support]
-                K[lens-rules.ts<br/>📋 Filtering Rules]
-            end
+            B[extension.ts<br/>🎯 Main Controller & Event Orchestrator]
         end
         
-        subgraph "🎛️ Control Systems"
-            direction LR
-            L[toggle.ts<br/>🔄 Toggle Manager]
-            M[colors.ts<br/>🎨 Color Manager]
-            
-            subgraph "🎯 Action Options"
-                N[🌐 Global Toggle<br/>Extension-wide]
-                O[📄 File Toggle<br/>Per-file control]
-                P[♻️ Refresh<br/>Force update]
-                Q[🎨 Color Picker<br/>Live preview]
-            end
-        end
-        
-        subgraph "⚡ Performance Layer"
+        subgraph "⚡ Performance Core"
             direction TB
-            R[performance-cache.ts<br/>💾 Cache Management]
-            S[performance-parser.ts<br/>🚀 Optimized Parsing]
+            C[performance-config.ts<br/>🛡️ Config, Logging & Error Handling]
+            D[performance-cache.ts<br/>💾 Advanced Multi-Level Caching]
+            E[performance-parser.ts<br/>🏃 Optimized Parsing Engine]
+        end
+        
+        subgraph "👁️ Universal Lens System"
+            direction TB
+            F[lens.ts<br/>🎯 BracketLynx Main Controller]
+            G[language-formatter.ts<br/>🌐 Language-Specific Formatting]
+            H[lens-rules.ts<br/>📋 Smart Filtering Rules]
+        end
+        
+        subgraph "🎨 Specialized Decorators"
+            direction LR
+            I[astro-decorator.ts<br/>🌟 Astro/HTML Support]
+            J[vue.decorator.ts<br/>💚 Vue.js Support]
+            K[svelte.decorator.ts<br/>🧡 Svelte Support]
+            L[js-ts-function-decorator.ts<br/>⚡ JS/TS Function Symbols]
+        end
+        
+        subgraph "🎛️ Action & Control Systems"
+            direction LR
+            M[toggle.ts<br/>🔄 Toggle & Menu Management]
+            N[colors.ts<br/>🎨 Dynamic Color System]
             
-            subgraph "📊 Cache System"
-                T[AdvancedCacheManager<br/>🧠 Smart Caching]
-                U[DocumentCache<br/>📄 Doc-level Cache]
-                V[EditorCache<br/>🖥️ Editor-level Cache]
+            subgraph "🎯 Control Features"
+                O[🌐 Global Toggle<br/>Extension-wide]
+                P[📄 File Toggle<br/>Per-file control]
+                Q[♻️ Refresh<br/>Force update]
+                R[🧹 Memory Cleanup<br/>Cache management]
+                S[🎨 Color Picker<br/>Live preview]
             end
         end
         
-        subgraph "📚 Language Support"
-            direction LR
-            W[25+ Languages<br/>🌐 Multi-language]
-            X[Smart Filtering<br/>🎯 Content Rules]
-            Y[Header Generation<br/>📝 Context Headers]
+        subgraph "🧪 Testing Infrastructure"
+            direction TB
+            T[simple.test.ts<br/>🧪 Comprehensive Test Suite]
+            U[test-setup.ts<br/>🛠️ Test Utilities & Mocks]
+            
+            subgraph "📚 Test History"
+                V[test_v0.4.0.md<br/>📝 v0.4.0 Tests]
+                W[test_v0.5.0.md<br/>📝 v0.5.0 Tests]
+                X[test_v0.6.0.md<br/>📝 v0.6.0 Tests]
+                Y[test_v0.7.0.md<br/>📝 v0.7.0 Tests]
+                Z[TESTING_GUIDE.md<br/>📖 Testing Documentation]
+            end
         end
     end
     
     subgraph "🎯 VS Code Integration"
         direction TB
-        Z[Extension Host<br/>🏠 Runtime Environment]
+        AA[Extension Host<br/>🏠 Runtime Environment]
         
         subgraph "⚙️ VS Code APIs"
             direction LR
-            AA[TextEditor API<br/>📝 Editor Integration]
-            AB[Decoration API<br/>✨ Visual Effects]
-            AC[Command API<br/>⌨️ User Commands]
-            AD[Configuration API<br/>⚙️ Settings]
+            BB[TextEditor API<br/>📝 Editor Integration]
+            CC[Decoration API<br/>✨ Visual Effects]
+            DD[Command API<br/>⌨️ User Commands]
+            EE[Configuration API<br/>⚙️ Settings Management]
         end
         
-        AE[User Interface<br/>👤 Editor Experience]
+        FF[User Interface<br/>👤 Enhanced Editor Experience]
     end
     
-    %% Main connections
+    %% Main flow connections
     A --> B
     B --> C
-    C --> D
-    C --> E
-    C --> F
-    G --> H
-    G --> I
-    G --> J
-    G --> K
-    L --> N
-    L --> O
-    L --> P
+    B --> D
+    B --> E
+    B --> F
+    B --> G
+    B --> H
+    B --> I
+    B --> J
+    B --> K
+    B --> L
+    B --> M
+    B --> N
+    
+    %% Core system interactions
+    F --> G
+    F --> H
+    F --> D
+    F --> E
+    M --> O
+    M --> P
     M --> Q
-    R --> T
-    R --> U
-    R --> V
-    S --> D
+    M --> R
+    N --> S
     
-    %% Integration connections
-    A -.-> Z
-    C -.-> AA
-    I -.-> AB
-    L -.-> AC
-    M -.-> AC
-    B -.-> AD
-    AA --> AE
-    AB --> AE
-    AC --> AE
-    Z --> AA
-    Z --> AB
-    Z --> AC
-    Z --> AD
+    %% Testing connections
+    T --> U
+    T --> V
+    T --> W
+    T --> X
+    T --> Y
+    U --> Z
     
-    %% Cross-system connections
-    C --> G
-    C --> L
-    C --> M
-    C --> R
-    G --> R
-    L --> C
+    %% VS Code integration
+    A -.-> AA
+    B -.-> BB
+    F -.-> CC
+    I -.-> CC
+    J -.-> CC
+    K -.-> CC
+    M -.-> DD
+    N -.-> DD
+    B -.-> EE
+    AA --> BB
+    AA --> CC
+    AA --> DD
+    AA --> EE
+    BB --> FF
+    CC --> FF
+    DD --> FF
+    
+    %% Cross-system dependencies
+    F --> C
+    I --> C
+    J --> C
+    K --> C
     M --> C
+    N --> C
     
     %% Styling
     classDef mainConfig fill:#ff6b6b,stroke:#333,stroke-width:2px,color:#fff
     classDef coreEngine fill:#4ecdc4,stroke:#333,stroke-width:2px,color:#fff
-    classDef parser fill:#45b7d1,stroke:#333,stroke-width:2px,color:#fff
+    classDef performance fill:#45b7d1,stroke:#333,stroke-width:2px,color:#fff
     classDef lens fill:#96ceb4,stroke:#333,stroke-width:2px,color:#fff
-    classDef controls fill:#feca57,stroke:#333,stroke-width:2px,color:#000
-    classDef performance fill:#a8e6cf,stroke:#333,stroke-width:2px,color:#000
+    classDef decorators fill:#feca57,stroke:#333,stroke-width:2px,color:#000
+    classDef controls fill:#ff9ff3,stroke:#333,stroke-width:2px,color:#000
+    classDef testing fill:#a8e6cf,stroke:#333,stroke-width:2px,color:#000
     classDef integration fill:#dda0dd,stroke:#333,stroke-width:2px,color:#000
     classDef output fill:#ffb3ba,stroke:#333,stroke-width:2px,color:#000
     
     class A mainConfig
-    class B,C coreEngine
-    class D,E,F parser
-    class G,H,I,J,K lens
-    class L,M,N,O,P,Q controls
-    class R,S,T,U,V performance
-    class W,X,Y lens
-    class Z,AA,AB,AC,AD integration
-    class AE output
-
+    class B coreEngine
+    class C,D,E performance
+    class F,G,H lens
+    class I,J,K,L decorators
+    class M,N,O,P,Q,R,S controls
+    class T,U,V,W,X,Y,Z testing
+    class AA,BB,CC,DD,EE integration
+    class FF output
 ```
 
 ## 🎯 Core Systems
 
-### 🔧 Parser Engine
+### 🚀 Entry Point & Orchestration
 
-The heart of Bracket Lynx is its **dual-parser system** designed for optimal performance:
+The **extension.ts** serves as the main orchestrator, managing:
 
-- **OptimizedBracketParser**: High-performance parser with incremental parsing capabilities
-- **Standard BracketParser**: Fallback parser for complex scenarios
-- **Exception Handler**: Manages parsing exceptions for problematic files (minified, Astro, etc.)
+- **Extension Lifecycle**: Activation, deactivation, and cleanup
+- **Event Handling**: Document changes, configuration updates, and editor events
+- **System Initialization**: Setting up decorators, error handling, and persistent state
+- **Universal Updates**: Coordinating between specialized decorators and universal lens
 
 **Key Features:**
-- 🚀 **Incremental Parsing**: Updates only changed portions of documents
-- 💾 **Smart Caching**: Multi-level cache system with hit ratio optimization  
-- 🎯 **Performance Filters**: Automatic detection and handling of large files
-- 🛡️ **Error Recovery**: Graceful handling of parsing failures
+- 🎯 **Smart Activation**: Language-specific activation events
+- 🔄 **Event Coordination**: Unified handling of VS Code events
+- 🛡️ **Error Recovery**: Comprehensive error handling and logging
+- 🧹 **Memory Management**: Automatic cleanup and state persistence
 
-### 👁️ Lens System
+### ⚡ Performance Core
 
-The **Lens System** transforms parsed bracket data into meaningful visual decorations:
+The **performance core** consists of three main components:
 
+**performance-config.ts** - Central configuration and utilities:
+- 🛡️ **Error Handling**: Comprehensive error classes and logging system
+- ⚙️ **Configuration Management**: Performance limits and language support
+- 🧪 **Utilities**: Text processing, validation, and helper functions
+- 📊 **Logging System**: Multi-level logging with categorization
+
+**performance-cache.ts** - Advanced caching system:
+- 💾 **Multi-Level Caching**: Document, editor, and parse state caches
+- 🧠 **Smart Management**: Automatic cleanup and memory optimization
+- 📈 **Performance Metrics**: Cache hit ratios and health monitoring
+- 🔄 **Incremental Updates**: Efficient partial cache invalidation
+
+**performance-parser.ts** - Optimized parsing engine:
+- 🏃 **High-Performance Parsing**: Optimized algorithms for large files
+- 🎯 **Smart Filtering**: Content-aware parsing with exception handling
+- 📊 **Performance Monitoring**: Timing and memory usage tracking
+- 🛡️ **Fallback Mechanisms**: Graceful degradation for problematic files
+
+### 👁️ Universal Lens System
+
+The **lens system** provides core bracket detection and decoration:
+
+**lens.ts (BracketLynx)** - Main universal controller:
+- 🎯 **Bracket Detection**: Universal bracket parsing and matching
+- ✨ **Decoration Management**: Dynamic decoration creation and updates
+- 🔄 **State Management**: Document and editor state tracking
+- 📊 **Performance Integration**: Cache utilization and optimization
+
+**language-formatter.ts** - Language-specific formatting:
+- 🌐 **Multi-Language Support**: 25+ programming languages
+- 🎨 **Context-Aware Formatting**: Intelligent header generation
+- 🎯 **Smart Filtering**: Language-specific content rules
+- 📝 **Header Generation**: Meaningful context extraction
+
+**lens-rules.ts** - Intelligent filtering rules:
+- 🎯 **Content Filtering**: Noise symbol removal and focus rules
+- 📋 **Rule Engine**: Language-specific filtering logic
+- 🛡️ **Exception Handling**: Special case management
+- 🔍 **Pattern Recognition**: Advanced content analysis
+
+### 🎨 Specialized Decorators
+
+**Language-Specific Decorators:**
+
+**astro-decorator.ts** - Astro/HTML support:
+- 🌟 **Astro Framework**: Specialized Astro file handling
+- 🏷️ **HTML Integration**: HTML tag and structure support
+- 🎯 **Template Analysis**: Component and template parsing
+- ⚡ **Performance Optimized**: Efficient processing for complex templates
+
+**vue.decorator.ts** - Vue.js support:
+- 💚 **Vue Components**: Single File Component (SFC) support
+- 🎨 **Template Processing**: Vue template syntax handling
+- 🔄 **Reactive Updates**: Vue-specific state management
+- 🛠️ **Composition API**: Modern Vue 3 support
+
+**svelte.decorator.ts** - Svelte support:
+- 🧡 **Svelte Components**: .svelte file processing
+- 🎯 **Compile-Time Analysis**: Svelte-specific syntax handling
+- 🔄 **Reactivity Tracking**: Svelte reactivity patterns
+- ⚡ **Optimized Rendering**: Efficient decoration updates
+
+**js-ts-function-decorator.ts** - JavaScript/TypeScript function symbols:
+- ⚡ **Function Detection**: Arrow functions, async functions, methods
+- 🎨 **Symbol Management**: Customizable function symbols
+- 🔧 **TypeScript Support**: Generic and complex type handling
+- 📊 **Pattern Recognition**: Advanced function pattern matching
+
+**Symbol System:**
 ```typescript
-// Core components working together
-BracketParser → BracketHeaderGenerator → BracketDecorationGenerator → VS Code Decorations
+FUNCTION_SYMBOLS = {
+  NORMAL_ARROW: '❨❩➤',
+  COLLECTION_ARROW: '⮞',
+  ASYNC_FUNCTION: '⧖',
+  COMPLEX_FUNCTION: '⇄'
+}
 ```
 
-**Intelligence Features:**
-- 📝 **Context Headers**: Generates meaningful headers from surrounding code
-- 🎯 **Smart Filtering**: Removes noise symbols and focuses on structure  
-- 🌐 **Language Awareness**: Adapts behavior for different programming languages
-- ✨ **Dynamic Decorations**: Real-time updates as code changes
+### 🎛️ Action & Control Systems
 
-### 🎛️ Control Systems
-
-**Toggle System** – Granular and persistent control over decoration behavior, with advanced memory management and interactive menu:
+**toggle.ts** - Advanced toggle and menu management:
 
 | Control Type         | Scope           | Persistence         | Description |
 |---------------------|-----------------|---------------------|-------------|
-| 🌐 **Global Toggle** | Extension-wide  | Persistent (Config) | Enable/disable for all files, state saved across sessions |
-| 📄 **File Toggle**   | Per-file        | Persistent (Config) | Enable/disable decorations per file, state saved across sessions |
-| ♻️ **Refresh**       | Current file    | Immediate           | Force update decorations for current file |
-| 🧹 **Memory Cleanup**| Extension-wide  | Immediate           | Clean up memory for closed/unused editors, auto and manual |
-| 🧠 **Memory Stats**  | Extension-wide  | Immediate           | Show memory usage and health in menu |
-| 🛠️ **Interactive Menu** | Extension-wide | Immediate        | QuickPick menu for all actions, with live stats |
+| 🌐 **Global Toggle** | Extension-wide  | Configuration       | Enable/disable across all files |
+| 📄 **File Toggle**   | Per-file        | Configuration       | Individual file control |
+| ♻️ **Refresh**       | Current file    | Immediate           | Force decoration update |
+| 🧹 **Memory Cleanup**| Extension-wide  | Immediate           | Cache and memory management |
+| 🛠️ **Interactive Menu** | Extension-wide | Dynamic          | QuickPick interface with live stats |
 
-**Color System** – Advanced color customization and live preview:
+**colors.ts** - Dynamic color management system:
 
 | Feature              | Capability                | Persistence         |
 |----------------------|--------------------------|---------------------|
-| 🌈 **Built-in Colors** | Predefined color palette | Workspace-wide      |
-| #️⃣ **Custom Hex**     | Any valid hex color      | Workspace-wide      |
-| 👀 **Live Preview**    | Real-time color changes  | Temporary           |
+| 🌈 **Preset Colors** | Built-in color palette   | Workspace           |
+| #️⃣ **Custom Colors**  | Hex color input          | Workspace           |
+| 👀 **Live Preview**    | Real-time updates        | Session             |
 | 🎨 **Color Picker**    | Interactive selection    | Immediate           |
+| 🔄 **Auto-Sync**      | Configuration sync       | Persistent          |
 
-**Persistence & Memory Management**
+### 🧪 Testing Infrastructure
 
-- Global and per-file enable/disable states are saved in VS Code configuration for session persistence.
-- Disabled files and global state are automatically loaded and saved.
-- Automatic and manual memory cleanup for disabled editors, with periodic timer and force cleanup option.
-- Memory statistics (entries, footprint, health) shown in menu for transparency and debugging.
+**Comprehensive Test Suite:**
 
-**User Experience Enhancements**
+**simple.test.ts** - Main test file:
+- 🚀 **Quick Tests**: Basic functionality (5s timeout)
+- 🔄 **Integration Tests**: System integration (10s timeout)  
+- ⚡ **Performance Tests**: Large file and memory tests (30s timeout)
+- 📊 **Metrics Validation**: Performance benchmarks
 
-- Interactive QuickPick menu for all control actions, including color change, refresh, cleanup, and stats.
-- Informative messages for all actions (enable/disable, refresh, cleanup, color change).
-- Robust error handling and legacy key cleanup for disabled editors.
+**test-setup.ts** - Test utilities and mocks:
+- 🛠️ **Mock System**: VS Code API mocking
+- 📝 **Test Data**: Sample code generation
+- ⏱️ **Performance Tools**: Timing and memory measurement
+- 🎯 **Language Samples**: Multi-language test cases
 
-## ⚡ Performance Architecture
-
-### 📊 Multi-Level Caching
-
+**Test Categories:**
+```typescript
+TEST_CONFIG = {
+  QUICK_TIMEOUT: 5000,
+  INTEGRATION_TIMEOUT: 10000,
+  PERFORMANCE_TIMEOUT: 30000,
+  PERFORMANCE_LIMITS: {
+    LARGE_FILE_PARSE_MS: 2000,
+    MULTIPLE_PARSES_MS: 5000,
+    MEMORY_INCREASE_MB: 50
+  }
+}
 ```
-Document Level Cache ──────┐
-                          ├── AdvancedCacheManager
-Editor Level Cache ────────┤
-                          │
-Parse State Cache ─────────┘
-```
-
-**Cache Strategy:**
-- **Document Cache**: Stores parsed bracket information per document
-- **Editor Cache**: Maintains decoration state per editor instance  
-- **Parse State Cache**: Optimizes incremental parsing operations
-- **Memory Management**: Automatic cleanup and low-memory mode
-
-### 🚀 Performance Optimizations
-
-- **File Size Limits**: Configurable limits for large files (default: 10MB)
-- **Decoration Limits**: Maximum decorations per file (default: 500)
-- **Debouncing**: Smart update timing to prevent excessive re-parsing
-- **Background Processing**: Non-blocking operations for large files
-
-## 🌐 Language Support
-
-### Supported Languages (25+)
-
-```
-JavaScript/TypeScript • React/JSX • Vue • Svelte • Astro
-CSS/SCSS/Sass/Less • HTML/XML • JSON/JSONC
-Python • Java • C/C++ • C# • Rust • Go • Dart • PHP
-```
-
-### 🎯 Smart Filtering Rules
-
-**Content Filtering System:**
-- **Symbol Exclusion**: Removes noise symbols (`!`, `$`, `%`, etc.)
-- **Word Limiting**: Focuses on meaningful code structure
-- **Exception Handling**: Special rules for keywords like `export`
-- **Language-Specific**: Adapts filtering based on file type
 
 ## 📁 Project Structure
 
 ```
 bracket-lynx/
 ├── src/
-│   ├── extension.ts                 # 🚀 Main entry point
-│   ├── core/                        # ⚡ Performance systems
-│   │   ├── config.ts                # ⚙️ Extension config manager
-│   │   ├── performance-cache.ts     # 💾 Advanced caching
-│   │   ├── performance-parser.ts    # 🏃 Optimized parsing
-│   │   ├── parser-exceptions.ts     # 🛡️ Exception handling
-│   │   └── utils.ts                 # 🛠️ Core utilities
-│   ├── lens/                        # 👁️ Core lens system
-│   │   ├── lens.ts                  # 🎯 Main lens logic
-│   │   ├── language-formatter.ts    # 🌐 Language support
-│   │   ├── lens-rules.ts            # 📋 Filtering rules
-│   │   └── decorators/
-│   │       └── astrojs-decorator.ts # 🌟 AstroJS specific decorator
+│   ├── extension.ts                 # 🚀 Main entry point & orchestration
+│   ├── core/                        # ⚡ Performance & configuration
+│   │   ├── performance-config.ts    # 🛡️ Config, logging & error handling
+│   │   ├── performance-cache.ts     # 💾 Advanced multi-level caching
+│   │   └── performance-parser.ts    # 🏃 Optimized parsing engine
+│   ├── lens/                        # 👁️ Universal lens system
+│   │   ├── lens.ts                  # 🎯 BracketLynx main controller
+│   │   ├── language-formatter.ts    # 🌐 Language-specific formatting
+│   │   ├── lens-rules.ts            # 📋 Smart filtering rules
+│   │   └── decorators/              # 🎨 Specialized decorators
+│   │       ├── astro-decorator.ts   # 🌟 Astro/HTML support
+│   │       ├── vue.decorator.ts     # 💚 Vue.js support
+│   │       ├── svelte.decorator.ts  # 🧡 Svelte support
+│   │       └── js-ts-function-decorator.ts # ⚡ JS/TS function symbols
 │   ├── actions/                     # 🎛️ Control systems
-│   │   ├── toggle.ts                # 🔄 Toggle management
-│   │   └── colors.ts                # 🎨 Color system
-│   └── __test__/                    # 🧪 Test suite
-│       ├── extension.test.ts        # 🧪 Extension tests
-│       ├── test-feature_astro.md    # 🧪 Astro feature test
-│       ├── test-refactor.md         # 🧪 Refactor test
-│       ├── test-v0.4.0.md           # 🧪 v0.4.0 test
-│       ├── test-v0.5.0.md           # 🧪 v0.5.0 test
-│       ├── test-v0.6.0.md           # 🧪 v0.6.0 test
-│       └── TESTING_GUIDE.md         # 📖 Testing guide
+│   │   ├── toggle.ts                # 🔄 Toggle & menu management
+│   │   └── colors.ts                # 🎨 Dynamic color system
+│   └── __test__/                    # 🧪 Testing infrastructure
+│       ├── simple.test.ts           # 🧪 Comprehensive test suite
+│       ├── test-setup.ts            # 🛠️ Test utilities & mocks
+│       ├── TESTING_GUIDE.md         # 📖 Testing documentation
+│       └── test-history/            # 📚 Version test history
+│           ├── test_v0.4.0.md       # 📝 v0.4.0 tests
+│           ├── test_v0.5.0.md       # 📝 v0.5.0 tests
+│           ├── test_v0.6.0.md       # 📝 v0.6.0 tests
+│           └── test_v0.7.0.md       # 📝 v0.7.0 tests
 ├── assets/                          # 🖼️ Resources
 │   ├── icon.png                     # 🖼️ Extension icon
 │   └── images/
 │       ├── screenshot.jpg           # 🖼️ Screenshot
 │       └── star.png                 # 🖼️ Star icon
-├── package.json                     # 📋 Extension config
-├── README.md                        # 📖 Documentation
-├── ARCHITECTURE.md                  # 🏗️ Architecture overview
-├── CHANGELOG.md                     # 📝 Changelog
-├── CODE_OF_CONDUCT.md               # 📜 Code of conduct
+├── dist/                            # 📦 Build output
+├── node_modules/                    # 📚 Dependencies
+├── .vscode/                         # 🔧 VS Code workspace settings
+├── package.json                     # 📋 Extension configuration
+├── README.md                        # 📖 User documentation
+├── ARCHITECTURE.md                  # 🏗️ Architecture overview (this file)
+├── CHANGELOG.md                     # 📝 Version history
+├── CODE_OF_CONDUCT.md               # 📜 Community guidelines
 ├── CONTRIBUTING.md                  # 🤝 Contribution guide
-├── esbuild.js                       # ⚡ Esbuild config
-├── eslint.config.mjs                # 🧹 ESLint config
-├── LICENSE                          # 📄 License
-├── tsconfig.json                    # 🛠️ TypeScript config
-├── vsc-extension-quickstart.md      # 🚀 VS Code quickstart
+├── esbuild.js                       # ⚡ Build configuration
+├── eslint.config.mjs                # 🧹 Code quality rules
+├── tsconfig.json                    # 🛠️ TypeScript configuration
+├── .mocharc.json                    # 🧪 Test configuration
+├── .prettierrc                      # 🎨 Code formatting
+└── LICENSE                          # 📄 MIT License
 ```
 
-## 🎹 Key Features
+## 🌐 Language Support & Activation
+
+### Supported Languages (25+)
+
+**Core Web Technologies:**
+```
+JavaScript • TypeScript • React (JSX/TSX) • Vue.js • Svelte • Astro
+HTML • CSS • SCSS • Sass • Less • JSON • JSONC
+```
+
+**Backend & Systems:**
+```
+Python • Java • C/C++ • C# • Rust • Go • Dart • PHP
+```
+
+### Activation Events
+
+```json
+"activationEvents": [
+  "onLanguage:javascript", "onLanguage:typescript",
+  "onLanguage:javascriptreact", "onLanguage:typescriptreact",
+  "onLanguage:html", "onLanguage:css", "onLanguage:scss",
+  "onLanguage:vue", "onLanguage:astro", "onLanguage:svelte",
+  "onLanguage:json"
+]
+```
+
+## ⚡ Performance Architecture
+
+### 📊 Multi-Level Caching Strategy
+
+```
+Document Cache     ──┐
+Editor Cache       ──├── AdvancedCacheManager
+Parse State Cache  ──┘       │
+                             ├── Memory Optimization
+                             ├── Auto Cleanup
+                             └── Performance Metrics
+```
+
+### 🚀 Performance Features
+
+- **File Size Management**: Configurable limits (default: 10MB)
+- **Decoration Limits**: Maximum decorations per file (default: 500)
+- **Smart Debouncing**: Intelligent update timing
+- **Incremental Parsing**: Process only changed content
+- **Memory Monitoring**: Automatic cleanup and health tracking
+- **Background Processing**: Non-blocking operations
+
+### 🛡️ Error Handling & Recovery
+
+**Error Class Hierarchy:**
+```typescript
+BracketLynxError (base)
+├── ParseError
+├── CacheError
+├── ConfigurationError
+├── PerformanceError
+├── DecorationError
+└── DocumentError
+```
+
+**Recovery Mechanisms:**
+- **Graceful Degradation**: Fallback to basic parsing
+- **Automatic Retry**: Smart retry logic with exponential backoff
+- **Exception Handling**: Specialized handling for problematic files
+- **Safe Execution**: Wrapped operations with error boundaries
+
+## 🎹 Key Features & Capabilities
 
 ### 🤖 Intelligent Processing
 
-- **Smart Header Generation**: Extracts meaningful context from code structure
-- **Incremental Updates**: Processes only changed portions for performance
-- **Language Adaptation**: Adjusts behavior based on programming language
-- **Error Recovery**: Graceful handling of parsing edge cases
+- **Hybrid Decoration System**: Universal + specialized decorators
+- **Context-Aware Headers**: Language-specific header generation  
+- **Smart Symbol Management**: Customizable function symbols
+- **Incremental Updates**: Efficient partial reprocessing
+- **Multi-Language Detection**: Automatic language adaptation
 
 ### 🎨 Visual Management
 
-- **Dynamic Colors**: 5-color system with live preview capabilities
-- **Flexible Display**: Configurable prefix and styling options
-- **Context-Aware**: Headers adapt to code structure and nesting level
-- **Performance Aware**: Automatic decoration limiting for large files
+- **Dynamic Color System**: Live preview with persistence
+- **Function Symbol Customization**: Configurable visual indicators
+- **Flexible Styling**: Font style and prefix customization
+- **Context-Responsive**: Adapts to code structure and nesting
+- **Performance-Aware**: Automatic limiting for large files
 
-### ⚡ Performance Features
+### ⚡ Performance & Reliability
 
-- **Memory Optimization**: Multi-level caching with automatic cleanup
-- **File Size Handling**: Intelligent processing of large files
-- **Background Operations**: Non-blocking parsing for smooth experience
-- **Metrics Tracking**: Performance monitoring and optimization
+- **Memory Optimization**: Multi-level caching with cleanup
+- **File Size Intelligence**: Automatic handling of large files
+- **Background Processing**: Non-blocking parsing operations
+- **Comprehensive Testing**: Quick, integration, and performance tests
+- **Error Resilience**: Robust exception handling and recovery
 
-## 🚀 Installation & Configuration
+## 🚀 Installation & Usage
 
 ### Requirements
 
 - **VS Code**: Version 1.74.0 or higher
-- **Operating System**: Windows, macOS, Linux
-- **Memory**: Optimized for minimal memory usage
+- **Memory**: Optimized for minimal usage with automatic cleanup
+- **Languages**: Supports 25+ programming languages
 
 ### Key Configuration Options
 
@@ -354,32 +494,63 @@ bracket-lynx/
 {
   "bracketLynx.mode": "auto",
   "bracketLynx.color": "#515151",
+  "bracketLynx.fontStyle": "italic",
+  "bracketLynx.prefix": "‹~ ",
   "bracketLynx.maxFileSize": 10485760,
   "bracketLynx.maxDecorationsPerFile": 500,
-  "bracketLynx.enablePerformanceFilters": true
+  "bracketLynx.enablePerformanceFilters": true,
+  "bracketLynx.globalEnabled": true,
+  "bracketLynx.debug": false
 }
 ```
 
 ## 🎯 Usage Workflow
 
 1. **Install**: Search "Bracket Lynx" in VS Code Extensions
-2. **Activate**: Extension activates automatically for supported languages
-3. **Control**: Use `Ctrl+Shift+P` → "Bracket Lynx: Toggle & Refresh 🛠️"
-4. **Customize**: Access color picker through toggle menu or command palette
-5. **Monitor**: Performance metrics available in debug mode
+2. **Auto-Activation**: Extension activates automatically for supported languages
+3. **Interactive Control**: Use `Ctrl+Shift+P` → "Bracket Lynx: Toggle & Refresh 🛠️"
+4. **Customize Colors**: Access color picker through toggle menu
+5. **Monitor Performance**: Debug mode provides performance metrics
+6. **File-Level Control**: Per-file enable/disable with persistence
+
+## 🔮 Architecture Benefits
+
+### 🎯 Modularity & Maintainability
+
+- **Separation of Concerns**: Clear boundaries between systems
+- **Specialized Decorators**: Language-specific optimizations
+- **Universal Fallback**: Comprehensive coverage for all languages
+- **Centralized Configuration**: Single source of truth for settings
+- **Comprehensive Testing**: Multiple test categories with history tracking
+
+### ⚡ Performance & Scalability
+
+- **Multi-Level Caching**: Document, editor, and parse caches
+- **Incremental Processing**: Only parse changed content
+- **Memory Management**: Automatic cleanup and monitoring
+- **Smart Limits**: Configurable thresholds for large files
+- **Background Operations**: Non-blocking processing
+
+### 🛡️ Reliability & Error Handling
+
+- **Comprehensive Error System**: Specialized error classes
+- **Graceful Degradation**: Fallback mechanisms
+- **Recovery Chains**: Multi-step error recovery
+- **Safe Execution**: Error boundaries and validation
+- **Detailed Logging**: Multi-level logging with categorization
 
 ## Conclusion
 
-**Bracket Lynx** delivers an intelligent, performance-optimized solution for code structure visualization in Visual Studio Code. Through its sophisticated architecture combining advanced parsing, intelligent caching, and flexible control systems, it provides developers with enhanced code readability without compromising editor performance.
+**Bracket Lynx v0.7.0** represents a sophisticated, performance-optimized architecture that combines universal bracket detection with specialized language decorators. The hybrid approach ensures comprehensive coverage while maintaining optimal performance through advanced caching, intelligent parsing, and robust error handling.
 
-### Key Benefits
+### Key Architectural Strengths
 
-- 🎯 **Intelligent Structure Visualization**: Smart bracket headers with contextual information
-- ⚡ **Performance Optimized**: Multi-level caching and incremental parsing
-- 🌐 **Multi-Language Support**: 25+ programming languages with language-specific rules
-- 🎛️ **Granular Control**: Per-file and global toggle capabilities
-- 🎨 **Visual Customization**: Advanced color system with live preview
-- 💾 **Memory Efficient**: Automatic cleanup and low-memory mode
-- 🛡️ **Error Resilient**: Robust exception handling and graceful degradation
+- 🎯 **Hybrid System**: Universal + specialized decorators for optimal coverage
+- ⚡ **Performance Core**: Advanced caching and optimized parsing engine
+- 🌐 **Multi-Language**: 25+ languages with specialized framework support
+- 🎛️ **Granular Control**: Per-file and global control with persistence
+- 🧪 **Comprehensive Testing**: Multi-level test suite with performance benchmarks
+- 🛡️ **Error Resilience**: Robust error handling and recovery mechanisms
+- 💾 **Memory Efficient**: Automatic cleanup and intelligent cache management
 
-**Result**: A maintainable, scalable system that enhances code comprehension while maintaining optimal performance across projects of any size. Perfect for developers who value both functionality and performance in their development environment.
+**Result**: A maintainable, scalable, and highly performant VS Code extension that enhances code comprehension across a wide range of programming languages and frameworks, while maintaining optimal editor performance and providing extensive customization options for developers.
