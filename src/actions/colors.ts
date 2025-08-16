@@ -420,3 +420,22 @@ export async function restoreColorFromGlobal(): Promise<void> {
     );
   }
 }
+
+/**
+ * Reset color to factory default
+ */
+export async function resetColorToDefault(): Promise<void> {
+  try {
+    currentColor = DEFAULT_COLOR;
+    await saveColorToConfiguration(DEFAULT_COLOR);
+    
+    if (bracketLynxProvider) {
+      await recreateAllBracketLynxDecorations(DEFAULT_COLOR);
+    }
+    
+    console.log(`🎨 Color reset to default: ${DEFAULT_COLOR}`);
+  } catch (error) {
+    console.error('🎨 Error resetting color to default:', error);
+    throw error;
+  }
+}
