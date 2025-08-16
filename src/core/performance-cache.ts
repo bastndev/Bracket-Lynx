@@ -1,14 +1,9 @@
 import * as vscode from 'vscode';
-import {
-  DocumentDecorationCacheEntry,
-  EditorDecorationCacheEntry,
-  BracketEntry,
-  BracketDecorationSource,
-} from '../lens/lens';
-import { CACHE_CONFIG } from './performance-config';
+import { DocumentDecorationCacheEntry,EditorDecorationCacheEntry,BracketEntry,BracketDecorationSource,} from '../lens/lens';
+import { CACHE_CONFIG, createHash,safeExecute, safeExecuteAsync, CacheError, PerformanceError,logger, LogCategory,validateDocument} from './performance-config';
 
 // ============================================================================
-// PERFORMANCE CACHE INTERFACES
+// 🎯 UNIFIED CACHE INTERFACES - Clean and Simple
 // ============================================================================
 
 export interface CacheMetrics {
@@ -19,41 +14,45 @@ export interface CacheMetrics {
   lastCleanup: number;
 }
 
-export interface AdvancedDocumentCacheEntry
-  extends DocumentDecorationCacheEntry {
-  textHash: string;
-  timestamp: number;
-  accessCount: number;
-  lastAccessed: number;
-  fileSize: number;
+export interface AdvancedDocumentCacheEntry extends DocumentDecorationCacheEntry {
+  readonly textHash: string;
+  readonly timestamp: number;
+  readonly accessCount: number;
+  readonly lastAccessed: number;
+  readonly fileSize: number;
 }
 
 export interface AdvancedEditorCacheEntry extends EditorDecorationCacheEntry {
-  timestamp: number;
-  lastAccessed: number;
+  readonly timestamp: number;
+  readonly lastAccessed: number;
 }
 
 export interface CacheConfig {
-  maxDocumentCacheSize: number;
-  maxEditorCacheSize: number;
-  documentCacheTTL: number; // milliseconds
-  editorCacheTTL: number; // milliseconds
-  cleanupInterval: number; // milliseconds
-  enableMetrics: boolean;
+  readonly maxDocumentCacheSize: number;
+  readonly maxEditorCacheSize: number;
+  readonly documentCacheTTL: number; // milliseconds
+  readonly editorCacheTTL: number; // milliseconds
+  readonly cleanupInterval: number; // milliseconds
+  readonly enableMetrics: boolean;
+  // 🧠 Advanced memory management
+  readonly memoryPressureThreshold: number; // MB
+  readonly aggressiveCleanupThreshold: number; // MB
+  readonly lowMemoryMode: boolean;
+  readonly maxMemoryUsage: number; // MB
 }
 
 // ============================================================================
-// ADVANCED CACHE MANAGER
+// 🚀 ADVANCED CACHE MANAGER - Unified and Optimized
 // ============================================================================
 
 export class AdvancedCacheManager {
   private static instance: AdvancedCacheManager;
 
-  // Cache storage
+  // 🎯 Cache storage - simplified
   private documentCache = new Map<string, AdvancedDocumentCacheEntry>();
   private editorCache = new Map<vscode.TextEditor, AdvancedEditorCacheEntry>();
 
-  // Performance metrics
+  // 📊 Performance metrics
   private metrics: CacheMetrics = {
     hits: 0,
     misses: 0,
@@ -62,7 +61,7 @@ export class AdvancedCacheManager {
     lastCleanup: Date.now(),
   };
 
-  // Configuration
+  // ⚙️ Configuration with memory management
   private config: CacheConfig = {
     maxDocumentCacheSize: CACHE_CONFIG.MAX_DOCUMENT_CACHE_SIZE,
     maxEditorCacheSize: CACHE_CONFIG.MAX_EDITOR_CACHE_SIZE,
@@ -70,15 +69,20 @@ export class AdvancedCacheManager {
     editorCacheTTL: CACHE_CONFIG.EDITOR_CACHE_TTL,
     cleanupInterval: CACHE_CONFIG.CLEANUP_INTERVAL,
     enableMetrics: true,
+    // 🧠 Memory management settings
+    memoryPressureThreshold: 50, // 50MB
+    aggressiveCleanupThreshold: 100, // 100MB
+    lowMemoryMode: false,
+    maxMemoryUsage: 200, // 200MB
   };
 
-  // Cleanup timer
+  // ⏰ Cleanup timer
   private cleanupTimer?: NodeJS.Timeout;
-
-
+  private memoryMonitorTimer?: NodeJS.Timeout;
 
   private constructor() {
     this.startCleanupTimer();
+    this.startMemoryMonitoring();
   }
 
   static getInstance(): AdvancedCacheManager {
@@ -89,31 +93,16 @@ export class AdvancedCacheManager {
   }
 
   // ============================================================================
-  // DOCUMENT CACHE METHODS
+  // 🎯 DOCUMENT CACHE METHODS - Optimized
   // ============================================================================
-
-  /**
-   * Generate a hash for document content to detect changes
-   */
-  private generateTextHash(text: string): string {
-    let hash = 0;
-    for (let i = 0; i < text.length; i++) {
-      const char = text.charCodeAt(i);
-      hash = (hash << 5) - hash + char;
-      hash = hash & hash; // Convert to 32-bit integer
-    }
-    return hash.toString();
-  }
 
   /**
    * Get document cache entry with LRU and TTL logic
    */
-  getDocumentCache(
-    document: vscode.TextDocument
-  ): AdvancedDocumentCacheEntry | null {
+  getDocumentCache(document: vscode.TextDocument): AdvancedDocumentCacheEntry | null {
     const uri = document.uri.toString();
     const text = document.getText();
-    const textHash = this.generateTextHash(text);
+    const textHash = createHash(text); // 🚀 Use optimized hash from performance-config
     const now = Date.now();
 
     const cached = this.documentCache.get(uri);
@@ -123,25 +112,25 @@ export class AdvancedCacheManager {
       return null;
     }
 
-    // Check TTL
+    // 🕐 Check TTL
     if (now - cached.timestamp > this.config.documentCacheTTL) {
       this.documentCache.delete(uri);
       this.metrics.misses++;
       return null;
     }
 
-    // Check content hash
+    // 🔍 Check content hash
     if (cached.textHash !== textHash) {
       this.documentCache.delete(uri);
       this.metrics.misses++;
       return null;
     }
 
-    // Update LRU data
-    cached.lastAccessed = now;
-    cached.accessCount++;
+    // 🎯 Update LRU data (mutable update for performance)
+    (cached as any).lastAccessed = now;
+    (cached as any).accessCount++;
 
-    // Move to end for LRU (delete and re-add)
+    // 🚀 Move to end for LRU (delete and re-add)
     this.documentCache.delete(uri);
     this.documentCache.set(uri, cached);
 
@@ -159,10 +148,10 @@ export class AdvancedCacheManager {
   ): AdvancedDocumentCacheEntry {
     const uri = document.uri.toString();
     const text = document.getText();
-    const textHash = this.generateTextHash(text);
+    const textHash = createHash(text); // 🚀 Use optimized hash
     const now = Date.now();
 
-    // Enforce cache size limit with LRU eviction
+    // 🧹 Enforce cache size limit with LRU eviction
     if (this.documentCache.size >= this.config.maxDocumentCacheSize) {
       const oldestEntry = this.documentCache.keys().next().value;
       if (oldestEntry) {
@@ -188,7 +177,7 @@ export class AdvancedCacheManager {
   }
 
   // ============================================================================
-  // EDITOR CACHE METHODS
+  // 🎯 EDITOR CACHE METHODS - Optimized
   // ============================================================================
 
   /**
@@ -202,15 +191,15 @@ export class AdvancedCacheManager {
       return null;
     }
 
-    // Check TTL
+    // 🕐 Check TTL
     if (now - cached.timestamp > this.config.editorCacheTTL) {
       cached.dispose();
       this.editorCache.delete(editor);
       return null;
     }
 
-    // Update access time
-    cached.lastAccessed = now;
+    // 🎯 Update access time (mutable for performance)
+    (cached as any).lastAccessed = now;
 
     return cached;
   }
@@ -221,9 +210,9 @@ export class AdvancedCacheManager {
   setEditorCache(editor: vscode.TextEditor): AdvancedEditorCacheEntry {
     const now = Date.now();
 
-    // Enforce cache size limit
+    // 🧹 Enforce cache size limit with LRU eviction
     if (this.editorCache.size >= this.config.maxEditorCacheSize) {
-      // Find oldest entry
+      // 🚀 Find oldest entry efficiently
       let oldestEditor: vscode.TextEditor | null = null;
       let oldestTime = now;
 
@@ -255,7 +244,7 @@ export class AdvancedCacheManager {
   }
 
   // ============================================================================
-  // CACHE MANAGEMENT METHODS
+  // 🧹 CACHE MANAGEMENT METHODS - Unified and Efficient
   // ============================================================================
 
   /**
@@ -266,7 +255,7 @@ export class AdvancedCacheManager {
       const uri = document.uri.toString();
       this.documentCache.delete(uri);
 
-      // Mark related editors as dirty
+      // 🎯 Mark related editors as dirty
       for (const [editor, editorEntry] of this.editorCache) {
         if (editor.document === document) {
           editorEntry.setDirty();
@@ -274,14 +263,8 @@ export class AdvancedCacheManager {
       }
     }
 
-    // Clean up invisible editors
-    for (const [editor, editorEntry] of this.editorCache) {
-      if (vscode.window.visibleTextEditors.indexOf(editor) < 0) {
-        editorEntry.dispose();
-        this.editorCache.delete(editor);
-      }
-    }
-
+    // 🧹 Clean up invisible editors
+    this.cleanupInvisibleEditors();
     this.updateMetrics();
   }
 
@@ -291,7 +274,7 @@ export class AdvancedCacheManager {
   clearAllCache(): void {
     this.documentCache.clear();
 
-    for (const [editor, editorEntry] of this.editorCache) {
+    for (const [, editorEntry] of this.editorCache) {
       editorEntry.setDirty();
     }
 
@@ -299,13 +282,27 @@ export class AdvancedCacheManager {
   }
 
   /**
-   * Automatic cleanup based on TTL and LRU
+   * 🧹 Clean up invisible editors (extracted for reuse)
+   */
+  private cleanupInvisibleEditors(): void {
+    const visibleEditors = new Set(vscode.window.visibleTextEditors);
+    
+    for (const [editor, editorEntry] of this.editorCache) {
+      if (!visibleEditors.has(editor)) {
+        editorEntry.dispose();
+        this.editorCache.delete(editor);
+      }
+    }
+  }
+
+  /**
+   * 🕐 Automatic cleanup based on TTL and LRU
    */
   private performCleanup(): void {
     const now = Date.now();
     let cleanedCount = 0;
 
-    // Clean expired document cache entries
+    // 🧹 Clean expired document cache entries
     for (const [uri, entry] of this.documentCache) {
       if (now - entry.timestamp > this.config.documentCacheTTL) {
         this.documentCache.delete(uri);
@@ -313,7 +310,7 @@ export class AdvancedCacheManager {
       }
     }
 
-    // Clean expired editor cache entries
+    // 🧹 Clean expired editor cache entries
     for (const [editor, entry] of this.editorCache) {
       if (now - entry.timestamp > this.config.editorCacheTTL) {
         entry.dispose();
@@ -322,18 +319,22 @@ export class AdvancedCacheManager {
       }
     }
 
-    this.metrics.lastCleanup = now;
+    // 🧹 Clean invisible editors
+    this.cleanupInvisibleEditors();
+
+    this.metrics = {
+      ...this.metrics,
+      lastCleanup: now,
+    };
     this.updateMetrics();
 
     if (cleanedCount > 0 && this.config.enableMetrics) {
-      console.log(
-        `Bracket Lynx: Cleaned up ${cleanedCount} expired cache entries`
-      );
+      console.log(`🧹 Bracket Lynx: Cleaned up ${cleanedCount} expired cache entries`);
     }
   }
 
   /**
-   * Start automatic cleanup timer
+   * ⏰ Start automatic cleanup timer
    */
   private startCleanupTimer(): void {
     this.cleanupTimer = setInterval(() => {
@@ -342,22 +343,161 @@ export class AdvancedCacheManager {
   }
 
   /**
-   * Update cache metrics
+   * 📊 Update cache metrics
    */
   private updateMetrics(): void {
-    this.metrics.totalSize = this.documentCache.size + this.editorCache.size;
+    this.metrics = {
+      ...this.metrics,
+      totalSize: this.documentCache.size + this.editorCache.size,
+    };
   }
 
+  // ============================================================================
+  // 🧠 MEMORY MANAGEMENT - Advanced Features
+  // ============================================================================
 
+  /**
+   * 🧠 Start memory monitoring
+   */
+  private startMemoryMonitoring(): void {
+    this.memoryMonitorTimer = setInterval(() => {
+      this.performMemoryCheck();
+    }, 30000); // Check every 30 seconds
+  }
 
+  /**
+   * 🔍 Check system memory pressure and perform cleanup if needed
+   */
+  private performMemoryCheck(): void {
+    const memoryUsage = this.getEstimatedMemoryUsage();
+    
+    if (memoryUsage > this.config.aggressiveCleanupThreshold) {
+      this.performCriticalCleanup();
+      this.showMemoryWarning(memoryUsage, 'critical');
+    } else if (memoryUsage > this.config.memoryPressureThreshold) {
+      this.performAggressiveCleanup();
+      this.showMemoryWarning(memoryUsage, 'high');
+    }
+  }
 
+  /**
+   * 📊 Get estimated memory usage in MB
+   */
+  getEstimatedMemoryUsage(): number {
+    // 🎯 Rough estimation based on cache sizes and average entry size
+    const avgDocumentEntrySize = 2048; // 2KB per document entry estimate
+    const avgEditorEntrySize = 512; // 512B per editor entry estimate
+    
+    const documentMemory = this.documentCache.size * avgDocumentEntrySize;
+    const editorMemory = this.editorCache.size * avgEditorEntrySize;
+    
+    return (documentMemory + editorMemory) / (1024 * 1024); // Convert to MB
+  }
 
+  /**
+   * 🚨 Perform critical memory cleanup
+   */
+  private performCriticalCleanup(): void {
+    // 🔥 Aggressive cleanup - remove 75% of cache
+    const documentsToRemove = Math.floor(this.documentCache.size * 0.75);
+    const editorsToRemove = Math.floor(this.editorCache.size * 0.75);
+    
+    // Remove oldest documents
+    let removedDocs = 0;
+    for (const [uri] of this.documentCache) {
+      if (removedDocs >= documentsToRemove) {break;}
+      this.documentCache.delete(uri);
+      removedDocs++;
+    }
+    
+    // Remove oldest editors
+    let removedEditors = 0;
+    for (const [editor, entry] of this.editorCache) {
+      if (removedEditors >= editorsToRemove) {break;}
+      entry.dispose();
+      this.editorCache.delete(editor);
+      removedEditors++;
+    }
+    
+    this.adjustConfigForLowMemory();
+    this.updateMetrics();
+    
+    console.log(`🚨 Critical memory cleanup: removed ${removedDocs} documents, ${removedEditors} editors`);
+  }
 
+  /**
+   * ⚡ Perform aggressive cleanup
+   */
+  private performAggressiveCleanup(): void {
+    // 🎯 Medium cleanup - remove 50% of cache
+    const documentsToRemove = Math.floor(this.documentCache.size * 0.5);
+    const editorsToRemove = Math.floor(this.editorCache.size * 0.5);
+    
+    let removedDocs = 0;
+    for (const [uri] of this.documentCache) {
+      if (removedDocs >= documentsToRemove) {break;}
+      this.documentCache.delete(uri);
+      removedDocs++;
+    }
+    
+    let removedEditors = 0;
+    for (const [editor, entry] of this.editorCache) {
+      if (removedEditors >= editorsToRemove) {break;}
+      entry.dispose();
+      this.editorCache.delete(editor);
+      removedEditors++;
+    }
+    
+    this.updateMetrics();
+    console.log(`⚡ Aggressive cleanup: removed ${removedDocs} documents, ${removedEditors} editors`);
+  }
 
+  /**
+   * ⚙️ Adjust configuration for low memory mode
+   */
+  private adjustConfigForLowMemory(): void {
+    this.config = {
+      ...this.config,
+      maxDocumentCacheSize: Math.floor(this.config.maxDocumentCacheSize * 0.5),
+      maxEditorCacheSize: Math.floor(this.config.maxEditorCacheSize * 0.5),
+      documentCacheTTL: Math.floor(this.config.documentCacheTTL * 0.7),
+      editorCacheTTL: Math.floor(this.config.editorCacheTTL * 0.7),
+      lowMemoryMode: true,
+    };
+  }
 
+  /**
+   * 🔔 Show memory warning to user
+   */
+  private showMemoryWarning(usage: number, level: 'high' | 'critical'): void {
+    const message = `🧠 Bracket Lynx: ${level === 'critical' ? 'Critical' : 'High'} memory usage detected (${usage.toFixed(1)}MB). Cache cleaned up automatically.`;
+    
+    if (level === 'critical') {
+      vscode.window.showWarningMessage(message);
+    } else {
+      console.log(message);
+    }
+  }
+
+  /**
+   * 🔄 Force memory cleanup
+   */
+  forceMemoryCleanup(): void {
+    this.performAggressiveCleanup();
+  }
+
+  /**
+   * 🔄 Force garbage collection if available (Node.js specific)
+   */
+  forceGarbageCollection(): void {
+    if (global.gc) {
+      global.gc();
+      console.log('🗑️ Forced garbage collection');
+    }
+  }
 
   // ============================================================================
-  // PUBLIC API METHODS
+  // 🎯 PUBLIC API METHODS - Clean and Efficient
   // ============================================================================
 
   /**
@@ -367,7 +507,22 @@ export class AdvancedCacheManager {
     return { ...this.metrics };
   }
 
-
+  /**
+   * Get memory metrics for debugging
+   */
+  getMemoryMetrics(): {
+    estimatedUsage: number;
+    documentCacheSize: number;
+    editorCacheSize: number;
+    isLowMemoryMode: boolean;
+  } {
+    return {
+      estimatedUsage: this.getEstimatedMemoryUsage(),
+      documentCacheSize: this.documentCache.size,
+      editorCacheSize: this.editorCache.size,
+      isLowMemoryMode: this.config.lowMemoryMode,
+    };
+  }
 
   /**
    * Get cache hit ratio
@@ -385,15 +540,35 @@ export class AdvancedCacheManager {
   }
 
   /**
+   * Restore normal memory mode settings
+   */
+  restoreNormalMemoryMode(): void {
+    this.config = {
+      ...this.config,
+      maxDocumentCacheSize: CACHE_CONFIG.MAX_DOCUMENT_CACHE_SIZE,
+      maxEditorCacheSize: CACHE_CONFIG.MAX_EDITOR_CACHE_SIZE,
+      documentCacheTTL: CACHE_CONFIG.DOCUMENT_CACHE_TTL,
+      editorCacheTTL: CACHE_CONFIG.EDITOR_CACHE_TTL,
+      lowMemoryMode: false,
+    };
+  }
+
+  /**
    * Dispose and cleanup
    */
   dispose(): void {
+    // 🧹 Clear timers
     if (this.cleanupTimer) {
       clearInterval(this.cleanupTimer);
       this.cleanupTimer = undefined;
     }
+    
+    if (this.memoryMonitorTimer) {
+      clearInterval(this.memoryMonitorTimer);
+      this.memoryMonitorTimer = undefined;
+    }
 
-    // Dispose all editor entries
+    // 🧹 Dispose all editor entries
     for (const [, entry] of this.editorCache) {
       entry.dispose();
     }
@@ -404,14 +579,14 @@ export class AdvancedCacheManager {
 }
 
 // ============================================================================
-// DEBOUNCING AND THROTTLING UTILITIES
+// 🚀 SMART DEBOUNCER - Optimized and Efficient
 // ============================================================================
 
 export class SmartDebouncer {
   private timers = new Map<string, NodeJS.Timeout>();
 
   /**
-   * Smart debounce based on file size and editor activity
+   * 🎯 Smart debounce based on file size and editor activity
    */
   debounce(
     key: string,
@@ -419,13 +594,13 @@ export class SmartDebouncer {
     document: vscode.TextDocument,
     isActiveEditor: boolean = false
   ): void {
-    // Clear existing timer
+    // 🧹 Clear existing timer
     const existingTimer = this.timers.get(key);
     if (existingTimer) {
       clearTimeout(existingTimer);
     }
 
-    // Calculate delay based on file size and editor state
+    // 🎯 Calculate delay based on file size and editor state
     const fileSize = document.getText().length;
     const baseSizeUnit = 16 * 1024; // 16KB
     const sizeMultiplier = Math.pow(
@@ -442,7 +617,7 @@ export class SmartDebouncer {
       2000
     );
 
-    // Set new timer
+    // ⏰ Set new timer
     const timer = setTimeout(() => {
       this.timers.delete(key);
       callback();
@@ -452,7 +627,7 @@ export class SmartDebouncer {
   }
 
   /**
-   * Cancel debounced operation
+   * ❌ Cancel debounced operation
    */
   cancel(key: string): void {
     const timer = this.timers.get(key);
@@ -463,7 +638,7 @@ export class SmartDebouncer {
   }
 
   /**
-   * Dispose all timers
+   * 🧹 Dispose all timers
    */
   dispose(): void {
     for (const timer of this.timers.values()) {

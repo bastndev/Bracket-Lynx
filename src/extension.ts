@@ -3,6 +3,7 @@ import { BracketLynx } from './lens/lens';
 import { AstroDecorator } from './lens/decorators/astrojs-decorator';
 import { setBracketLynxProviderForColors, setAstroDecoratorForColors } from './actions/colors';
 import { showBracketLynxMenu, setBracketLynxProvider, setAstroDecorator, cleanupClosedEditor, initializePersistedState } from './actions/toggle';
+import { initializeErrorHandling, LogLevel, logger } from './core/performance-config';
 
 export let extensionContext: vscode.ExtensionContext;
 
@@ -14,6 +15,15 @@ const updateUniversalDecorations = (editor?: vscode.TextEditor) => {
 
 export const activate = async (context: vscode.ExtensionContext) => {
     extensionContext = context;
+
+    // Initialize error handling system first
+    const config = vscode.workspace.getConfiguration('bracketLynx');
+    const debugMode = config.get('debug', false);
+    initializeErrorHandling({
+        logLevel: debugMode ? LogLevel.DEBUG : LogLevel.WARN
+    });
+
+    logger.info('Bracket Lynx extension activating...', { version: '0.6.1' });
 
     initializePersistedState();
 

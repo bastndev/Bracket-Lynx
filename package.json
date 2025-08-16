@@ -2,7 +2,7 @@
   "name": "bracket-lynx",
   "displayName": "Bracket Lynx",
   "description": "Available now: VSCode • Cursor • Windsurf • Trae.ai • Kiro & (Firebase Studio)... 雨",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "publisher": "bastndev",
   "license": "MIT",
   "engines": {
@@ -47,16 +47,13 @@
     "onLanguage:typescript", 
     "onLanguage:javascriptreact",
     "onLanguage:typescriptreact",
+    "onLanguage:html",
     "onLanguage:css",
     "onLanguage:scss",
-    "onLanguage:sass", 
-    "onLanguage:less",
-    "onLanguage:html",
-    "onLanguage:astro",
     "onLanguage:vue",
+    "onLanguage:astro",
     "onLanguage:svelte",
-    "onLanguage:json",
-    "onLanguage:jsonc"
+    "onLanguage:json"
   ],
   "contributes": {
     "commands": [

@@ -41,8 +41,6 @@ export class LanguageFormatter {
 
       case 'css':
       case 'scss':
-      case 'sass':
-      case 'less':
         return this.formatCSS(filteredContext);
 
       case 'html':

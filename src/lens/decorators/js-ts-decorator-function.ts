@@ -1,6 +1,6 @@
 class FunctionSymbols {
   private static arrowFunctionSymbol = '❨❩➤';
-  private static asyncFunctionSymbol = '⧘⧙';
+  private static asyncFunctionSymbol = '⧖';
   private static complexFunctionSymbol = '⇄';
   
   private static collectionArrowSymbol = '⮞';
