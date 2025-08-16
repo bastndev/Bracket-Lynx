@@ -4,7 +4,7 @@ import { OptimizedBracketParser } from '../core/performance-parser';
 import { getEffectiveColor, onConfigurationChanged } from '../actions/colors';
 import { AdvancedCacheManager, SmartDebouncer } from '../core/performance-cache';
 import { isExtensionEnabled, isEditorEnabled, isDocumentEnabled } from '../actions/toggle';
-import { PositionUtils, regExpExecToArray, makeRegExpPart, PERFORMANCE_LIMITS, SUPPORTED_LANGUAGES, ALLOWED_JSON_FILES, PROBLEMATIC_LANGUAGES, PROBLEMATIC_EXTENSIONS, SupportedLanguage, ProblematicLanguage, AllowedJsonFile,safeExecute, safeExecuteAsync, validateDocument, validateTextEditor, validateFileSize,ParseError, DecorationError, PerformanceError,logger, LogCategory,createRecoveryChain} from '../core/performance-config';
+import { PositionUtils, regExpExecToArray, makeRegExpPart, PERFORMANCE_LIMITS, SUPPORTED_LANGUAGES, ALLOWED_JSON_FILES, PROBLEMATIC_LANGUAGES, PROBLEMATIC_EXTENSIONS, SupportedLanguage, ProblematicLanguage, AllowedJsonFile, safeExecute, safeExecuteAsync, validateDocument, validateTextEditor, validateFileSize, logger, LogCategory} from '../core/performance-config';
 import { FILTER_RULES, shouldExcludeSymbol, filterContent, isLanguageSupported as isLanguageSupportedRules, shouldProcessFile as shouldProcessFileRules, applyWordLimit, containsControlFlowKeyword, formatArrowFunction } from './lens-rules';
 
 // RE-EXPORT CONSTANTS FOR EASY ACCESS
@@ -43,7 +43,7 @@ export function shouldProcessFileConfig(
   languageId: string,
   fileName: string
 ): boolean {
-  if (languageId === 'json' || languageId === 'jsonc') {
+  if (languageId === 'json') {
     return isAllowedJsonFile(fileName);
   }
   return isSupportedLanguage(languageId);
@@ -1240,7 +1240,6 @@ export class BracketDecorationGenerator {
 // ============================================================================
 
 export class BracketLynx {
-  private static isMutedAll: boolean = false;
   private static lastUpdateStamp = new Map<vscode.TextEditor, number>();
   private static smartDebouncer = new SmartDebouncer();
 
@@ -1268,10 +1267,7 @@ export class BracketLynx {
 
     const editorCache = CacheManager.editorCache.get(textEditor);
     if ('none' !== BracketLynxConfig.mode) {
-      const isMuted =
-        undefined !== editorCache?.isMuted
-          ? editorCache.isMuted
-          : this.isMutedAll;
+      const isMuted = editorCache?.isMuted || false;
 
       if (isMuted) {
         editorCache?.dispose();
@@ -1345,32 +1341,10 @@ export class BracketLynx {
   // METHODS FOR TOGGLE SYSTEM INTEGRATION
   // ============================================================================
 
-  static forceUpdate(textEditor: vscode.TextEditor): void {
-    // Clear cache and force update
-    CacheManager.clearAllDecorationCache();
-    this.updateDecoration(textEditor);
-  }
-
   static clearDecorations(textEditor: vscode.TextEditor): void {
     const editorCache = CacheManager.editorCache.get(textEditor);
     editorCache?.dispose();
     CacheManager.editorCache.delete(textEditor);
-  }
-
-  static toggleMute(textEditor: vscode.TextEditor): void {
-    const currentEditorDecorationCache =
-      CacheManager.getEditorCache(textEditor);
-    currentEditorDecorationCache.isMuted =
-      undefined === currentEditorDecorationCache.isMuted
-        ? !this.isMutedAll
-        : !currentEditorDecorationCache.isMuted;
-    this.updateDecoration(textEditor);
-  }
-
-  static toggleMuteAll(): void {
-    this.isMutedAll = !this.isMutedAll;
-    CacheManager.editorCache.forEach((i) => (i.isMuted = undefined));
-    this.updateAllDecoration();
   }
 
   // ============================================================================

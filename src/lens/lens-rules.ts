@@ -45,7 +45,7 @@ function isAllowedJsonFile(fileName: string): boolean {
 }
 
 function configShouldProcessFile(languageId: string, fileName: string): boolean {
-  if (languageId === 'json' || languageId === 'jsonc') {
+  if (languageId === 'json') {
     return isAllowedJsonFile(fileName);
   }
   return isSupportedLanguage(languageId);
@@ -69,23 +69,15 @@ function getCachedRegex(pattern: string, flags: string = 'g'): RegExp {
 const CSS_RELATED_WORDS_SET = new Set<string>(KEYWORDS.CSS_RELATED_WORDS);
 const TRY_CATCH_KEYWORDS_SET = new Set<string>(KEYWORDS.TRY_CATCH_KEYWORDS);
 const IF_ELSE_KEYWORDS_SET = new Set<string>(KEYWORDS.IF_ELSE_KEYWORDS);
-const CSS_LANGUAGES_SET = new Set<string>(['css', 'scss', 'sass', 'less']);
+const CSS_LANGUAGES_SET = new Set<string>(['css', 'scss']);
 
 // ============================================================================
 // ADVANCED TYPES - Ultra-specific for better type safety
 // ============================================================================
 
 export type ExcludedSymbol = typeof EXCLUDED_SYMBOLS[number];
-export type CssLanguage = 'css' | 'scss' | 'sass' | 'less';
-export type WordLimitType = 'header' | 'exception' | 'css' | 'arrow';
+export type CssLanguage = 'css' | 'scss';
 export type ContentType = 'async' | 'complex' | 'arrow' | 'collection-arrow' | 'css' | 'exception' | 'control-flow';
-
-// Smart union types for better intellisense
-export type LanguageContext = {
-  readonly languageId?: string;
-  readonly contentType?: ContentType;
-  readonly isLowerCase?: boolean;
-};
 
 export interface FilterRules {
   excludedSymbols: readonly ExcludedSymbol[];
