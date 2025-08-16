@@ -189,15 +189,24 @@ export async function toggleCurrentEditor(): Promise<void> {
 
 export async function resetToDefault(): Promise<void> {
   try {
-    // Show confirmation dialog
+    // Show confirmation dialog with performance info
     const confirmation = await vscode.window.showWarningMessage(
-      '♻️ Reset Bracket Lynx to factory defaults?\n\nThis will:\n• Enable globally\n• Clear all file-specific settings\n• Reset color to default (#515151)\n• Reset all other settings to defaults',
+      '♻️ Reset Bracket Lynx to factory defaults?\n\nThis will:\n• Enable globally\n• Clear all file-specific settings\n• Reset color to default (#515151)\n• Reset all other settings to defaults\n• 🚀 Clear all performance caches\n• 🧠 Free up memory usage',
       { modal: true },
       'Reset to Default'
     );
 
     if (confirmation !== 'Reset to Default') {
       return;
+    }
+
+    // 📊 Get memory usage before reset for reporting
+    let memoryBefore = 0;
+    try {
+      const { AdvancedCacheManager } = await import('../core/performance-cache.js');
+      memoryBefore = AdvancedCacheManager.getInstance().getEstimatedMemoryUsage();
+    } catch (error) {
+      console.log('Could not get memory usage before reset:', error);
     }
 
     const config = vscode.workspace.getConfiguration(CONFIG_SECTION);
@@ -239,9 +248,45 @@ export async function resetToDefault(): Promise<void> {
     const { resetColorToDefault } = await import('./colors.js');
     await resetColorToDefault();
 
-    vscode.window.showInformationMessage(
-      '♻️ Bracket Lynx: Successfully reset to factory defaults! 🎉'
-    );
+    // 🚀 PERFORMANCE RESET - Clear all caches and optimize memory
+    try {
+      const { AdvancedCacheManager } = await import('../core/performance-cache.js');
+      const { OptimizedBracketParser } = await import('../core/performance-parser.js');
+      
+      const cacheManager = AdvancedCacheManager.getInstance();
+      const parser = OptimizedBracketParser.getInstance();
+      
+      // 🧹 Clear all performance caches
+      cacheManager.clearAllCache();
+      parser.clearAllCache();
+      
+      // 🔄 Force memory cleanup
+      cacheManager.forceMemoryCleanup();
+      cacheManager.forceGarbageCollection();
+      
+      // 📊 Restore normal memory mode
+      cacheManager.restoreNormalMemoryMode();
+      
+      // 📊 Get memory usage after reset
+      const memoryAfter = cacheManager.getEstimatedMemoryUsage();
+      const memoryFreed = Math.max(0, memoryBefore - memoryAfter);
+      
+      // 🎉 Simple and clean success message
+      const memoryInfo = memoryFreed > 0.1 ? ` (${memoryFreed.toFixed(1)}MB freed)` : '';
+      
+      vscode.window.showInformationMessage(
+        `🎉 Bracket Lynx reset to defaults${memoryInfo}`
+      );
+      
+      console.log(`🔄 Performance reset completed - Memory freed: ${memoryFreed.toFixed(1)}MB`);
+      
+    } catch (error) {
+      console.error('Error during performance reset:', error);
+      // Still show success message even if performance reset fails
+      vscode.window.showInformationMessage(
+        '🎉 Bracket Lynx reset to defaults'
+      );
+    }
 
   } catch (error) {
     console.error('Error resetting to default:', error);
