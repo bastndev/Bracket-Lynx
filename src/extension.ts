@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { BracketLynx } from './lens/lens';
 import { AstroDecorator } from './lens/decorators/astrojs-decorator';
-import { setAstroDecoratorForColors } from './actions/colors';
-import { showBracketLynxMenu, setBracketLynxProvider, setAstroDecorator, cleanupClosedEditor, stopMemoryCleanupTimer, forceMemoryCleanup, initializePersistedState } from './actions/toggle';
+import { setBracketLynxProviderForColors, setAstroDecoratorForColors } from './actions/colors';
+import { showBracketLynxMenu, setBracketLynxProvider, setAstroDecorator, cleanupClosedEditor, initializePersistedState, getCurrentState } from './actions/toggle';
 
 export let extensionContext: vscode.ExtensionContext;
 
@@ -14,10 +14,22 @@ export const activate = async (context: vscode.ExtensionContext) => {
     
     setBracketLynxProvider(BracketLynx);
     setAstroDecorator(AstroDecorator);
+    setBracketLynxProviderForColors(BracketLynx);
     setAstroDecoratorForColors(AstroDecorator);
+    
+    // Initialize color system
+    const { initializeColorSystem } = await import('./actions/colors.js');
+    initializeColorSystem();
     
     context.subscriptions.push(
         vscode.commands.registerCommand('bracketLynx.menu', showBracketLynxMenu),
+        vscode.commands.registerCommand('bracketLynx.debug', () => {
+            const state = getCurrentState();
+            console.log('🔍 Bracket Lynx Debug State:', state);
+            // vscode.window.showInformationMessage(
+            //     `🔍 Debug: Global=${state.isEnabled ? 'ON' : 'OFF'}, Current=${state.isActiveEditorEnabled ? 'ON' : 'OFF'}`
+            // );
+        }),
         vscode.commands.registerCommand('bracketLynx.restoreColor', async () => {
             const { restoreColorFromGlobal } = await import('./actions/colors.js');
             await restoreColorFromGlobal();
@@ -106,9 +118,5 @@ export const deactivate = async () => {
     // Cleanup Universal decorations
     AstroDecorator.dispose();
     
-    // MEMORY OPTIMIZATION: Stop cleanup timer and clear memory
-    stopMemoryCleanupTimer();
-    await forceMemoryCleanup();
-    
-    console.log('🧹 Bracket Lynx: Extension deactivated and memory cleaned up');
+    console.log('🧹 Bracket Lynx: Extension deactivated');
 };

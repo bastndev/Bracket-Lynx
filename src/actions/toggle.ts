@@ -1,89 +1,140 @@
 import * as vscode from 'vscode';
 import {
-  forceSyncColorWithConfiguration,
   setBracketLynxProviderForColors,
   initializeColorSystem,
   changeDecorationColor,
 } from './colors';
 
-// Configuration keys
+// Configuration constants
 const CONFIG_SECTION = 'bracketLynx';
 const GLOBAL_ENABLED_KEY = 'globalEnabled';
 const DISABLED_FILES_KEY = 'disabledFiles';
-const MEMORY_CLEANUP_INTERVAL = 5 * 60 * 1000; // 5 minutes
+const INDIVIDUALLY_ENABLED_FILES_KEY = 'individuallyEnabledFiles';
+
+// Timing constants
+const DECORATION_UPDATE_DELAY_SHORT = 50;
+const DECORATION_UPDATE_DELAY_LONG = 200;
 
 // Quick Pick Options
-const MENU_OPTIONS = [
-  {
-    label: '🌐 Toggle Global',
-    description: 'Activate/deactivate for all files',
-    action: 'global',
-  },
-  {
-    label: '📝 Toggle Current File',
-    description: 'Activate/deactivate only current file',
-    action: 'current',
-  }, 
-  {
-    label: '🎨 Change Color',
-    description: 'Change decoration color with preview',
-    action: 'color',
-  },
-  {
-    label: '🧹 Clean Memory',
-    description: '',
-    action: 'cleanup',
-  },
-  {
-    label: '♻️ Refresh',
-    description: 'Update decorations for current file',
-    action: 'refresh',
-  },
-];
+function getMenuOptions(): any[] {
+  const globalStatus = isEnabled ? '🟢' : '⭕';
+  const currentFileStatus = getCurrentFileStatus();
+  
+  return [
+    {
+      label: `🌐 Toggle Global (${globalStatus})`,
+      description: isEnabled ? 'Deactivate for all files' : 'Activate for all files',
+      action: 'global',
+    },
+    {
+      label: `📝 Toggle Current File (${currentFileStatus})`,
+      description: getCurrentFileDescription(),
+      action: 'current',
+    }, 
+    {
+      label: '🎨 Change Color',
+      description: 'Change decoration color with preview',
+      action: 'color',
+    },
+  ];
+}
+
+function getCurrentFileStatus(): string {
+  const activeEditor = vscode.window.activeTextEditor;
+  if (!activeEditor) {
+    return '❓ No file';
+  }
+  
+  const isCurrentEnabled = isEditorEnabled(activeEditor);
+  return isCurrentEnabled ? '🟢' : '⭕';
+}
+
+function getCurrentFileDescription(): string {
+  const activeEditor = vscode.window.activeTextEditor;
+  if (!activeEditor) {
+    return 'No active file';
+  }
+  
+  const isCurrentEnabled = isEditorEnabled(activeEditor);
+  if (isEnabled) {
+    return isCurrentEnabled ? 'Disable for current file' : 'Enable for current file';
+  } else {
+    return isCurrentEnabled ? 'Disable for current file (individual mode)' : 'Enable for current file (individual mode)';
+  }
+}
 
 let isEnabled = true;
 let bracketLynxProvider: any = undefined;
 let astroDecorator: any = undefined;
 const disabledEditors = new Map<string, boolean>();
-let memoryCleanupTimer: NodeJS.Timeout | undefined;
+const individuallyEnabledEditors = new Map<string, boolean>();
 
 export async function toggleBracketLynx(): Promise<void> {
   isEnabled = !isEnabled;
   await saveGlobalEnabledState(isEnabled);
 
   if (isEnabled) {
-    disabledEditors.clear();
-    await saveDisabledFilesState();
+    // Notification in bottom Right
+    individuallyEnabledEditors.clear();
+    await saveIndividuallyEnabledFilesState();
     reactivateExtension();
     vscode.window.showInformationMessage(
-      '🌐 Bracket Lynx: Activated globally (all files enabled)'
+      'Bracket Lynx: (Activated ✅) globally - 🌐'
     );
   } else {
     deactivateExtension();
     vscode.window.showInformationMessage(
-      '🌐 Bracket Lynx: Deactivated globally'
+      'Bracket Lynx: (Deactivated ❌) globally - 🌐 '
     );
   }
 }
 
 export function isExtensionEnabled(): boolean {
-  return isEnabled;
+  // Extension is enabled if either:
+  // 1. Global mode is enabled, OR
+  // 2. Individual mode is enabled and there are individually enabled files
+  return isEnabled || (!isEnabled && individuallyEnabledEditors.size > 0);
 }
 
 export function isEditorEnabled(editor: vscode.TextEditor): boolean {
-  if (!isEnabled) {
-    return false;
-  }
   const editorKey = getEditorKey(editor);
-  return !disabledEditors.get(editorKey);
+  
+  if (isEnabled) {
+    return !disabledEditors.get(editorKey);
+  } else {
+    return individuallyEnabledEditors.get(editorKey) || false;
+  }
 }
 
 export function isDocumentEnabled(document: vscode.TextDocument): boolean {
-  if (!isEnabled) {
-    return false;
-  }
   const documentUri = document.uri.toString();
-  return !disabledEditors.get(documentUri);
+  
+  if (isEnabled) {
+    return !disabledEditors.get(documentUri);
+  } else {
+    return individuallyEnabledEditors.get(documentUri) || false;
+  }
+}
+
+/**
+ * Get current extension state for debugging
+ */
+export function getCurrentState(): {
+  isEnabled: boolean;
+  isExtensionEnabled: boolean;
+  activeEditorEnabled: boolean | null;
+  disabledFilesCount: number;
+  individuallyEnabledFilesCount: number;
+} {
+  const activeEditor = vscode.window.activeTextEditor;
+  
+  return {
+    isEnabled,
+    isExtensionEnabled: isExtensionEnabled(),
+    activeEditorEnabled: activeEditor ? isEditorEnabled(activeEditor) : null,
+    disabledFilesCount: disabledEditors.size,
+    individuallyEnabledFilesCount: individuallyEnabledEditors.size,
+  };
 }
 
 export async function toggleCurrentEditor(): Promise<void> {
@@ -93,85 +144,92 @@ export async function toggleCurrentEditor(): Promise<void> {
     return;
   }
 
-  if (!isEnabled) {
-    vscode.window.showWarningMessage(
-      '📝 Cannot toggle individual file: Extension is disabled globally. Enable globally first.'
-    );
-    return;
-  }
-
   const editorKey = getEditorKey(activeEditor);
-  const isCurrentlyDisabled = disabledEditors.get(editorKey) || false;
+  
+  if (isEnabled) {
+    // Global mode: toggle individual file in disabledEditors
+    const isCurrentlyDisabled = disabledEditors.get(editorKey) || false;
 
-  if (isCurrentlyDisabled) {
-    disabledEditors.delete(editorKey);
-    await saveDisabledFilesState();
-    if (bracketLynxProvider) {
-      bracketLynxProvider.forceUpdateEditor?.(activeEditor);
-    }
-    if (astroDecorator) {
-      astroDecorator.forceUpdateEditor?.(activeEditor);
-    }
-    vscode.window.showInformationMessage(
-      '📝 Bracket Lynx: Enabled for current file'
-    );
-  } else {
-    disabledEditors.set(editorKey, true);
-    await saveDisabledFilesState();
-    if (bracketLynxProvider) {
-      bracketLynxProvider.clearEditorDecorations?.(activeEditor);
-    }
-    if (astroDecorator) {
-      astroDecorator.clearDecorations?.(activeEditor);
-    }
-    vscode.window.showInformationMessage(
-      '📝 Bracket Lynx: Disabled for current file'
-    );
-  }
-}
-
-export function refreshBrackets(): void {
-  const activeEditor = vscode.window.activeTextEditor;
-  if (!activeEditor) {
-    vscode.window.showWarningMessage('♻️ No active editor to refresh');
-    return;
-  }
-
-  if (bracketLynxProvider && isEditorEnabled(activeEditor)) {
-    forceSyncColorWithConfiguration()
-      .then(() => {
-        bracketLynxProvider.clearDecorationCache?.(activeEditor.document);
-        bracketLynxProvider.forceUpdateEditor?.(activeEditor);
-
-        if (astroDecorator) {
-          astroDecorator.forceUpdateEditor?.(activeEditor);
-        }
-        vscode.window.showInformationMessage('♻️ Bracket Lynx: Refreshed');
-      })
-      .catch((error: any) => {
-        console.error('♻️ Error during refresh:', error);
-        bracketLynxProvider.clearDecorationCache?.(activeEditor.document);
-        bracketLynxProvider.forceUpdateEditor?.(activeEditor);
-
-        if (astroDecorator) {
-          astroDecorator.forceUpdateEditor?.(activeEditor);
-        }
+    if (isCurrentlyDisabled) {
+      disabledEditors.delete(editorKey);
+      await saveDisabledFilesState();
+      vscode.window.showInformationMessage(
+        '📝 Bracket Lynx: Enabled for current file'
+      );
+    } else {
+      disabledEditors.set(editorKey, true);
+      await saveDisabledFilesState();
+      
+      try {
+        clearEditorDecorations(activeEditor);
         vscode.window.showInformationMessage(
-          '♻️ Bracket Lynx: Refreshed (with warnings)'
+          '📝 Bracket Lynx: Disabled for current file'
         );
-      });
+      } catch (error) {
+        console.error('Error deactivating file in global mode:', error);
+        vscode.window.showErrorMessage(
+          '📝 Error deactivating Bracket Lynx for current file'
+        );
+      }
+    }
   } else {
-    vscode.window.showInformationMessage(
-      '♻️ Bracket Lynx: Cannot refresh (disabled)'
-    );
+    // Individual mode: toggle individual file in individuallyEnabledEditors
+    const isCurrentlyEnabled = individuallyEnabledEditors.get(editorKey) || false;
+
+    if (isCurrentlyEnabled) {
+      individuallyEnabledEditors.delete(editorKey);
+      await saveIndividuallyEnabledFilesState();
+      
+      try {
+        clearEditorDecorations(activeEditor);
+        vscode.window.showInformationMessage(
+          '📝 Bracket Lynx: Disabled for current file'
+        );
+      } catch (error) {
+        console.error('Error deactivating individual file:', error);
+        vscode.window.showErrorMessage(
+          '📝 Error deactivating Bracket Lynx for current file'
+        );
+      }
+    } else {
+      individuallyEnabledEditors.set(editorKey, true);
+      await saveIndividuallyEnabledFilesState();
+      
+      // Activate decorations for this specific file
+      try {
+        if (bracketLynxProvider) {
+          if (bracketLynxProvider.updateDecoration) {
+            bracketLynxProvider.updateDecoration(activeEditor);
+          } else if (bracketLynxProvider.delayUpdateDecoration) {
+            bracketLynxProvider.delayUpdateDecoration(activeEditor);
+          }
+        }
+        
+        // Initial update
+        updateEditorDecorations(activeEditor);
+        
+        // Force multiple updates to ensure decorations appear
+        setTimeout(() => updateEditorDecorations(activeEditor), DECORATION_UPDATE_DELAY_SHORT);
+        setTimeout(() => updateEditorDecorations(activeEditor), DECORATION_UPDATE_DELAY_LONG);
+        
+        vscode.window.showInformationMessage(
+          '📝 Bracket Lynx: Enabled for current file (individual mode)'
+        );
+      } catch (error) {
+        console.error('Error activating individual file:', error);
+        vscode.window.showErrorMessage(
+          '📝 Error activating Bracket Lynx for current file'
+        );
+      }
+    }
   }
 }
+
 
 export function setBracketLynxProvider(provider: any): void {
   bracketLynxProvider = provider;
   setBracketLynxProviderForColors(provider);
   initializeColorSystem();
-  startMemoryCleanupTimer();
 }
 
 export function setAstroDecorator(decorator: any): void {
@@ -179,16 +237,8 @@ export function setAstroDecorator(decorator: any): void {
 }
 
 export function showBracketLynxMenu(): void {
-  const memoryStats = getMemoryStats();
-  const memoryLabel = memoryStats.isHealthy
-    ? `🧠 Memory: ${memoryStats.disabledEditorsCount} entries (${memoryStats.memoryFootprintKB}KB)`
-    : `⚠️ Memory: ${memoryStats.disabledEditorsCount} entries (${memoryStats.memoryFootprintKB}KB) - Cleanup recommended`;
-
-  const options = [...MENU_OPTIONS];
-  options[3].description = memoryLabel;
-
   vscode.window
-    .showQuickPick(options, {
+    .showQuickPick(getMenuOptions(), {
       placeHolder: 'Choose Bracket Lynx action...',
     })
     .then(async (selected) => {
@@ -203,28 +253,29 @@ export function showBracketLynxMenu(): void {
         case 'current':
           await toggleCurrentEditor();
           break;
-        case 'refresh':
-          refreshBrackets();
-          break;
         case 'color':
           changeDecorationColor();
-          break;
-        case 'cleanup':
-          await forceMemoryCleanup();
-          vscode.window.showInformationMessage(
-            '🧹 Bracket Lynx: Memory cleanup completed!'
-          );
           break;
       }
     });
 }
 
 function reactivateExtension(): void {
-  if (bracketLynxProvider) {
-    bracketLynxProvider.updateAllDecoration?.();
-  }
-  if (astroDecorator) {
-    astroDecorator.forceRefresh?.();
+  try {
+    if (bracketLynxProvider) {
+      if (bracketLynxProvider.updateAllDecoration) {
+        bracketLynxProvider.updateAllDecoration();
+      }
+    }
+    
+    // Force update for all visible editors
+    vscode.window.visibleTextEditors.forEach(editor => {
+      if (isEditorEnabled(editor)) {
+        updateEditorDecorations(editor);
+      }
+    });
+  } catch (error) {
+    console.error('Error reactivating extension:', error);
   }
 }
 
@@ -237,136 +288,75 @@ function deactivateExtension(): void {
   }
 }
 
+/**
+ * Helper function to update decorations for a specific editor
+ */
+function updateEditorDecorations(editor: vscode.TextEditor): void {
+  if (bracketLynxProvider && bracketLynxProvider.updateDecoration) {
+    bracketLynxProvider.updateDecoration(editor);
+  }
+  if (astroDecorator && astroDecorator.updateDecorations) {
+    astroDecorator.updateDecorations(editor);
+  }
+}
+
+/**
+ * Helper function to clear decorations for a specific editor
+ */
+function clearEditorDecorations(editor: vscode.TextEditor): void {
+  if (bracketLynxProvider && bracketLynxProvider.clearEditorDecorations) {
+    bracketLynxProvider.clearEditorDecorations(editor);
+  }
+  if (astroDecorator && astroDecorator.clearDecorations) {
+    astroDecorator.clearDecorations(editor);
+  }
+}
+
 function getEditorKey(editor: vscode.TextEditor): string {
   return editor.document.uri.toString();
 }
 
+/**
+ * Clean up editor references when a document is closed
+ */
 export async function cleanupClosedEditor(document: vscode.TextDocument): Promise<void> {
   const documentUri = document.uri.toString();
   let hasChanges = false;
 
+  // Helper function to clean up legacy keys from a Map
+  const cleanupLegacyKeys = (map: Map<string, boolean>): string[] => {
+    const keysToDelete: string[] = [];
+    for (const [key] of map) {
+      if (key.startsWith(documentUri + ':') || key.includes(documentUri)) {
+        keysToDelete.push(key);
+      }
+    }
+    keysToDelete.forEach((key) => map.delete(key));
+    return keysToDelete;
+  };
+
+  // Clean up from both Maps
   if (disabledEditors.delete(documentUri)) {
     hasChanges = true;
   }
-
-  const legacyKeysToDelete: string[] = [];
-  for (const [key] of disabledEditors) {
-    if (key.startsWith(documentUri + ':') || key.includes(documentUri)) {
-      legacyKeysToDelete.push(key);
-    }
+  if (individuallyEnabledEditors.delete(documentUri)) {
+    hasChanges = true;
   }
+
+  // Clean up legacy keys from both Maps
+  const legacyDisabledKeys = cleanupLegacyKeys(disabledEditors);
+  const legacyIndividualKeys = cleanupLegacyKeys(individuallyEnabledEditors);
   
-  if (legacyKeysToDelete.length > 0) {
-    legacyKeysToDelete.forEach((key) => disabledEditors.delete(key));
+  if (legacyDisabledKeys.length > 0 || legacyIndividualKeys.length > 0) {
     hasChanges = true;
   }
 
   if (hasChanges) {
     await saveDisabledFilesState();
-  }
-
-  if (disabledEditors.size > 100) {
-    console.log(
-      `⚠️ Bracket Lynx: Large memory footprint detected (${disabledEditors.size} entries), triggering cleanup`
-    );
-    await cleanupAllClosedEditors();
+    await saveIndividuallyEnabledFilesState();
   }
 }
 
-export async function cleanupAllClosedEditors(): Promise<void> {
-  const visibleUris = new Set<string>();
-
-  vscode.window.visibleTextEditors.forEach((editor) => {
-    visibleUris.add(editor.document.uri.toString());
-  });
-
-  vscode.workspace.textDocuments.forEach((document) => {
-    visibleUris.add(document.uri.toString());
-  });
-
-  const keysToDelete: string[] = [];
-  for (const [key] of disabledEditors) {
-    if (!visibleUris.has(key)) {
-      keysToDelete.push(key);
-    }
-  }
-
-  keysToDelete.forEach((key) => {
-    disabledEditors.delete(key);
-  });
-
-  if (keysToDelete.length > 0) {
-    await saveDisabledFilesState();
-    console.log(
-      `🧹 Bracket Lynx: Cleaned up ${keysToDelete.length} closed editor(s) from memory and persisted changes`
-    );
-  }
-}
-
-function startMemoryCleanupTimer(): void {
-  if (memoryCleanupTimer) {
-    clearInterval(memoryCleanupTimer);
-  }
-
-  memoryCleanupTimer = setInterval(async () => {
-    const sizeBefore = disabledEditors.size;
-    await cleanupAllClosedEditors();
-    const sizeAfter = disabledEditors.size;
-
-    if (sizeBefore !== sizeAfter) {
-      console.log(
-        `🔄 Bracket Lynx: Periodic cleanup - reduced memory from ${sizeBefore} to ${sizeAfter} entries`
-      );
-    }
-  }, MEMORY_CLEANUP_INTERVAL);
-}
-
-export function stopMemoryCleanupTimer(): void {
-  if (memoryCleanupTimer) {
-    clearInterval(memoryCleanupTimer);
-    memoryCleanupTimer = undefined;
-  }
-}
-
-export function getMemoryStats(): {
-  disabledEditorsCount: number;
-  memoryFootprintKB: number;
-  isHealthy: boolean;
-} {
-  const count = disabledEditors.size;
-  const estimatedKB = Math.round((count * 100) / 1024);
-  const isHealthy = count < 50;
-
-  return {
-    disabledEditorsCount: count,
-    memoryFootprintKB: estimatedKB,
-    isHealthy,
-  };
-}
-
-export async function forceMemoryCleanup(): Promise<void> {
-  const statsBefore = getMemoryStats();
-  await cleanupAllClosedEditors();
-
-  const keysToDelete: string[] = [];
-  for (const [key] of disabledEditors) {
-    if (!key || key.trim() === '' || key.length > 1000) {
-      keysToDelete.push(key);
-    }
-  }
-
-  if (keysToDelete.length > 0) {
-    keysToDelete.forEach((key) => disabledEditors.delete(key));
-    await saveDisabledFilesState();
-  }
-
-  const statsAfter = getMemoryStats();
-  
-  console.log(`🚀 Bracket Lynx: Force cleanup completed`);
-  console.log(`   Before: ${statsBefore.disabledEditorsCount} entries (${statsBefore.memoryFootprintKB}KB)`);
-  console.log(`   After: ${statsAfter.disabledEditorsCount} entries (${statsAfter.memoryFootprintKB}KB)`);
-  console.log(`   Freed: ${statsBefore.disabledEditorsCount - statsAfter.disabledEditorsCount} entries`);
-}
 
 // ============================================================================
 // PERSISTENCE FUNCTIONS
@@ -415,6 +405,30 @@ function loadDisabledFilesState(): void {
   }
 }
 
+async function saveIndividuallyEnabledFilesState(): Promise<void> {
+  try {
+    const config = vscode.workspace.getConfiguration(CONFIG_SECTION);
+    const individuallyEnabledFilesArray = Array.from(individuallyEnabledEditors.keys());
+    await config.update(INDIVIDUALLY_ENABLED_FILES_KEY, individuallyEnabledFilesArray, vscode.ConfigurationTarget.Global);
+  } catch (error) {
+    console.error('Failed to save individually enabled files state:', error);
+  }
+}
+
+function loadIndividuallyEnabledFilesState(): void {
+  try {
+    const config = vscode.workspace.getConfiguration(CONFIG_SECTION);
+    const individuallyEnabledFilesArray = config.get<string[]>(INDIVIDUALLY_ENABLED_FILES_KEY, []);
+    
+    individuallyEnabledEditors.clear();
+    individuallyEnabledFilesArray.forEach(fileUri => {
+      individuallyEnabledEditors.set(fileUri, true);
+    });
+  } catch (error) {
+    console.error('Failed to load individually enabled files state:', error);
+  }
+}
+
 /**
  * Initialize state from persisted configuration
  * This should be called when the extension activates
@@ -422,6 +436,7 @@ function loadDisabledFilesState(): void {
 export function initializePersistedState(): void {
   isEnabled = loadGlobalEnabledState();
   loadDisabledFilesState();
+  loadIndividuallyEnabledFilesState();
   
-  console.log(`🔄 Bracket Lynx: Initialized state - Global: ${isEnabled ? 'enabled' : 'disabled'}, Disabled files: ${disabledEditors.size}`);
+  console.log(`🔄 Bracket Lynx: Initialized state - Global: ${isEnabled ? 'enabled' : 'disabled'}, Disabled files: ${disabledEditors.size}, Individually enabled: ${individuallyEnabledEditors.size}`);
 }

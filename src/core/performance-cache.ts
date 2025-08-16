@@ -40,11 +40,6 @@ export interface CacheConfig {
   editorCacheTTL: number; // milliseconds
   cleanupInterval: number; // milliseconds
   enableMetrics: boolean;
-  // Advanced memory management
-  memoryPressureThreshold: number; // MB
-  aggressiveCleanupThreshold: number; // MB
-  lowMemoryMode: boolean;
-  maxMemoryUsage: number; // MB
 }
 
 // ============================================================================
@@ -75,24 +70,15 @@ export class AdvancedCacheManager {
     editorCacheTTL: CACHE_CONFIG.EDITOR_CACHE_TTL,
     cleanupInterval: CACHE_CONFIG.CLEANUP_INTERVAL,
     enableMetrics: true,
-    // Advanced memory management
-    memoryPressureThreshold: CACHE_CONFIG.MEMORY_PRESSURE_THRESHOLD,
-    aggressiveCleanupThreshold: CACHE_CONFIG.AGGRESSIVE_CLEANUP_THRESHOLD,
-    lowMemoryMode: false,
-    maxMemoryUsage: CACHE_CONFIG.MAX_MEMORY_USAGE,
   };
 
   // Cleanup timer
   private cleanupTimer?: NodeJS.Timeout;
 
-  // Memory management
-  private memoryMonitorTimer?: NodeJS.Timeout;
-  private lastMemoryCheck = 0;
-  private memoryWarningShown = false;
+
 
   private constructor() {
     this.startCleanupTimer();
-    this.startMemoryMonitoring();
   }
 
   static getInstance(): AdvancedCacheManager {
@@ -362,274 +348,13 @@ export class AdvancedCacheManager {
     this.metrics.totalSize = this.documentCache.size + this.editorCache.size;
   }
 
-  // ============================================================================
-  // ADVANCED MEMORY MANAGEMENT
-  // ============================================================================
 
-  /**
-   * Get estimated memory usage in MB
-   */
-  private getEstimatedMemoryUsage(): number {
-    let totalSize = 0;
 
-    // Estimate document cache memory
-    for (const [, entry] of this.documentCache) {
-      totalSize += entry.fileSize || 0;
-      totalSize += (entry.brackets?.length || 0) * 200; // Rough estimate per bracket
-      totalSize += (entry.decorationSource?.length || 0) * 100; // Rough estimate per decoration
-    }
 
-    // Estimate editor cache memory (smaller)
-    totalSize += this.editorCache.size * 1000; // Rough estimate per editor
 
-    return Math.round(totalSize / 1024 / 1024); // Convert to MB
-  }
 
-  /**
-   * Check system memory pressure (simplified estimation)
-   */
-  private checkMemoryPressure(): 'low' | 'medium' | 'high' | 'critical' {
-    const estimatedUsage = this.getEstimatedMemoryUsage();
 
-    if (estimatedUsage > this.config.maxMemoryUsage) {
-      return 'critical';
-    } else if (estimatedUsage > this.config.aggressiveCleanupThreshold) {
-      return 'high';
-    } else if (estimatedUsage > this.config.memoryPressureThreshold) {
-      return 'medium';
-    } else {
-      return 'low';
-    }
-  }
 
-  /**
-   * Start memory monitoring
-   */
-  private startMemoryMonitoring(): void {
-    this.memoryMonitorTimer = setInterval(() => {
-      this.performMemoryCheck();
-    }, 30 * 1000); // Check every 30 seconds
-  }
-
-  /**
-   * Perform memory check and cleanup if needed
-   */
-  private performMemoryCheck(): void {
-    const now = Date.now();
-    this.lastMemoryCheck = now;
-
-    const memoryPressure = this.checkMemoryPressure();
-    const estimatedUsage = this.getEstimatedMemoryUsage();
-
-    if (this.config.enableMetrics) {
-      console.log(
-        `Bracket Lynx Memory: ${estimatedUsage}MB, Pressure: ${memoryPressure}`
-      );
-    }
-
-    switch (memoryPressure) {
-      case 'critical':
-        this.performCriticalCleanup();
-        this.showMemoryWarning(estimatedUsage, 'critical');
-        break;
-
-      case 'high':
-        this.performAggressiveCleanup();
-        this.showMemoryWarning(estimatedUsage, 'high');
-        break;
-
-      case 'medium':
-        this.performMediumCleanup();
-        break;
-
-      case 'low':
-        // Reset warning flag when memory is low
-        this.memoryWarningShown = false;
-        break;
-    }
-  }
-
-  /**
-   * Perform critical memory cleanup
-   */
-  private performCriticalCleanup(): void {
-    console.warn(
-      'Bracket Lynx: Critical memory usage detected, performing emergency cleanup'
-    );
-
-    // Clear most of the cache, keep only most recent entries
-    const keepDocuments = Math.min(5, this.config.maxDocumentCacheSize);
-    const keepEditors = Math.min(3, this.config.maxEditorCacheSize);
-
-    // Keep only most recently accessed documents
-    const sortedDocs = Array.from(this.documentCache.entries()).sort(
-      ([, a], [, b]) => b.lastAccessed - a.lastAccessed
-    );
-
-    this.documentCache.clear();
-    for (let i = 0; i < Math.min(keepDocuments, sortedDocs.length); i++) {
-      this.documentCache.set(sortedDocs[i][0], sortedDocs[i][1]);
-    }
-
-    // Keep only most recently accessed editors
-    const sortedEditors = Array.from(this.editorCache.entries()).sort(
-      ([, a], [, b]) => b.lastAccessed - a.lastAccessed
-    );
-
-    // Dispose old editors
-    for (let i = keepEditors; i < sortedEditors.length; i++) {
-      sortedEditors[i][1].dispose();
-    }
-
-    this.editorCache.clear();
-    for (let i = 0; i < Math.min(keepEditors, sortedEditors.length); i++) {
-      this.editorCache.set(sortedEditors[i][0], sortedEditors[i][1]);
-    }
-
-    // Enable low memory mode
-    this.config.lowMemoryMode = true;
-    this.adjustConfigForLowMemory();
-
-    this.metrics.evictions +=
-      sortedDocs.length - keepDocuments + sortedEditors.length - keepEditors;
-    this.updateMetrics();
-  }
-
-  /**
-   * Perform aggressive cleanup
-   */
-  private performAggressiveCleanup(): void {
-    console.warn(
-      'Bracket Lynx: High memory usage detected, performing aggressive cleanup'
-    );
-
-    const now = Date.now();
-
-    // Use shorter TTL for aggressive cleanup
-    const aggressiveTTL = Math.min(
-      this.config.documentCacheTTL / 2,
-      2 * 60 * 1000
-    ); // 2 minutes max
-
-    // Clean documents more aggressively
-    const docsToDelete: string[] = [];
-    for (const [uri, entry] of this.documentCache) {
-      if (
-        now - entry.timestamp > aggressiveTTL ||
-        now - entry.lastAccessed > aggressiveTTL
-      ) {
-        docsToDelete.push(uri);
-      }
-    }
-
-    docsToDelete.forEach((uri) => this.documentCache.delete(uri));
-
-    // Clean editors more aggressively
-    const editorsToDelete: vscode.TextEditor[] = [];
-    for (const [editor, entry] of this.editorCache) {
-      if (
-        now - entry.timestamp > aggressiveTTL ||
-        now - entry.lastAccessed > aggressiveTTL
-      ) {
-        editorsToDelete.push(editor);
-      }
-    }
-
-    editorsToDelete.forEach((editor) => {
-      const entry = this.editorCache.get(editor);
-      entry?.dispose();
-      this.editorCache.delete(editor);
-    });
-
-    // Reduce cache sizes temporarily
-    this.config.maxDocumentCacheSize = Math.max(
-      10,
-      this.config.maxDocumentCacheSize * 0.7
-    );
-    this.config.maxEditorCacheSize = Math.max(
-      5,
-      this.config.maxEditorCacheSize * 0.7
-    );
-
-    this.metrics.evictions += docsToDelete.length + editorsToDelete.length;
-    this.updateMetrics();
-  }
-
-  /**
-   * Perform medium cleanup
-   */
-  private performMediumCleanup(): void {
-    if (this.config.enableMetrics) {
-      console.log(
-        'Bracket Lynx: Medium memory pressure detected, performing cleanup'
-      );
-    }
-
-    // Perform regular cleanup but more frequently
-    this.performCleanup();
-
-    // Slightly reduce cache sizes
-    if (!this.config.lowMemoryMode) {
-      this.config.maxDocumentCacheSize = Math.max(
-        20,
-        this.config.maxDocumentCacheSize * 0.9
-      );
-      this.config.maxEditorCacheSize = Math.max(
-        10,
-        this.config.maxEditorCacheSize * 0.9
-      );
-    }
-  }
-
-  /**
-   * Adjust configuration for low memory mode
-   */
-  private adjustConfigForLowMemory(): void {
-    this.config.maxDocumentCacheSize = 5;
-    this.config.maxEditorCacheSize = 3;
-    this.config.documentCacheTTL = 2 * 60 * 1000; // 2 minutes
-    this.config.editorCacheTTL = 3 * 60 * 1000; // 3 minutes
-    this.config.cleanupInterval = 30 * 1000; // 30 seconds
-  }
-
-  /**
-   * Show memory warning to user
-   */
-  private showMemoryWarning(usage: number, level: 'high' | 'critical'): void {
-    if (this.memoryWarningShown) {
-      return; // Don't spam warnings
-    }
-
-    this.memoryWarningShown = true;
-
-    const message =
-      level === 'critical'
-        ? `Bracket Lynx: Critical memory usage (${usage}MB). Cache cleared and low memory mode enabled.`
-        : `Bracket Lynx: High memory usage (${usage}MB). Performing cleanup.`;
-
-    console.warn(message);
-
-    // Reset warning flag after 5 minutes
-    setTimeout(() => {
-      this.memoryWarningShown = false;
-    }, 5 * 60 * 1000);
-  }
-
-  /**
-   * Force garbage collection if available (Node.js specific)
-   */
-  private forceGarbageCollection(): void {
-    try {
-      if (global.gc) {
-        global.gc();
-        if (this.config.enableMetrics) {
-          console.log('Bracket Lynx: Forced garbage collection');
-        }
-      }
-    } catch (error) {
-      // Ignore errors - GC might not be available
-    }
-  }
 
   // ============================================================================
   // PUBLIC API METHODS
@@ -642,22 +367,7 @@ export class AdvancedCacheManager {
     return { ...this.metrics };
   }
 
-  /**
-   * Get memory metrics for debugging
-   */
-  getMemoryMetrics() {
-    return {
-      estimatedUsage: `${this.getEstimatedMemoryUsage()}MB`,
-      memoryPressure: this.checkMemoryPressure(),
-      lowMemoryMode: this.config.lowMemoryMode,
-      lastMemoryCheck: new Date(this.lastMemoryCheck).toISOString(),
-      thresholds: {
-        memoryPressure: `${this.config.memoryPressureThreshold}MB`,
-        aggressiveCleanup: `${this.config.aggressiveCleanupThreshold}MB`,
-        maxUsage: `${this.config.maxMemoryUsage}MB`,
-      },
-    };
-  }
+
 
   /**
    * Get cache hit ratio
@@ -672,30 +382,6 @@ export class AdvancedCacheManager {
    */
   updateConfig(newConfig: Partial<CacheConfig>): void {
     this.config = { ...this.config, ...newConfig };
-
-    // If low memory mode is disabled, restore normal settings
-    if (newConfig.lowMemoryMode === false) {
-      this.restoreNormalMemoryMode();
-    }
-  }
-
-  /**
-   * Restore normal memory mode settings
-   */
-  private restoreNormalMemoryMode(): void {
-    this.config.maxDocumentCacheSize = 50;
-    this.config.maxEditorCacheSize = 20;
-    this.config.documentCacheTTL = 5 * 60 * 1000;
-    this.config.editorCacheTTL = 10 * 60 * 1000;
-    this.config.cleanupInterval = 60 * 1000;
-  }
-
-  /**
-   * Force memory cleanup
-   */
-  forceMemoryCleanup(): void {
-    this.performAggressiveCleanup();
-    this.forceGarbageCollection();
   }
 
   /**
@@ -707,11 +393,6 @@ export class AdvancedCacheManager {
       this.cleanupTimer = undefined;
     }
 
-    if (this.memoryMonitorTimer) {
-      clearInterval(this.memoryMonitorTimer);
-      this.memoryMonitorTimer = undefined;
-    }
-
     // Dispose all editor entries
     for (const [, entry] of this.editorCache) {
       entry.dispose();
@@ -719,9 +400,6 @@ export class AdvancedCacheManager {
 
     this.documentCache.clear();
     this.editorCache.clear();
-
-    // Final garbage collection attempt
-    this.forceGarbageCollection();
   }
 }
 

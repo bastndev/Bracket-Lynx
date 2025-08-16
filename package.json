@@ -152,6 +152,14 @@
           },
           "default": [],
           "description": "List of file URIs where Bracket Lynx is disabled (persisted across reloads)"
+        },
+        "bracketLynx.individuallyEnabledFiles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "List of file URIs where Bracket Lynx is individually enabled when globally disabled (persisted across reloads)"
         }
       }
     }
