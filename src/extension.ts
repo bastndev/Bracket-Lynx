@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { BracketLynx } from './lens/lens';
-import { AstroDecorator } from './lens/decorators/astrojs-decorator';
+import { AstroDecorator } from './lens/decorators/astro-decorator';
 import { VueDecorator } from './lens/decorators/vue.decorator';
 import SvelteDecorator from './lens/decorators/svelte.decorator';
 import { setBracketLynxProviderForColors, setAstroDecoratorForColors, setVueDecoratorForColors, setSvelteDecoratorForColors } from './actions/colors';
