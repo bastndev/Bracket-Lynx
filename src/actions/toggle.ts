@@ -17,7 +17,7 @@ const DECORATION_UPDATE_DELAY_LONG = 200;
 
 // Quick Pick Options
 function getMenuOptions(): any[] {
-  const globalStatus = isEnabled ? '🟢' : '🔴';
+  const globalStatus = isEnabled ? '🟢' : '⭕';
   const currentFileStatus = getCurrentFileStatus();
   
   return [
@@ -46,7 +46,7 @@ function getCurrentFileStatus(): string {
   }
   
   const isCurrentEnabled = isEditorEnabled(activeEditor);
-  return isCurrentEnabled ? '🟢' : '🔴';
+  return isCurrentEnabled ? '🟢' : '⭕';
 }
 
 function getCurrentFileDescription(): string {
