@@ -174,7 +174,7 @@ npx mocha --require ts-node/register --extensions ts --timeout 10000 --grep "Lar
 
 ### ✅ Success Indicators
 
-- **Green checkmarks (✔)**: Test passed
+- **Green check marks (✔)**: Test passed
 - **Performance metrics**: Timing information (e.g., "parsed in 51.67ms")
 - **Memory metrics**: Memory usage (e.g., "Memory increase: 0.82MB")
 - **Feature confirmations**: (e.g., "Found 24 bracket pairs")
