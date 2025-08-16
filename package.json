@@ -44,7 +44,7 @@
   "main": "./dist/extension.js",
   "activationEvents": [
     "onLanguage:javascript",
-    "onLanguage:typescript", 
+    "onLanguage:typescript",
     "onLanguage:javascriptreact",
     "onLanguage:typescriptreact",
     "onLanguage:html",
@@ -161,8 +161,11 @@
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
     "check-types": "tsc --noEmit",
     "lint": "eslint src",
-    "test": "node ./node_modules/mocha/bin/mocha -r ts-node/register src/__test__/**/*.test.ts",
-    "watch-tests": "npm run test -- --watch"
+
+    "test": "mocha --require ts-node/register --extensions ts --timeout 5000 --grep \"Quick Tests\" src/__test__/simple.test.ts",
+    "test:integration": "mocha --require ts-node/register --extensions ts --timeout 10000 --grep \"Integration Tests\" src/__test__/simple.test.ts",
+    "test:performance": "mocha --require ts-node/register --extensions ts --timeout 30000 --grep \"Performance Tests\" src/__test__/simple.test.ts",
+    "test:all": "npm run test && npm run test:integration && npm run test:performance"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",

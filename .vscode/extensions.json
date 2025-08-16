@@ -1,5 +1,38 @@
 {
   // See http://go.microsoft.com/fwlink/?LinkId=827846
   // for the documentation about the extensions.json format
-  "recommendations": ["dbaeumer.vscode-eslint", "connor4312.esbuild-problem-matchers", "ms-vscode.extension-test-runner"]
+  "recommendations": [
+    // Core development extensions
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "ms-vscode.vscode-typescript-next",
+
+    // Testing extensions
+    "connor4312.esbuild-problem-matchers",
+    "ms-vscode.extension-test-runner",
+    "hbenl.vscode-mocha-test-adapter",
+    "ryanluker.vscode-coverage-gutters",
+
+    // Development utilities
+    "ms-vscode.vscode-json",
+    "bradlc.vscode-tailwindcss",
+    "formulahendry.auto-rename-tag",
+
+    // Performance and debugging
+    "ms-vscode.vscode-js-profile-flame",
+    "ms-vscode.hexeditor",
+    "alefragnani.project-manager",
+
+    // Git and version control
+    "eamodio.gitlens",
+    "github.vscode-pull-request-github",
+
+    // Extension development specific
+    "ms-vscode.extension-pack",
+    "ms-vscode.vscode-extension-samples"
+  ],
+  "unwantedRecommendations": [
+    "ms-vscode.vscode-typescript",
+    "hookyqr.beautify"
+  ]
 }

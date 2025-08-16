@@ -1,4 +1,4 @@
-# 🧪 Test Suite - Bracket Lynx Extension
+# 🧪 Test Suite - Bracket Lynx Extension v0.4.0
 
 This directory contains all tests for the Bracket Lynx extension. Tests are organized to cover all main functionalities of the extension.
 

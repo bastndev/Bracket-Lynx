@@ -1,251 +1,470 @@
-# 🧪 Testing Guide for Bracket Lynx
+# 🧪 Testing Guide for Bracket Lynx Extension
 
-This guide explains how to run and write tests for the Bracket Lynx extension in a simple and practical way.
+Welcome to the **Bracket Lynx** testing suite! This guide will help new developers understand how to run tests, interpret results, and contribute to the project's quality assurance.
 
-## 🚀 Running Tests
+## 📋 Table of Contents
+
+- [Quick Start](#-quick-start)
+- [Available Test Commands](#-available-test-commands)
+- [Test Categories](#-test-categories)
+- [Running Specific Tests](#-running-specific-tests)
+- [Understanding Test Results](#-understanding-test-results)
+- [Performance Benchmarks](#-performance-benchmarks)
+- [Troubleshooting](#-troubleshooting)
+- [Contributing New Tests](#-contributing-new-tests)
+
+---
+
+## 🚀 Quick Start
 
 ### Prerequisites
+
 ```bash
 # Make sure dependencies are installed
 npm install
 ```
 
-### Basic Commands
+### Run All Tests (Recommended)
+
 ```bash
-# Run all tests
-npm test
-
-# Run tests in watch mode (automatically runs when code changes)
-npm run watch-tests
-
-# Check TypeScript types
-npm run check-types
-
-# Run linting
-npm run lint
+npm run test:all
 ```
 
-## 📁 Test Structure
+This runs all test categories in sequence and gives you a complete overview.
 
-```
-src/__test__/
-├── extension.test.ts          # Main tests
-├── TESTING_GUIDE.md           # This guide
-├── test-feature_astro.md      # Astro-specific tests
-├── test-refactor.md           # Refactoring tests
-├── test-v0.4.0.md             # Version 0.4.0 tests
-└── test-v0.5.0.md             # Version 0.5.0 tests
-```
+---
 
-## ✍️ Writing Tests
+## 🎯 Available Test Commands
 
-### Basic Structure
-```typescript
-suite('Test Group Name', () => {
-  test('✅ Test description', () => {
-    // Your test code here
-    assert.strictEqual(actualValue, expectedValue, 'Error message');
-  });
-});
-```
+| Command                    | Purpose                   | Timeout | What It Tests                          |
+| -------------------------- | ------------------------- | ------- | -------------------------------------- |
+| `npm run test`             | **Quick health checks**   | 5s      | Basic functionality, environment setup |
+| `npm run test:integration` | **Component integration** | 10s     | Multi-language processing, workflows   |
+| `npm run test:performance` | **Speed & efficiency**    | 30s     | Parsing speed, memory usage            |
+| `npm run test:all`         | **Complete test suite**   | All     | Runs all tests in sequence             |
 
-### Practical Example
-```typescript
-suite('Color Management Tests', () => {
-  test('✅ Should return valid hex color', () => {
-    const color = getCurrentColor();
-    assert.ok(color.startsWith('#'), 'Color should start with #');
-    assert.strictEqual(color.length, 7, 'Color should be 7 characters');
-  });
-});
-```
+---
 
-## 🔧 Most Used Assertions
+## 📊 Test Categories
 
-```typescript
-// Strict equality
-assert.strictEqual(actual, expected, 'message');
+### 🚀 Quick Tests - Basic Health Check
 
-// Check if something is true
-assert.ok(value, 'message');
+**When to run:** Always run these first when you start working on the project.
 
-// Check that a function does not throw
-assert.doesNotThrow(() => {
-  myFunction();
-}, 'message');
-
-// Deep object comparison
-assert.deepStrictEqual(object1, object2, 'message');
-
-// Check if something is false
-assert.strictEqual(value, false, 'message');
-```
-
-## 📊 Current Test Categories
-
-### 1. Configuration Tests
-Test the extension configuration:
-```typescript
-test('✅ BracketLynxConfig default values', () => {
-  assert.strictEqual(BracketLynxConfig.mode, 'auto');
-  assert.strictEqual(BracketLynxConfig.debug, false);
-});
-```
-
-### 2. Utility Functions Tests
-Test utility functions:
-```typescript
-test('✅ Core utility functions', () => {
-  assert.strictEqual(isEmpty(''), true);
-  assert.strictEqual(isValidHexColor('#ff6b6b'), true);
-});
-```
-
-### 3. Language Rules Tests
-Test supported language rules:
-```typescript
-test('✅ Language support validation', () => {
-  assert.strictEqual(isLanguageSupported('javascript'), true);
-  assert.strictEqual(isLanguageSupported('unknownlang'), false);
-});
-```
-
-### 4. Performance Tests
-Test performance and limits:
-```typescript
-test('✅ Large text handling simulation', async () => {
-  const startTime = Date.now();
-  const filtered = filterContent(largeText);
-  const endTime = Date.now();
-  assert.ok(endTime - startTime < 100, 'Should be fast');
-});
-```
-
-### 5. Integration Tests
-Test how components work together:
-```typescript
-test('✅ Full system integration', () => {
-  const cache = AdvancedCacheManager.getInstance();
-  const parser = OptimizedBracketParser.getInstance();
-  assert.ok(cache, 'Cache should be initialized');
-  assert.ok(parser, 'Parser should be initialized');
-});
-```
-
-## 🎯 Best Practices
-
-### ✅ Do
-- Use descriptive names with emoji ✅
-- Group related tests in suites
-- Test positive and negative cases
-- Include performance tests for critical functions
-- Test error handling and edge cases
-
-### ❌ Avoid
-- Tests that depend on other tests
-- Very long tests (split into smaller tests)
-- Hardcoding values that may change
-- Tests without descriptive error messages
-
-## 🐛 Debugging Tests
-
-### In VS Code:
-1. Set breakpoints in test files
-2. Use `F5` or "Debug: Start Debugging"
-3. Select "Node.js" as environment
-
-### In Terminal:
 ```bash
-# Run a specific test
-npm test -- --grep "test name"
-
-# Run with more information
-npm test -- --reporter spec
+npm run test
 ```
 
-## ➕ Adding New Tests
+**What it validates:**
 
-### Step by step:
-1. **Identify what to test**: New function, module, or behavior
-2. **Choose the appropriate suite**: Or create a new one if needed
-3. **Write the test**:
-   ```typescript
-   test('✅ My new functionality', () => {
-     // Arrange (prepare)
-     const input = 'test input';
-     
-     // Act (execute)
-     const result = myFunction(input);
-     
-     // Assert (verify)
-     assert.strictEqual(result, 'expected output');
-   });
-   ```
-4. **Run the test**: `npm test`
-5. **Verify it passes**: ✅
+- ✅ VSCode mock environment works
+- ✅ Basic bracket parsing functionality
+- ✅ Language detection and validation
+- ✅ Document creation utilities
+- ✅ Edge case handling (empty files, malformed code)
 
-### Complete Example:
-```typescript
-suite('New Feature Tests', () => {
-  test('✅ Should handle empty input', () => {
-    const result = myNewFunction('');
-    assert.strictEqual(result, '', 'Should return empty string');
-  });
+**Expected output:**
 
-  test('✅ Should handle normal input', () => {
-    const result = myNewFunction('hello');
-    assert.ok(result.length > 0, 'Should return non-empty result');
-  });
+```
+🚀 Quick Tests - Basic Health Check
+  Environment Setup
+    ✔ ✅ VSCode mock should be available
+    ✔ ✅ Test utilities should work
+    ✔ ✅ Configuration mock should work
+  Basic Functionality
+    ✔ ✅ Bracket detection should work
+    ✔ ✅ Language validation should work
+    ✔ ✅ Document creation for different languages
+  Edge Cases
+    ✔ ✅ Empty content should be handled gracefully
+    ✔ ✅ Malformed brackets should not crash
 
-  test('✅ Should not throw on invalid input', () => {
-    assert.doesNotThrow(() => {
-      myNewFunction(null);
-    }, 'Should handle null gracefully');
-  });
-});
+8 passing (4ms)
 ```
 
-## 📈 Test Coverage
+### 🔄 Integration Tests - Component Integration
 
-Current tests cover:
-- ✅ Extension configuration
-- ✅ Utility functions
-- ✅ Language rules
-- ✅ Color system
-- ✅ Cache management
-- ✅ Performance parser
-- ✅ Exception handling
-- ✅ Universal decorators
-- ✅ Integration tests
+**When to run:** After making changes to multiple components or workflows.
 
-## 🚨 Common Troubleshooting
-
-### Error: "Cannot find module"
 ```bash
-# Reinstall dependencies
+npm run test:integration
+```
+
+**What it validates:**
+
+- ✅ Multi-language processing (JavaScript, TypeScript, HTML, JSON, CSS)
+- ✅ Mixed content scenarios (JSX, CSS-in-JS, nested structures)
+- ✅ Error handling across different scenarios
+- ✅ End-to-end workflow processing
+
+**Expected output:**
+
+```
+🔄 Integration Tests - Component Integration
+  Multi-Language Processing
+    ✅ javascript: Found 4 bracket pairs
+    ✅ typescript: Found 24 bracket pairs
+    ✅ html: Found 2 bracket pairs
+    ✅ json: Found 6 bracket pairs
+    ✅ css: Found 4 bracket pairs
+      ✔ 🔄 Should process all supported languages consistently
+
+4 passing (6ms)
+```
+
+### ⚡ Performance Tests - Speed & Efficiency
+
+**When to run:** Before releasing, after performance optimizations, or when investigating slowdowns.
+
+```bash
+npm run test:performance
+```
+
+**What it validates:**
+
+- ⚡ Large file processing speed (< 2000ms for large files)
+- ⚡ Multiple consecutive operations (< 5000ms for 100 operations)
+- ⚡ Deep nesting handling (< 1000ms for 30 levels)
+- ⚡ Memory usage efficiency (< 50MB increase for 50 documents)
+- ⚡ Concurrent processing performance
+
+**Expected output:**
+
+```
+⚡ Performance Tests - Speed & Efficiency
+  Parsing Performance
+    📊 Large file (48794 chars) parsed in 51.67ms
+      ✔ ⚡ Large file processing should be fast (55ms)
+    📊 100 operations completed in 3.91ms (avg: 0.04ms)
+      ✔ ⚡ Multiple consecutive operations should maintain speed
+
+5 passing (67ms)
+```
+
+---
+
+## 🎪 Running Specific Tests
+
+### Target Specific Functionality
+
+```bash
+# Test only environment setup
+npx mocha --require ts-node/register --extensions ts --grep "Environment Setup" src/__test__/simple.test.ts
+
+# Test only bracket detection
+npx mocha --require ts-node/register --extensions ts --grep "Bracket detection" src/__test__/simple.test.ts
+
+# Test only performance parsing
+npx mocha --require ts-node/register --extensions ts --grep "Parsing Performance" src/__test__/simple.test.ts
+```
+
+### Debug Mode (Verbose Output)
+
+```bash
+# Run with detailed logging
+DEBUG=* npm run test
+
+# Run single test with timeout extended
+npx mocha --require ts-node/register --extensions ts --timeout 10000 --grep "Large file" src/__test__/simple.test.ts
+```
+
+---
+
+## 📈 Understanding Test Results
+
+### ✅ Success Indicators
+
+- **Green check marks (✔)**: Test passed
+- **Performance metrics**: Timing information (e.g., "parsed in 51.67ms")
+- **Memory metrics**: Memory usage (e.g., "Memory increase: 0.82MB")
+- **Feature confirmations**: (e.g., "Found 24 bracket pairs")
+
+### ❌ Failure Indicators
+
+- **Red X marks**: Test failed
+- **Error messages**: Specific failure reasons
+- **Timeout warnings**: Operations taking too long
+- **Memory warnings**: Excessive memory usage
+
+### 📊 Performance Benchmarks
+
+| Test Type               | Expected Performance | Warning Threshold | Failure Threshold |
+| ----------------------- | -------------------- | ----------------- | ----------------- |
+| **Large File Parsing**  | < 100ms              | 500ms             | 2000ms            |
+| **Multiple Operations** | < 1ms average        | 10ms average      | 50ms average      |
+| **Deep Nesting**        | < 10ms               | 100ms             | 1000ms            |
+| **Memory Usage**        | < 5MB increase       | 25MB increase     | 50MB increase     |
+
+---
+
+## 🛠️ Troubleshooting
+
+### Common Issues
+
+#### 1. **Tests not running**
+
+```bash
+Error: Cannot find module 'ts-node'
+```
+
+**Solution:**
+
+```bash
+npm install --save-dev ts-node typescript
+npm run test
+```
+
+#### 2. **VSCode mock errors**
+
+```bash
+Error: Cannot find module 'vscode'
+```
+
+**Solution:** This is expected - our mock handles this. If tests still fail:
+
+```bash
+# Clean and reinstall
 rm -rf node_modules package-lock.json
 npm install
+npm run test
 ```
 
-### Tests fail after changes
+#### 3. **Timeout errors**
+
 ```bash
-# Check types first
-npm run check-types
-
-# Then run tests
-npm test
+Error: Timeout of 5000ms exceeded
 ```
 
-### Tests are too slow
-- Check for infinite loops
-- Make sure there are no heavy synchronous operations
-- Use mocks for external operations
+**Solution:**
 
-## 📝 Important Notes
+```bash
+# Run performance tests with extended timeout
+npx mocha --require ts-node/register --extensions ts --timeout 30000 --grep "Performance" src/__test__/simple.test.ts
+```
 
-- Tests use **Mocha** as the framework
-- Assertions are from **Node.js** native
-- Tests run in a **Node.js** environment, not in VS Code
-- Some tests may require mocks for VS Code functionalities
+#### 4. **Memory issues**
 
-Done! With this guide you should be able to write and run tests easily. 🎉
+```bash
+FATAL ERROR: CALL_AND_RETRY_LAST Allocation failed - JavaScript heap out of memory
+```
+
+**Solution:**
+
+```bash
+# Increase Node.js memory limit
+node --max-old-space-size=4096 ./node_modules/.bin/mocha --require ts-node/register --extensions ts src/__test__/simple.test.ts
+```
+
+### Debug Commands
+
+```bash
+# Check test file syntax
+npx tsc --noEmit src/__test__/simple.test.ts
+
+# Run single test with stack trace
+npx mocha --require ts-node/register --extensions ts --grep "specific test name" --reporter spec src/__test__/simple.test.ts
+
+# Check memory usage during tests
+node --inspect ./node_modules/.bin/mocha --require ts-node/register --extensions ts src/__test__/simple.test.ts
+```
+
+---
+
+## 🔧 Development Workflow
+
+### Before Starting Development
+
+```bash
+# Verify everything works
+npm run test:all
+```
+
+### During Development
+
+```bash
+# Quick sanity check
+npm run test
+
+# After major changes
+npm run test:integration
+```
+
+### Before Committing
+
+```bash
+# Full test suite
+npm run test:all
+
+# Check performance impact
+npm run test:performance
+```
+
+### Before Releasing
+
+```bash
+# Complete validation
+npm run test:all
+
+# Verify no performance regressions
+npm run test:performance
+```
+
+---
+
+## 📝 Contributing New Tests
+
+### Adding a New Test Category
+
+1. **Add to `simple.test.ts`**:
+
+```typescript
+describe('🔥 Your New Test Category', function () {
+  this.timeout(10000);
+
+  it('✅ Should test your new feature', () => {
+    // Your test logic here
+    assert.ok(true, 'Test passed');
+  });
+});
+```
+
+2. **Add to `package.json`**:
+
+```json
+{
+  "scripts": {
+    "test:yourcategory": "mocha --require ts-node/register --extensions ts --timeout 10000 --grep \"Your New Test Category\" src/__test__/simple.test.ts"
+  }
+}
+```
+
+### Test Writing Guidelines
+
+#### ✅ Good Test Practices
+
+```typescript
+// Descriptive names with emojis
+it('✅ Should parse complex nested structures correctly', () => {
+  // Arrange
+  const testContent = 'your test content';
+
+  // Act
+  const result = TestUtilities.simulateBracketParsing(testContent);
+
+  // Assert
+  assert.ok(result.length > 0, 'Should find brackets');
+  TestUtilities.validateBracketStructure(result);
+});
+```
+
+#### ❌ Avoid These Patterns
+
+```typescript
+// Too generic
+it('test parsing', () => { ... });
+
+// No error context
+assert.ok(result, 'failed');
+
+// Hard to debug
+assert.strictEqual(result.length, 5);
+```
+
+### Performance Test Guidelines
+
+```typescript
+it('⚡ Your performance test', async () => {
+  const { result, duration } = await measureTime(() => {
+    // Your performance-critical code
+    return yourFunction(testData);
+  });
+
+  assert.ok(result, 'Should return valid result');
+  assert.ok(duration < 100, `Too slow: ${duration}ms`);
+
+  console.log(`    📊 Performance: ${duration.toFixed(2)}ms`);
+});
+```
+
+---
+
+## 🎯 Test Scenarios Coverage
+
+### Currently Tested ✅
+
+- Basic bracket parsing and validation
+- Multi-language support (JavaScript, TypeScript, HTML, JSON, CSS)
+- Performance with large files (48K+ characters)
+- Memory efficiency (50 document processing)
+- Deep nesting (30 levels)
+- Error handling with malformed code
+- Edge cases (empty files, unbalanced brackets)
+
+### Future Test Ideas 💡
+
+- Real VSCode integration tests
+- User interaction simulation
+- Extension activation/deactivation
+- Configuration change handling
+- File watching and updates
+- Multi-workspace scenarios
+
+---
+
+## 📊 CI/CD Integration (Future)
+
+When we add CI/CD, you'll be able to use:
+
+```bash
+# For CI environments
+npm run test:ci
+
+# With coverage reporting
+npm run test:coverage
+
+# With test artifacts
+npm run test:report
+```
+
+---
+
+## 🆘 Getting Help
+
+### Internal Resources
+
+- **Test Setup**: `src/__test__/test-setup.ts` - Mock utilities and helpers
+- **Main Tests**: `src/__test__/simple.test.ts` - All test implementations
+- **Project Config**: `package.json` - Test scripts and dependencies
+
+### External Resources
+
+- [Mocha Documentation](https://mochajs.org/) - Test framework
+- [Node.js Assert](https://nodejs.org/api/assert.html) - Assertion library
+- [TypeScript Testing](https://www.typescriptlang.org/docs/handbook/testing.html) - TypeScript-specific testing
+
+### Team Support
+
+If you encounter issues not covered in this guide:
+
+1. Check the test output for specific error messages
+2. Review recent changes that might affect tests
+3. Ask team members who worked on similar features
+4. Create an issue with test output and system information
+
+---
+
+## 🎉 Success!
+
+If all tests pass, you should see:
+
+```
+🎉 ALL TESTS PASSED - EXTENSION READY FOR PRODUCTION!
+```
+
+**Happy Testing! 🧪✨**
+
+---
+
+_Last updated: August 2025_  
+_Version: 0.7.0_  
+_Maintainer: Development Team_
