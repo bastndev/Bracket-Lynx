@@ -79,12 +79,12 @@ export async function toggleBracketLynx(): Promise<void> {
     await saveIndividuallyEnabledFilesState();
     reactivateExtension();
     vscode.window.showInformationMessage(
-      '🌐 Bracket Lynx: Activated globally (all files enabled except disabled ones)'
+      'Bracket Lynx: (Activated ✅) globally - 🌐'
     );
   } else {
     deactivateExtension();
     vscode.window.showInformationMessage(
-      '🌐 Bracket Lynx: Deactivated globally'
+      'Bracket Lynx: (Deactivated ❌) globally - 🌐 '
     );
   }
 }
