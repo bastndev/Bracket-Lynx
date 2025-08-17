@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
-import { getCurrentColor } from '../../actions/colors';
-import { isEditorEnabled, isExtensionEnabled } from '../../actions/toggle';
-import { BracketLynxConfig } from '../lens';
+import { getCurrentColor } from '../../../actions/colors';
+import { isEditorEnabled, isExtensionEnabled } from '../../../actions/toggle';
+import { BracketLynxConfig } from '../../lens';
 
 // ============================================================================
 // 🎯 TARGET ELEMENTS CONFIGURATION - GLOBAL MODULE CONSTANTS (Easy to maintain!)

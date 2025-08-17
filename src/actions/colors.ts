@@ -27,28 +27,26 @@ export interface IBracketLynxProvider {
 // STATE VARIABLES
 // ============================================================================
 let bracketLynxProvider: IBracketLynxProvider | undefined = undefined;
-let astroDecorator: any = undefined;
-let vueDecorator: any = undefined;
-let svelteDecorator: any = undefined;
+let universalDecorator: any = undefined;
 let currentColor: string = DEFAULT_COLOR;
 
 // ============================================================================
 // PROVIDER SETTERS
 // ============================================================================
 export function setBracketLynxProviderForColors(provider: IBracketLynxProvider): void {
-  bracketLynxProvider = provider;
+	bracketLynxProvider = provider;
 }
 
 export function setAstroDecoratorForColors(decorator: any): void {
-  astroDecorator = decorator;
+	universalDecorator = decorator;
 }
 
 export function setVueDecoratorForColors(decorator: any): void {
-  vueDecorator = decorator;
+	universalDecorator = decorator;
 }
 
 export function setSvelteDecoratorForColors(decorator: any): void {
-  svelteDecorator = decorator;
+	universalDecorator = decorator;
 }
 
 // ============================================================================
@@ -185,8 +183,12 @@ export function changeDecorationColor(): void {
         placeHolder: '#ffffff (example: #ff6b6b, #00ff00, #3498db)',
         value: originalColor,
         validateInput: (value) => {
-          if (!value) return 'Color is required';
-          if (!isValidHexColor(value)) return 'Please enter a valid hex color (e.g., #ff6b6b)';
+          if (!value) {
+            return 'Color is required';
+          }
+          if (!isValidHexColor(value)) {
+            return 'Please enter a valid hex color (e.g., #ff6b6b)';
+          }
           return null;
         },
       });
@@ -252,9 +254,7 @@ async function recreateAllBracketLynxDecorations(overrideColor?: string): Promis
     // Clear all existing decorations from all providers simultaneously
     const decorators = [
       { name: 'Main', decorator: bracketLynxProvider },
-      { name: 'Astro', decorator: astroDecorator },
-      { name: 'Vue', decorator: vueDecorator },
-      { name: 'Svelte', decorator: svelteDecorator }
+      { name: 'Universal', decorator: universalDecorator }
     ];
 
     // Clear all decorators
@@ -377,9 +377,7 @@ export function initializeColorSystem(): void {
     try {
       const decoratorStatus = {
         main: !!bracketLynxProvider,
-        astro: !!astroDecorator,
-        vue: !!vueDecorator,
-        svelte: !!svelteDecorator
+        universal: !!universalDecorator
       };
 
       console.log('🎨 Decorator initialization status:', decoratorStatus);
@@ -528,22 +526,22 @@ export function getDecoratorDiagnostics(): {
       hasClearAll: !!(bracketLynxProvider?.clearAllDecorations)
     },
     astro: {
-      available: !!astroDecorator,
-      hasForceRefresh: !!(astroDecorator?.forceColorRefresh),
-      hasUpdateDecorations: !!(astroDecorator?.updateDecorations),
-      hasClearAll: !!(astroDecorator?.clearAllDecorations)
+      available: !!universalDecorator,
+      hasForceRefresh: !!(universalDecorator?.forceColorRefresh),
+      hasUpdateDecorations: !!(universalDecorator?.updateDecorations),
+      hasClearAll: !!(universalDecorator?.clearAllDecorations)
     },
     vue: {
-      available: !!vueDecorator,
-      hasForceRefresh: !!(vueDecorator?.forceColorRefresh),
-      hasUpdateDecorations: !!(vueDecorator?.updateDecorations),
-      hasClearAll: !!(vueDecorator?.clearAllDecorations)
+      available: !!universalDecorator,
+      hasForceRefresh: !!(universalDecorator?.forceColorRefresh),
+      hasUpdateDecorations: !!(universalDecorator?.updateDecorations),
+      hasClearAll: !!(universalDecorator?.clearAllDecorations)
     },
     svelte: {
-      available: !!svelteDecorator,
-      hasForceRefresh: !!(svelteDecorator?.forceColorRefresh),
-      hasUpdateDecorations: !!(svelteDecorator?.updateDecorations),
-      hasClearAll: !!(svelteDecorator?.clearAllDecorations)
+      available: !!universalDecorator,
+      hasForceRefresh: !!(universalDecorator?.forceColorRefresh),
+      hasUpdateDecorations: !!(universalDecorator?.updateDecorations),
+      hasClearAll: !!(universalDecorator?.clearAllDecorations)
     },
     currentColor,
     isExtensionEnabled: isExtensionEnabled()

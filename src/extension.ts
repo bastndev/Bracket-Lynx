@@ -1,32 +1,86 @@
 import * as vscode from 'vscode';
 import { BracketLynx } from './lens/lens';
-import { AstroDecorator } from './lens/decorators/astro-decorator';
-import { VueDecorator } from './lens/decorators/vue.decorator';
-import SvelteDecorator from './lens/decorators/svelte.decorator';
+import UniversalDecorator from './lens/decorators/universal-decorator';
 import { setBracketLynxProviderForColors, setAstroDecoratorForColors, setVueDecoratorForColors, setSvelteDecoratorForColors } from './actions/colors';
-import { showBracketLynxMenu, setBracketLynxProvider, setAstroDecorator, setVueDecorator, cleanupClosedEditor, initializePersistedState } from './actions/toggle';
+import { showBracketLynxMenu, setBracketLynxProvider, setAstroDecorator, setVueDecorator, setSvelteDecorator, cleanupClosedEditor, initializePersistedState } from './actions/toggle';
 import { initializeErrorHandling, LogLevel, logger } from './core/performance-config';
 
 export let extensionContext: vscode.ExtensionContext;
 
 // ============================================================================
-// UNIVERSAL DECORATION UPDATER - Centralized logic for all decorators
+// UNIVERSAL COORDINATOR WITHOUT FLICKERING - Single source of truth
 // ============================================================================
-const updateUniversalDecorations = (editor?: vscode.TextEditor) => {
-    if (!editor) {
-        return;
+class DecorationCoordinator {
+    private static updateInProgress = false;
+    private static pendingUpdates = new Set<string>();
+    private static readonly COORDINATION_DELAY = 16; // ~60fps for smooth visuals
+
+    /**
+     * Coordinated update to avoid flickering
+     */
+    public static async coordinatedUpdate(editor?: vscode.TextEditor): Promise<void> {
+        if (!editor) {
+            return;
+        }
+
+        const editorKey = `${editor.document.uri.toString()}-${editor.document.version}`;
+        this.pendingUpdates.add(editorKey);
+
+        if (this.updateInProgress) {
+            return;
+        }
+
+        setTimeout(async () => {
+            await this.processPendingUpdates(editor);
+        }, this.COORDINATION_DELAY);
     }
-    
-    const { languageId } = editor.document;
-    
-    if (languageId === 'astro' || languageId === 'html') {
-        AstroDecorator.updateDecorations(editor);
-    } else if (languageId === 'vue') {
-        VueDecorator.updateDecorations(editor);
-    } else if (languageId === 'svelte') {
-        SvelteDecorator.updateDecorations(editor);
+
+    /**
+     * Atomically processes all pending updates
+     */
+    private static async processPendingUpdates(editor: vscode.TextEditor): Promise<void> {
+        if (this.updateInProgress) {
+            return;
+        }
+
+        this.updateInProgress = true;
+
+        try {
+            this.pendingUpdates.clear();
+
+            BracketLynx.delayUpdateDecoration(editor);
+
+            await UniversalDecorator.updateDecorations(editor);
+
+        } catch (error) {
+            console.error('DecorationCoordinator: Error in processPendingUpdates:', error);
+        } finally {
+            this.updateInProgress = false;
+        }
     }
-};
+
+    /**
+     * Coordinated cleanup of all decorations
+     */
+    public static clearAll(): void {
+        this.pendingUpdates.clear();
+        this.updateInProgress = false;
+
+        BracketLynx.clearAllDecorations();
+        UniversalDecorator.clearAllDecorations();
+    }
+
+    /**
+     * Coordinated configuration update
+     */
+    public static onConfigurationChange(): void {
+        this.pendingUpdates.clear();
+        this.updateInProgress = false;
+
+        BracketLynx.onDidChangeConfiguration();
+        UniversalDecorator.onDidChangeConfiguration();
+    }
+}
 
 // ============================================================================
 // EXTENSION ACTIVATION
@@ -43,30 +97,58 @@ export const activate = async (context: vscode.ExtensionContext) => {
 
     logger.info('Bracket Lynx extension activating...', { version: '0.6.1' });
 
-    // Initialize state and providers
-    initializePersistedState();
-    setBracketLynxProvider(BracketLynx);
-    setAstroDecorator(AstroDecorator);
-    setVueDecorator(VueDecorator);
-    setSvelteDecoratorForColors(SvelteDecorator);
-    setBracketLynxProviderForColors(BracketLynx);
-    setAstroDecoratorForColors(AstroDecorator);
-    setVueDecoratorForColors(VueDecorator);
+    try {
+        // Initialize state and providers - IMPORTANT ORDER to avoid conflicts
+        initializePersistedState();
 
-    // Initialize color system
-    const { initializeColorSystem } = await import('./actions/colors.js');
-    initializeColorSystem();
+        setBracketLynxProvider(BracketLynx);
+        setBracketLynxProviderForColors(BracketLynx);
 
-    // Register commands and event listeners
-    registerCommands(context);
-    registerEventListeners(context);
+        setAstroDecorator(UniversalDecorator);
+        setVueDecorator(UniversalDecorator);
+        setSvelteDecorator(UniversalDecorator);
+        setAstroDecoratorForColors(UniversalDecorator);
+        setVueDecoratorForColors(UniversalDecorator);
+        setSvelteDecoratorForColors(UniversalDecorator);
 
-    // Initialize decorations for all visible editors
-    vscode.window.visibleTextEditors.forEach(editor => {
-        BracketLynx.delayUpdateDecoration(editor);
-        updateUniversalDecorations(editor);
-    });
+        const { initializeColorSystem } = await import('./actions/colors.js');
+        initializeColorSystem();
+
+        registerCommands(context);
+        registerEventListeners(context);
+
+        // Coordinated decoration initialization - NO FLICKERING
+        await initializeDecorations();
+
+        logger.info('Bracket Lynx extension activated successfully');
+
+    } catch (error) {
+        logger.error('Error during extension activation:', error);
+        vscode.window.showErrorMessage(`Bracket Lynx: Activation failed - ${error}`);
+    }
 };
+
+/**
+ * Coordinated decoration initialization to avoid flickering
+ */
+async function initializeDecorations(): Promise<void> {
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    const visibleEditors = vscode.window.visibleTextEditors;
+
+    if (visibleEditors.length === 0) {
+        return;
+    }
+
+    for (const editor of visibleEditors) {
+        try {
+            await DecorationCoordinator.coordinatedUpdate(editor);
+            await new Promise(resolve => setTimeout(resolve, 10));
+        } catch (error) {
+            console.error(`Error initializing decorations for ${editor.document.fileName}:`, error);
+        }
+    }
+}
 
 // ============================================================================
 // COMMAND REGISTRATION
@@ -74,31 +156,29 @@ export const activate = async (context: vscode.ExtensionContext) => {
 function registerCommands(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand('bracketLynx.menu', showBracketLynxMenu),
-        
+
         vscode.commands.registerCommand('bracketLynx.restoreColor', async () => {
             const { restoreColorFromGlobal } = await import('./actions/colors.js');
             await restoreColorFromGlobal();
         }),
-        
+
         vscode.commands.registerCommand('bracketLynx.diagnostics', async () => {
             const { getDecoratorDiagnostics } = await import('./actions/colors.js');
             const diagnostics = getDecoratorDiagnostics();
             console.log('🔧 Bracket Lynx Diagnostics:', diagnostics);
             vscode.window.showInformationMessage(
                 `🔧 Bracket Lynx Diagnostics: Main: ${diagnostics.main.available ? '✅' : '❌'}, ` +
-                `Astro: ${diagnostics.astro.available ? '✅' : '❌'}, ` +
-                `Vue: ${diagnostics.vue.available ? '✅' : '❌'}, ` +
-                `Svelte: ${diagnostics.svelte.available ? '✅' : '❌'}, ` +
+                `Universal: ${diagnostics.astro.available ? '✅' : '❌'}, ` +
                 `Color: ${diagnostics.currentColor}`
             );
         }),
-        
+
         vscode.commands.registerCommand('bracketLynx.debugColorRefresh', async () => {
             const { debugColorRefresh } = await import('./actions/colors.js');
             await debugColorRefresh();
             vscode.window.showInformationMessage('🎨 Color refresh debug test completed - check console for details');
         }),
-        
+
         vscode.commands.registerCommand('bracketLynx.toggleDiagnostics', async () => {
             const { getToggleDiagnostics } = await import('./actions/toggle.js');
             const diagnostics = getToggleDiagnostics();
@@ -106,19 +186,17 @@ function registerCommands(context: vscode.ExtensionContext) {
             vscode.window.showInformationMessage(
                 `🔄 Toggle Status: Global: ${diagnostics.globalEnabled ? '✅' : '❌'}, ` +
                 `Current File: ${diagnostics.currentFileStatus}, ` +
-                `Main: ${diagnostics.decorators.main.available ? '✅' : '❌'}, ` +
-                `Astro: ${diagnostics.decorators.astro.available ? '✅' : '❌'}, ` +
-                `Vue: ${diagnostics.decorators.vue.available ? '✅' : '❌'}, ` +
-                `Svelte: ${diagnostics.decorators.svelte.available ? '✅' : '❌'}`
+                `Systems: ${diagnostics.decorators.main.available ? '✅' : '❌'} Main, ` +
+                `${diagnostics.decorators.astro.available ? '✅' : '❌'} Universal`
             );
         }),
-        
+
         vscode.commands.registerCommand('bracketLynx.debugToggleSync', async () => {
             const { debugToggleSync } = await import('./actions/toggle.js');
             await debugToggleSync();
             vscode.window.showInformationMessage('🔄 Toggle sync debug test completed - check console for details');
         }),
-        
+
         vscode.commands.registerCommand('bracketLynx.validateStatus', async () => {
             const { validateDecoratorStatus } = await import('./actions/colors.js');
             const validation = validateDecoratorStatus();
@@ -136,6 +214,12 @@ function registerCommands(context: vscode.ExtensionContext) {
             } else {
                 vscode.window.showWarningMessage(message);
             }
+        }),
+
+        vscode.commands.registerCommand('bracketLynx.refreshDecorations', async () => {
+            DecorationCoordinator.clearAll();
+            await initializeDecorations();
+            vscode.window.showInformationMessage('🔄 Decorations refreshed successfully');
         })
     );
 }
@@ -156,32 +240,30 @@ function registerEventListeners(context: vscode.ExtensionContext) {
 }
 
 // ============================================================================
-// EVENT HANDLERS
+// EVENT HANDLERS - COORDINATED TO AVOID CONFLICTS
 // ============================================================================
 async function handleConfigurationChange(event: vscode.ConfigurationChangeEvent) {
     if (event.affectsConfiguration('bracketLynx')) {
-        BracketLynx.onDidChangeConfiguration();
-        AstroDecorator.onDidChangeConfiguration();
-        VueDecorator.onDidChangeConfiguration();
-        SvelteDecorator.onDidChangeConfiguration();
-        
-        const { onConfigurationChanged } = await import('./actions/colors.js');
-        await onConfigurationChanged();
+        try {
+            DecorationCoordinator.onConfigurationChange();
+
+            const { onConfigurationChanged } = await import('./actions/colors.js');
+            await onConfigurationChanged();
+
+        } catch (error) {
+            console.error('Error handling configuration change:', error);
+        }
     }
 }
 
 function handleWorkspaceFoldersChange() {
-    BracketLynx.onDidChangeConfiguration();
-    AstroDecorator.onDidChangeConfiguration();
-    VueDecorator.onDidChangeConfiguration();
-    SvelteDecorator.onDidChangeConfiguration();
+    DecorationCoordinator.onConfigurationChange();
 }
 
 function handleTextDocumentChange(event: vscode.TextDocumentChangeEvent) {
-    BracketLynx.onDidChangeTextDocument(event.document);
     const editor = vscode.window.visibleTextEditors.find(e => e.document === event.document);
     if (editor) {
-        updateUniversalDecorations(editor);
+        DecorationCoordinator.coordinatedUpdate(editor);
     }
 }
 
@@ -189,7 +271,7 @@ function handleDidOpenTextDocument(document: vscode.TextDocument) {
     BracketLynx.onDidOpenTextDocument(document);
     const editor = vscode.window.visibleTextEditors.find(e => e.document === document);
     if (editor) {
-        updateUniversalDecorations(editor);
+        DecorationCoordinator.coordinatedUpdate(editor);
     }
 }
 
@@ -197,7 +279,7 @@ async function handleDidSaveTextDocument(document: vscode.TextDocument) {
     BracketLynx.onDidSaveTextDocument(document);
     const editor = vscode.window.visibleTextEditors.find(e => e.document === document);
     if (editor) {
-        updateUniversalDecorations(editor);
+        DecorationCoordinator.coordinatedUpdate(editor);
     }
 
     // Force color sync if settings were changed
@@ -214,15 +296,24 @@ async function handleDidCloseTextDocument(document: vscode.TextDocument) {
 
 function handleActiveTextEditorChange(editor?: vscode.TextEditor) {
     BracketLynx.onDidChangeActiveTextEditor();
-    updateUniversalDecorations(editor);
+    if (editor) {
+        setTimeout(() => {
+            DecorationCoordinator.coordinatedUpdate(editor);
+        }, 50);
+    }
 }
 
 // ============================================================================
 // EXTENSION DEACTIVATION
 // ============================================================================
 export const deactivate = () => {
-    AstroDecorator.dispose();
-    VueDecorator.dispose();
-    SvelteDecorator.dispose();
-    console.log('🧹 Bracket Lynx: Extension deactivated');
+    try {
+        DecorationCoordinator.clearAll();
+        UniversalDecorator.dispose();
+        BracketLynx.dispose();
+
+        logger.info('🧹 Bracket Lynx: Extension deactivated successfully');
+    } catch (error) {
+        console.error('Error during extension deactivation:', error);
+    }
 };

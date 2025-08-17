@@ -1,29 +1,31 @@
 import * as vscode from 'vscode';
-import { getCurrentColor } from '../../actions/colors';
-import { isEditorEnabled, isExtensionEnabled } from '../../actions/toggle';
-import { BracketLynxConfig } from '../lens';
+import { getCurrentColor } from '../../../actions/colors';
+import { isEditorEnabled, isExtensionEnabled } from '../../../actions/toggle';
+import { BracketLynxConfig } from '../../lens';
 
 // ============================================================================
 // 🎯 TARGET ELEMENTS CONFIGURATION - GLOBAL MODULE CONSTANTS (Easy to maintain!)
 // ============================================================================
-const ASTRO_COMPONENTS = [
-  'Fragment', 'Astro', 'Code', 'Markdown', 'Debug',
-  'slot', 'Component'
+const VUE_COMPONENTS = [
+  'template', 'script', 'style', 'component',
+  'transition', 'transition-group', 'keep-alive',
+  'slot', 'teleport', 'suspense'
 ];
 
 const TARGET_HTML_ELEMENTS = [
-  'style', 'script', 'section', 'article',
-  'main', 'header', 'footer', 'aside', 'nav',
-  'html', 'body'
+  'section', 'article', 'main', 'header',
+  'footer', 'aside', 'nav', 'form', 'table',
+  'ul', 'ol', 'li', 'p', 'span', 'button'
 ];
 
 // ============================================================================
 // TYPES
 // ============================================================================
-export type AstroComponentName = 'Fragment' | 'Astro' | 'Code' | 'Markdown' | 'Debug' | 'slot' | 'Component';
-export type HtmlElementName = 'style' | 'script' | 'section' | 'article' | 'main' | 'header' | 'footer' | 'aside' | 'nav' | 'html' | 'body';
-export type SupportedExtension = '.astro' | '.html';
-export type SupportedLanguageId = 'astro' | 'html';
+export type VueComponentName = 'template' | 'script' | 'style' | 'component' | 'transition' | 'transition-group' | 'keep-alive' | 'slot' | 'teleport' | 'suspense';
+export type VueDirectiveName = 'v-if' | 'v-else' | 'v-else-if' | 'v-for' | 'v-show' | 'v-model' | 'v-on' | 'v-bind' | 'v-slot';
+export type HtmlElementName = 'div' | 'section' | 'article' | 'main' | 'header' | 'footer' | 'aside' | 'nav' | 'form' | 'table';
+export type SupportedExtension = '.vue';
+export type SupportedLanguageId = 'vue';
 
 export interface ComponentRange {
   readonly name: string;
@@ -31,8 +33,9 @@ export interface ComponentRange {
   readonly endLine: number;
   readonly range: vscode.Range;
   readonly hasContent: boolean;
-  readonly componentType?: 'astro' | 'html' | 'custom';
+  readonly componentType?: 'vue' | 'html' | 'custom';
   readonly lineSpan?: number;
+  readonly isScoped?: boolean;
 }
 
 interface ComponentStackEntry {
@@ -44,19 +47,21 @@ interface ComponentStackEntry {
 // ============================================================================
 // MAIN DECORATOR CLASS
 // ============================================================================
-export class UniversalDecorator {
+export class VueDecorator {
   private static decorationType: vscode.TextEditorDecorationType | undefined;
-  private static readonly SUPPORTED_EXTENSIONS = ['.astro', '.html'];
-  private static readonly SUPPORTED_LANGUAGE_IDS = ['astro', 'html'];
+  private static readonly SUPPORTED_EXTENSIONS = ['.vue'];
+  private static readonly SUPPORTED_LANGUAGE_IDS = ['vue'];
 
   // 🚀 HYPER-OPTIMIZED Regex Cache - Compiled once, used forever!
   private static readonly OPEN_TAG_REGEX = /<(\w+)(?:\s+[^>]*)?(?<!\/)\s*>/;
   private static readonly CLOSE_TAG_REGEX = /<\/(\w+)\s*>/;
   private static readonly TAG_DETECTOR_REGEX = /<[^>]+>/;
+  private static readonly SCOPED_STYLE_REGEX = /<style[^>]*\s+scoped[^>]*>/;
 
   // 🚀 ULTRA-OPTIMIZED Content Analyzer - Smart early exits and caching
-  private static readonly INSIGNIFICANT_CONTENT = new Set(['{', '}', '', '<!--', '-->']);
+  private static readonly INSIGNIFICANT_CONTENT = new Set(['{', '}', '', '<!--', '-->', '{{', '}}']);
   private static readonly COMMENT_REGEX = /^<!--.*-->$/;
+  private static readonly VUE_COMMENT_REGEX = /^\/\*.*\*\/$/;
 
   /**
    * Ensure decoration type is created with current configuration
@@ -110,18 +115,17 @@ export class UniversalDecorator {
       editor.setDecorations(decorationType, decorations);
 
       if (BracketLynxConfig.debug) {
-        const fileType = this.getFileType(editor.document);
-        console.log(`Universal Decorator: Applied ${decorations.length} decorations to ${fileType} file: ${editor.document.fileName}`);
-        console.log(`Universal Decorator: Extension enabled: ${extensionEnabled}, Editor enabled: ${editorEnabled}`);
+        console.log(`Vue Decorator: Applied ${decorations.length} decorations to Vue file: ${editor.document.fileName}`);
+        console.log(`Vue Decorator: Extension enabled: ${extensionEnabled}, Editor enabled: ${editorEnabled}`);
       }
     } catch (error) {
-      console.error('Universal Decorator: Error updating decorations:', error);
+      console.error('Vue Decorator: Error updating decorations:', error);
       this.clearDecorations(editor);
     }
   }
 
   /**
-   * Generate decoration options for components
+   * Generate decoration options for Vue components
    */
   private static generateDecorations(document: vscode.TextDocument): vscode.DecorationOptions[] {
     const decorations: vscode.DecorationOptions[] = [];
@@ -132,7 +136,8 @@ export class UniversalDecorator {
     for (const component of componentRanges) {
       if (component.hasContent && this.shouldShowDecoration(component)) {
         const prefix = BracketLynxConfig.prefix.replace('‹~', '‹~').trim();
-        const decorationText = `${prefix} #${component.startLine}-${component.endLine} •${component.name}`;
+        const scopedIndicator = component.isScoped ? ' [scoped]' : '';
+        const decorationText = `${prefix} #${component.startLine}-${component.endLine} •${component.name}${scopedIndicator}`;
 
         const decoration: vscode.DecorationOptions = {
           range: component.range,
@@ -152,7 +157,7 @@ export class UniversalDecorator {
     const maxDecorations = BracketLynxConfig.maxDecorationsPerFile;
     if (decorations.length > maxDecorations) {
       if (BracketLynxConfig.debug) {
-        console.log(`Universal Decorator: Limiting decorations from ${decorations.length} to ${maxDecorations}`);
+        console.log(`Vue Decorator: Limiting decorations from ${decorations.length} to ${maxDecorations}`);
       }
       return decorations.slice(0, maxDecorations);
     }
@@ -161,7 +166,7 @@ export class UniversalDecorator {
   }
 
   /**
-   * 🔥 LIGHTNING-FAST Component Range Finder - Multi-level optimization!
+   * 🔥 LIGHTNING-FAST Component Range Finder - Multi-level optimization for Vue!
    */
   private static findComponentRanges(lines: string[]): ComponentRange[] {
     const componentStack: ComponentStackEntry[] = [];
@@ -206,7 +211,8 @@ export class UniversalDecorator {
 
             // 🎯 SMART Content Analysis - Only if meets minimum requirements
             if (lineSpan >= minLines && this.hasSignificantContent(lines, openComponent.startLine - 1, i)) {
-              const componentType = this.isAstroComponent(componentName) ? 'astro' : 'html';
+              const componentType = this.isVueComponent(componentName) ? 'vue' : 'html';
+              const isScoped = componentName === 'style' && this.isStyleScoped(lines, openComponent.startLine - 1);
 
               componentRanges.push({
                 name: componentName,
@@ -215,7 +221,8 @@ export class UniversalDecorator {
                 range: new vscode.Range(i, line.length, i, line.length),
                 hasContent: true,
                 componentType,
-                lineSpan
+                lineSpan,
+                isScoped
               });
             }
             break;
@@ -228,21 +235,24 @@ export class UniversalDecorator {
   }
 
   /**
-   * Check if a tag name represents a target element (Astro component or HTML element)
+   * Check if a tag name represents a target element (Vue component or HTML element)
    */
   private static isTargetElement(tagName: string): boolean {
-    return this.isAstroComponent(tagName) || this.isTargetHtmlElement(tagName);
+    return this.isVueComponent(tagName) || this.isTargetHtmlElement(tagName) || this.isCustomComponent(tagName);
   }
 
   /**
-   * Check if a tag name represents an Astro component
+   * Check if a tag name represents a Vue component or built-in element
    */
-  private static isAstroComponent(tagName: string): boolean {
-    if (tagName[0] === tagName[0].toUpperCase()) {
-      return true;
-    }
+  private static isVueComponent(tagName: string): boolean {
+    return VUE_COMPONENTS.includes(tagName.toLowerCase());
+  }
 
-    return ASTRO_COMPONENTS.includes(tagName);
+  /**
+   * Check if a tag name is a custom Vue component (starts with uppercase)
+   */
+  private static isCustomComponent(tagName: string): boolean {
+    return tagName[0] === tagName[0].toUpperCase() && tagName[0] !== tagName[0].toLowerCase();
   }
 
   /**
@@ -253,7 +263,15 @@ export class UniversalDecorator {
   }
 
   /**
-   * 🧠 MEGA-SMART Content Detector - Optimized with early exits and pattern recognition
+   * Check if a style tag has the scoped attribute
+   */
+  private static isStyleScoped(lines: string[], startIndex: number): boolean {
+    const openingLine = lines[startIndex]?.trim();
+    return openingLine ? this.SCOPED_STYLE_REGEX.test(openingLine) : false;
+  }
+
+  /**
+   * 🧠 MEGA-SMART Content Detector - Optimized for Vue with early exits
    */
   private static hasSignificantContent(lines: string[], startIndex: number, endIndex: number): boolean {
     // 🚀 Quick validation - avoid processing if range is too small
@@ -266,6 +284,8 @@ export class UniversalDecorator {
     const tagMatch = openingLine.match(/<(\w+)/);
     const tagName = tagMatch?.[1]?.toLowerCase();
     const isStyleTag = tagName === 'style';
+    const isScriptTag = tagName === 'script';
+    const isTemplateTag = tagName === 'template';
 
     // 🔥 OPTIMIZED Content Scanner - Early exit on first significant content
     for (let i = startIndex + 1; i < endIndex; i++) {
@@ -274,11 +294,11 @@ export class UniversalDecorator {
       // 🚀 Ultra-fast insignificant content check
       if (!contentLine || this.INSIGNIFICANT_CONTENT.has(contentLine)) {continue;}
 
-      // 🎯 Smart comment detection
-      if (this.COMMENT_REGEX.test(contentLine)) {continue;}
+      // 🎯 Smart comment detection (HTML and Vue/JS comments)
+      if (this.COMMENT_REGEX.test(contentLine) || this.VUE_COMMENT_REGEX.test(contentLine)) {continue;}
 
-      // 🔥 INSTANT RETURN for style tags - no need to count
-      if (isStyleTag) {return true;}
+      // 🔥 INSTANT RETURN for Vue special tags - no need to count
+      if (isStyleTag || isScriptTag || isTemplateTag) {return true;}
 
       // 🚀 IMMEDIATE SUCCESS - Found significant content!
       return true;
@@ -288,7 +308,7 @@ export class UniversalDecorator {
   }
 
   /**
-   * Check if file is a supported file (Astro or HTML)
+   * Check if file is a supported Vue file
    */
   private static isSupportedFile(document: vscode.TextDocument): boolean {
     const hasValidExtension = this.SUPPORTED_EXTENSIONS.some(ext =>
@@ -297,19 +317,6 @@ export class UniversalDecorator {
     const hasValidLanguageId = this.SUPPORTED_LANGUAGE_IDS.includes(document.languageId);
 
     return hasValidExtension || hasValidLanguageId;
-  }
-
-  /**
-   * Get file type for debugging purposes
-   */
-  private static getFileType(document: vscode.TextDocument): string {
-    if (document.fileName.endsWith('.astro') || document.languageId === 'astro') {
-      return 'Astro';
-    }
-    if (document.fileName.endsWith('.html') || document.languageId === 'html') {
-      return 'HTML';
-    }
-    return 'Unknown';
   }
 
   /**
@@ -325,8 +332,7 @@ export class UniversalDecorator {
 
     if (fileSize > maxFileSize) {
       if (BracketLynxConfig.debug) {
-        const fileType = this.getFileType(document);
-        console.log(`Universal Decorator: Skipping large ${fileType} file: ${document.fileName} (${fileSize} bytes)`);
+        console.log(`Vue Decorator: Skipping large Vue file: ${document.fileName} (${fileSize} bytes)`);
       }
       return false;
     }
@@ -396,7 +402,7 @@ export class UniversalDecorator {
           // Force update regardless of current state for color refresh
           if (isEditorEnabled(editor)) {
             this.updateDecorations(editor);
-            console.log(`Astro Decorator: Force refreshed color for ${editor.document.fileName}`);
+            console.log(`Vue Decorator: Force refreshed color for ${editor.document.fileName}`);
           }
         });
     }, 50);
@@ -416,4 +422,4 @@ export class UniversalDecorator {
 // ============================================================================
 // EXPORT
 // ============================================================================
-export const AstroDecorator = UniversalDecorator;
+export default VueDecorator;

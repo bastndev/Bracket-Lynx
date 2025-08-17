@@ -21,9 +21,7 @@ const DECORATION_UPDATE_DELAY_LONG = 200;
 // ============================================================================
 let isEnabled = true;
 let bracketLynxProvider: any = undefined;
-let astroDecorator: any = undefined;
-let vueDecorator: any = undefined;
-let svelteDecorator: any = undefined;
+let universalDecorator: any = undefined;
 const disabledEditors = new Map<string, boolean>();
 const individuallyEnabledEditors = new Map<string, boolean>();
 
@@ -60,7 +58,9 @@ function getMenuOptions(): any[] {
 
 function getCurrentFileStatus(): string {
   const activeEditor = vscode.window.activeTextEditor;
-  if (!activeEditor) return '❓ No file';
+  if (!activeEditor) {
+    return '❓ No file';
+  }
 
   const isCurrentEnabled = isEditorEnabled(activeEditor);
   return isCurrentEnabled ? '🟢' : '⭕';
@@ -68,7 +68,9 @@ function getCurrentFileStatus(): string {
 
 function getCurrentFileDescription(): string {
   const activeEditor = vscode.window.activeTextEditor;
-  if (!activeEditor) return 'No active file';
+  if (!activeEditor) {
+    return 'No active file';
+  }
 
   const isCurrentEnabled = isEditorEnabled(activeEditor);
   if (isEnabled) {
@@ -363,17 +365,17 @@ export function setBracketLynxProvider(provider: any): void {
 }
 
 export function setAstroDecorator(decorator: any): void {
-  astroDecorator = decorator;
+  universalDecorator = decorator;
   setAstroDecoratorForColors(decorator);
 }
 
 export function setVueDecorator(decorator: any): void {
-  vueDecorator = decorator;
+  universalDecorator = decorator;
   setVueDecoratorForColors(decorator);
 }
 
 export function setSvelteDecorator(decorator: any): void {
-  svelteDecorator = decorator;
+  universalDecorator = decorator;
   setSvelteDecoratorForColors(decorator);
 }
 
@@ -385,7 +387,9 @@ export function showBracketLynxMenu(): void {
           placeHolder: 'Choose Bracket Lynx action...',
         })
         .then(async (selected) => {
-          if (!selected) return;
+          if (!selected) {
+            return;
+          }
 
           await safeExecuteAsync(
             async () => {
@@ -479,24 +483,15 @@ function reactivateExtension(): void {
       }
     }
 
-    // Get all framework decorators
-    const decorators = [
-      { name: 'Astro', decorator: astroDecorator },
-      { name: 'Vue', decorator: vueDecorator },
-      { name: 'Svelte', decorator: svelteDecorator }
-    ];
-
-    // Clear all decorators first to ensure clean state
-    decorators.forEach(({ name, decorator }) => {
-      if (decorator && decorator.clearAllDecorations) {
-        try {
-          decorator.clearAllDecorations();
-          console.log(`🔄 ${name} decorator cleared for reactivation`);
-        } catch (error) {
-          console.warn(`Toggle: Error clearing ${name} decorator:`, error);
-        }
+    // Clear universal decorator first to ensure clean state
+    if (universalDecorator && universalDecorator.clearAllDecorations) {
+      try {
+        universalDecorator.clearAllDecorations();
+        console.log(`🔄 Universal decorator cleared for reactivation`);
+      } catch (error) {
+        console.warn(`Toggle: Error clearing Universal decorator:`, error);
       }
-    });
+    }
 
     // Small delay to ensure clears are complete
     setTimeout(() => {
@@ -511,17 +506,15 @@ function reactivateExtension(): void {
             bracketLynxProvider.updateDecoration(editor);
           }
 
-          // Update framework decorators for this editor
-          decorators.forEach(({ name, decorator }) => {
-            if (decorator && decorator.updateDecorations) {
-              try {
-                decorator.updateDecorations(editor);
-                console.log(`🔄 ${name} decorator updated for ${editor.document.fileName}`);
-              } catch (error) {
-                console.warn(`Toggle: Error updating ${name} decorator:`, error);
-              }
+          // Update universal decorator for this editor
+          if (universalDecorator && universalDecorator.updateDecorations) {
+            try {
+              universalDecorator.updateDecorations(editor);
+              console.log(`🔄 Universal decorator updated for ${editor.document.fileName}`);
+            } catch (error) {
+              console.warn(`Toggle: Error updating Universal decorator:`, error);
             }
-          });
+          }
         }
       });
 
@@ -546,25 +539,17 @@ function deactivateExtension(): void {
       bracketLynxProvider.clearAllDecorations?.();
     }
 
-    // Clear all framework decorators
-    const decorators = [
-      { name: 'Astro', decorator: astroDecorator },
-      { name: 'Vue', decorator: vueDecorator },
-      { name: 'Svelte', decorator: svelteDecorator }
-    ];
-
-    decorators.forEach(({ name, decorator }) => {
-      if (decorator) {
-        try {
-          if (decorator.clearAllDecorations) {
-            decorator.clearAllDecorations();
-          }
-          console.log(`Toggle: ${name} decorator deactivated`);
-        } catch (error) {
-          console.warn(`Toggle: Error deactivating ${name} decorator:`, error);
+    // Clear universal decorator
+    if (universalDecorator) {
+      try {
+        if (universalDecorator.clearAllDecorations) {
+          universalDecorator.clearAllDecorations();
         }
+        console.log(`Toggle: Universal decorator deactivated`);
+      } catch (error) {
+        console.warn(`Toggle: Error deactivating Universal decorator:`, error);
       }
-    });
+    }
   } catch (error) {
     console.error('Error deactivating extension:', error);
   }
@@ -588,69 +573,55 @@ function updateEditorDecorations(editor: vscode.TextEditor): void {
     }
   }
 
-  // Update framework decorators with enhanced state handling
-  const decorators = [
-    { name: 'Astro', decorator: astroDecorator },
-    { name: 'Vue', decorator: vueDecorator },
-    { name: 'Svelte', decorator: svelteDecorator }
-  ];
-
-  decorators.forEach(({ name, decorator }) => {
-    if (decorator) {
-      try {
-        if (isEditorEnabledForThisFile) {
-          // Editor is enabled - force update decorations
-          if (decorator.updateDecorations) {
-            decorator.updateDecorations(editor);
-            console.log(`🔄 ${name} decorator updated for ${editor.document.fileName}`);
-          } else {
-            console.warn(`🔄 ${name} decorator missing updateDecorations method`);
-          }
+  // Update universal decorator for all frameworks
+  if (universalDecorator) {
+    try {
+      if (isEditorEnabledForThisFile) {
+        // Editor is enabled - update decorations
+        if (universalDecorator.updateDecorations) {
+          universalDecorator.updateDecorations(editor);
+          console.log(`🔄 Universal decorator updated for ${editor.document.fileName}`);
         } else {
-          // Editor is disabled - clear decorations
-          if (decorator.clearDecorations) {
-            decorator.clearDecorations(editor);
-            console.log(`🔄 ${name} decorator cleared for ${editor.document.fileName}`);
-          }
+          console.warn(`🔄 Universal decorator missing updateDecorations method`);
         }
-      } catch (error) {
-        console.error(`Toggle: Error updating ${name} decorator for editor:`, error);
+      } else {
+        // Editor is disabled - clear decorations
+        if (universalDecorator.clearDecorations) {
+          universalDecorator.clearDecorations(editor);
+          console.log(`🔄 Universal decorator cleared for ${editor.document.fileName}`);
+        }
       }
-    } else {
-      console.warn(`🔄 ${name} decorator not available`);
+    } catch (error) {
+      console.error(`Toggle: Error updating Universal decorator for editor:`, error);
     }
-  });
+  } else {
+    console.warn(`🔄 Universal decorator not available`);
+  }
+
+
 
   // Additional verification for individual mode
-  if (!isEnabled && individuallyEnabledEditors.has(editorKey)) {
-    console.log(`🔄 Individual mode verification - forcing framework decorator updates`);
+  if (!isEnabled && individuallyEnabledEditors.has(editorKey) && universalDecorator) {
+    console.log(`🔄 Individual mode verification - forcing universal decorator update`);
     setTimeout(() => {
-      decorators.forEach(({ name, decorator }) => {
-        if (decorator && decorator.updateDecorations) {
-          try {
-            decorator.updateDecorations(editor);
-            console.log(`🔄 ${name} decorator force-updated (individual mode)`);
-          } catch (error) {
-            console.error(`🔄 Error force-updating ${name} decorator:`, error);
-          }
+      if (universalDecorator && universalDecorator.updateDecorations) {
+        try {
+          universalDecorator.updateDecorations(editor);
+          console.log(`🔄 Universal decorator force-updated (individual mode)`);
+        } catch (error) {
+          console.error(`🔄 Error force-updating Universal decorator:`, error);
         }
-      });
+      }
     }, 50);
   }
 }
 
-function clearEditorDecorations(editor: vscode.TextEditor): void {
-  if (bracketLynxProvider && bracketLynxProvider.clearEditorDecorations) {
-    bracketLynxProvider.clearEditorDecorations(editor);
+export function clearEditorDecorations(editor: vscode.TextEditor): void {
+  if (bracketLynxProvider && bracketLynxProvider.clearDecorations) {
+    bracketLynxProvider.clearDecorations(editor);
   }
-  if (astroDecorator && astroDecorator.clearDecorations) {
-    astroDecorator.clearDecorations(editor);
-  }
-  if (vueDecorator && vueDecorator.clearDecorations) {
-    vueDecorator.clearDecorations(editor);
-  }
-  if (svelteDecorator && svelteDecorator.clearDecorations) {
-    svelteDecorator.clearDecorations(editor);
+  if (universalDecorator && universalDecorator.clearDecorations) {
+    universalDecorator.clearDecorations(editor);
   }
 }
 
@@ -664,10 +635,10 @@ export function getToggleDiagnostics(): {
   disabledFilesCount: number;
   enabledFilesCount: number;
   decorators: {
-    main: { available: boolean; hasUpdate: boolean; hasClear: boolean };
-    astro: { available: boolean; hasUpdate: boolean; hasClear: boolean };
-    vue: { available: boolean; hasUpdate: boolean; hasClear: boolean };
-    svelte: { available: boolean; hasUpdate: boolean; hasClear: boolean };
+    main: { available: boolean; hasUpdateDecorations: boolean; hasClearAll: boolean };
+    astro: { available: boolean; hasUpdateDecorations: boolean; hasClearAll: boolean };
+    vue: { available: boolean; hasUpdateDecorations: boolean; hasClearAll: boolean };
+    svelte: { available: boolean; hasUpdateDecorations: boolean; hasClearAll: boolean };
   };
 } {
   const activeEditor = vscode.window.activeTextEditor;
@@ -684,23 +655,23 @@ export function getToggleDiagnostics(): {
     decorators: {
       main: {
         available: !!bracketLynxProvider,
-        hasUpdate: !!(bracketLynxProvider?.updateDecoration),
-        hasClear: !!(bracketLynxProvider?.clearEditorDecorations)
+        hasUpdateDecorations: !!(bracketLynxProvider?.delayUpdateDecoration),
+        hasClearAll: !!(bracketLynxProvider?.clearAllDecorations)
       },
       astro: {
-        available: !!astroDecorator,
-        hasUpdate: !!(astroDecorator?.updateDecorations),
-        hasClear: !!(astroDecorator?.clearDecorations)
+        available: !!universalDecorator,
+        hasUpdateDecorations: !!(universalDecorator?.updateDecorations),
+        hasClearAll: !!(universalDecorator?.clearAllDecorations)
       },
       vue: {
-        available: !!vueDecorator,
-        hasUpdate: !!(vueDecorator?.updateDecorations),
-        hasClear: !!(vueDecorator?.clearDecorations)
+        available: !!universalDecorator,
+        hasUpdateDecorations: !!(universalDecorator?.updateDecorations),
+        hasClearAll: !!(universalDecorator?.clearAllDecorations)
       },
       svelte: {
-        available: !!svelteDecorator,
-        hasUpdate: !!(svelteDecorator?.updateDecorations),
-        hasClear: !!(svelteDecorator?.clearDecorations)
+        available: !!universalDecorator,
+        hasUpdateDecorations: !!(universalDecorator?.updateDecorations),
+        hasClearAll: !!(universalDecorator?.clearAllDecorations)
       }
     }
   };
