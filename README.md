@@ -27,15 +27,6 @@
 ## 🌐 Language Compatibility
 
 
-| 📝 **Language**     |     | 📝 **Language**     |
-| ------------------- | --- | ------------------- |
-| ✨ JavaScript       |     | ⚡ TypeScript       |
-| ⚛️ JavaScript React |     | ⚛️ TypeScript React |
-| 🎨 CSS              |     | 🎨 SCSS             |
-| 🎨 SASS             |     | 🎨 LESS             |
-| 🌐 HTML             |     | 🟠 Astro            |
-| 🟩 Vue              |     | 🟦 Svelte           |
-| 🗂️ JSON             |     | 🗂️ JSONC            |
 
 > **📌 Note:** Bracket Lynx is automatically activated only for these languages.
 
