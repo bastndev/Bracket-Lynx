@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { setBracketLynxProviderForColors,initializeColorSystem,changeDecorationColor,} from './colors';
+import { setBracketLynxProviderForColors,initializeColorSystem,changeDecorationColor,setAstroDecoratorForColors,setVueDecoratorForColors,setSvelteDecoratorForColors} from './colors';
 import { safeExecute, safeExecuteAsync, validateTextEditor, validateDocument,ConfigurationError,logger, LogCategory} from '../core/performance-config';
 
 // Configuration constants
@@ -25,7 +25,7 @@ const individuallyEnabledEditors = new Map<string, boolean>();
 function getMenuOptions(): any[] {
   const globalStatus = isEnabled ? '🟢' : '⭕';
   const currentFileStatus = getCurrentFileStatus();
-  
+
   return [
     {
       label: `🌐 Toggle Global (${globalStatus})`,
@@ -36,7 +36,7 @@ function getMenuOptions(): any[] {
       label: `📝 Toggle Current File (${currentFileStatus})`,
       description: getCurrentFileDescription(),
       action: 'current',
-    }, 
+    },
     {
       label: '🎨 Change Color',
       description: 'Change decoration color with preview',
@@ -55,7 +55,7 @@ function getCurrentFileStatus(): string {
   if (!activeEditor) {
     return '❓ No file';
   }
-  
+
   const isCurrentEnabled = isEditorEnabled(activeEditor);
   return isCurrentEnabled ? '🟢' : '⭕';
 }
@@ -65,7 +65,7 @@ function getCurrentFileDescription(): string {
   if (!activeEditor) {
     return 'No active file';
   }
-  
+
   const isCurrentEnabled = isEditorEnabled(activeEditor);
   if (isEnabled) {
     return isCurrentEnabled ? 'Disable for current file' : 'Enable for current file';
@@ -106,7 +106,7 @@ export async function toggleCurrentEditor(): Promise<void> {
   }
 
   const editorKey = getEditorKey(activeEditor);
-  
+
   if (isEnabled) {
     // Global mode: toggle individual file in disabledEditors
     const isCurrentlyDisabled = disabledEditors.get(editorKey) || false;
@@ -120,7 +120,7 @@ export async function toggleCurrentEditor(): Promise<void> {
     } else {
       disabledEditors.set(editorKey, true);
       await saveDisabledFilesState();
-      
+
       try {
         clearEditorDecorations(activeEditor);
         vscode.window.showInformationMessage(
@@ -140,7 +140,7 @@ export async function toggleCurrentEditor(): Promise<void> {
     if (isCurrentlyEnabled) {
       individuallyEnabledEditors.delete(editorKey);
       await saveIndividuallyEnabledFilesState();
-      
+
       try {
         clearEditorDecorations(activeEditor);
         vscode.window.showInformationMessage(
@@ -155,7 +155,7 @@ export async function toggleCurrentEditor(): Promise<void> {
     } else {
       individuallyEnabledEditors.set(editorKey, true);
       await saveIndividuallyEnabledFilesState();
-      
+
       // Activate decorations for this specific file
       try {
         if (bracketLynxProvider) {
@@ -165,14 +165,14 @@ export async function toggleCurrentEditor(): Promise<void> {
             bracketLynxProvider.delayUpdateDecoration(activeEditor);
           }
         }
-        
+
         // Initial update
         updateEditorDecorations(activeEditor);
-        
+
         // Force multiple updates to ensure decorations appear
         setTimeout(() => updateEditorDecorations(activeEditor), DECORATION_UPDATE_DELAY_SHORT);
         setTimeout(() => updateEditorDecorations(activeEditor), DECORATION_UPDATE_DELAY_LONG);
-        
+
         vscode.window.showInformationMessage(
           '📝 Bracket Lynx: Enabled for current file (individual mode)'
         );
@@ -216,17 +216,17 @@ export async function resetToDefault(): Promise<void> {
       config.update(GLOBAL_ENABLED_KEY, true, vscode.ConfigurationTarget.Global),
       config.update(DISABLED_FILES_KEY, [], vscode.ConfigurationTarget.Global),
       config.update(INDIVIDUALLY_ENABLED_FILES_KEY, [], vscode.ConfigurationTarget.Global),
-      
+
       // Visual settings
       config.update('prefix', '‹~ ', vscode.ConfigurationTarget.Global),
       config.update('color', '#515151', vscode.ConfigurationTarget.Global),
       config.update('fontStyle', 'italic', vscode.ConfigurationTarget.Global),
       config.update('unmatchBracketsPrefix', '❌ ', vscode.ConfigurationTarget.Global),
-      
+
       // Behavior settings
       config.update('mode', 'auto', vscode.ConfigurationTarget.Global),
       config.update('debug', false, vscode.ConfigurationTarget.Global),
-      
+
       // Performance settings
       config.update('maxBracketHeaderLength', 50, vscode.ConfigurationTarget.Global),
       config.update('minBracketScopeLines', 4, vscode.ConfigurationTarget.Global),
@@ -251,34 +251,34 @@ export async function resetToDefault(): Promise<void> {
     try {
       const { AdvancedCacheManager } = await import('../core/performance-cache.js');
       const { OptimizedBracketParser } = await import('../core/performance-parser.js');
-      
+
       const cacheManager = AdvancedCacheManager.getInstance();
       const parser = OptimizedBracketParser.getInstance();
-      
+
       // 🧹 Clear all performance caches
       cacheManager.clearAllCache();
       parser.clearAllCache();
-      
+
       // 🔄 Force memory cleanup
       cacheManager.forceMemoryCleanup();
       cacheManager.forceGarbageCollection();
-      
+
       // 📊 Restore normal memory mode
       cacheManager.restoreNormalMemoryMode();
-      
+
       // 📊 Get memory usage after reset
       const memoryAfter = cacheManager.getEstimatedMemoryUsage();
       const memoryFreed = Math.max(0, memoryBefore - memoryAfter);
-      
+
       // 🎉 Simple and clean success message
       const memoryInfo = memoryFreed > 0.1 ? ` (${memoryFreed.toFixed(1)}MB freed)` : '';
-      
+
       vscode.window.showInformationMessage(
         `🎉 Bracket Lynx reset to defaults${memoryInfo}`
       );
-      
+
       console.log(`🔄 Performance reset completed - Memory freed: ${memoryFreed.toFixed(1)}MB`);
-      
+
     } catch (error) {
       console.error('Error during performance reset:', error);
       // Still show success message even if performance reset fails
@@ -308,7 +308,7 @@ export function isExtensionEnabled(): boolean {
 
 export function isEditorEnabled(editor: vscode.TextEditor): boolean {
   const editorKey = getEditorKey(editor);
-  
+
   if (isEnabled) {
     return !disabledEditors.get(editorKey);
   } else {
@@ -318,7 +318,7 @@ export function isEditorEnabled(editor: vscode.TextEditor): boolean {
 
 export function isDocumentEnabled(document: vscode.TextDocument): boolean {
   const documentUri = document.uri.toString();
-  
+
   if (isEnabled) {
     return !disabledEditors.get(documentUri);
   } else {
@@ -337,7 +337,7 @@ export function getCurrentState(): {
   individuallyEnabledFilesCount: number;
 } {
   const activeEditor = vscode.window.activeTextEditor;
-  
+
   return {
     isEnabled,
     isExtensionEnabled: isExtensionEnabled(),
@@ -359,14 +359,17 @@ export function setBracketLynxProvider(provider: any): void {
 
 export function setAstroDecorator(decorator: any): void {
   astroDecorator = decorator;
+  setAstroDecoratorForColors(decorator);
 }
 
 export function setVueDecorator(decorator: any): void {
   vueDecorator = decorator;
+  setVueDecoratorForColors(decorator);
 }
 
 export function setSvelteDecorator(decorator: any): void {
   svelteDecorator = decorator;
+  setSvelteDecoratorForColors(decorator);
 }
 
 export function showBracketLynxMenu(): void {
@@ -397,7 +400,7 @@ export function showBracketLynxMenu(): void {
                   await resetToDefault();
                   break;
                 default:
-                  logger.warn(`Unknown menu action: ${selected.action}`, 
+                  logger.warn(`Unknown menu action: ${selected.action}`,
                     { action: selected.action }, LogCategory.TOGGLE);
               }
             },
@@ -406,8 +409,8 @@ export function showBracketLynxMenu(): void {
             LogCategory.TOGGLE
           );
         }, (error: any) => {
-          logger.error('Failed to show Bracket Lynx menu', { 
-            error: error instanceof Error ? error.message : String(error) 
+          logger.error('Failed to show Bracket Lynx menu', {
+            error: error instanceof Error ? error.message : String(error)
           }, LogCategory.TOGGLE);
         });
     },
@@ -451,7 +454,7 @@ export async function cleanupClosedEditor(document: vscode.TextDocument): Promis
   // Clean up legacy keys from both Maps
   const legacyDisabledKeys = cleanupLegacyKeys(disabledEditors);
   const legacyIndividualKeys = cleanupLegacyKeys(individuallyEnabledEditors);
-  
+
   if (legacyDisabledKeys.length > 0 || legacyIndividualKeys.length > 0) {
     hasChanges = true;
   }
@@ -473,7 +476,7 @@ function reactivateExtension(): void {
         bracketLynxProvider.updateAllDecoration();
       }
     }
-    
+
     // Force update for all visible editors
     vscode.window.visibleTextEditors.forEach(editor => {
       if (isEditorEnabled(editor)) {
@@ -578,7 +581,7 @@ function loadDisabledFilesState(): void {
   try {
     const config = vscode.workspace.getConfiguration(CONFIG_SECTION);
     const disabledFilesArray = config.get<string[]>(DISABLED_FILES_KEY, []);
-    
+
     disabledEditors.clear();
     disabledFilesArray.forEach(fileUri => {
       disabledEditors.set(fileUri, true);
@@ -602,7 +605,7 @@ function loadIndividuallyEnabledFilesState(): void {
   try {
     const config = vscode.workspace.getConfiguration(CONFIG_SECTION);
     const individuallyEnabledFilesArray = config.get<string[]>(INDIVIDUALLY_ENABLED_FILES_KEY, []);
-    
+
     individuallyEnabledEditors.clear();
     individuallyEnabledFilesArray.forEach(fileUri => {
       individuallyEnabledEditors.set(fileUri, true);
@@ -620,6 +623,6 @@ export function initializePersistedState(): void {
   isEnabled = loadGlobalEnabledState();
   loadDisabledFilesState();
   loadIndividuallyEnabledFilesState();
-  
+
   console.log(`🔄 Bracket Lynx: Initialized state - Global: ${isEnabled ? 'enabled' : 'disabled'}, Disabled files: ${disabledEditors.size}, Individually enabled: ${individuallyEnabledEditors.size}`);
 }

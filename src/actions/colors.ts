@@ -93,31 +93,57 @@ export function changeDecorationColor(): void {
     try {
       if (isPreview && !previewState.isActive) {
         previewState = { isActive: true, originalColor: currentColor };
+        console.log(`🎨 Starting color preview: ${color} (was: ${currentColor})`);
       }
 
       if (!isPreview) {
         previewState.isActive = false;
+        console.log(`🎨 Applying final color: ${color}`);
       }
 
       currentColor = color;
 
       if (bracketLynxProvider && isExtensionEnabled()) {
         await recreateAllBracketLynxDecorations(color);
+        console.log(`🎨 Color ${isPreview ? 'preview' : 'application'} completed successfully`);
         return true;
+      } else {
+        const reason = !bracketLynxProvider ? 'Provider not initialized' : 'Extension disabled';
+        console.warn(`🎨 Cannot apply color: ${reason}`);
+        return false;
       }
-      return false;
     } catch (error) {
       console.error('🎨 Error applying color:', error);
-      vscode.window.showErrorMessage(`Failed to apply color: ${error}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      vscode.window.showErrorMessage(`🎨 Failed to apply color: ${errorMessage}`);
+
+      // Try to restore previous state on error
+      if (isPreview && previewState.isActive) {
+        try {
+          currentColor = previewState.originalColor;
+          await recreateAllBracketLynxDecorations(previewState.originalColor);
+          console.log('🎨 Restored original color after error');
+        } catch (restoreError) {
+          console.error('🎨 Failed to restore original color:', restoreError);
+        }
+      }
+
       return false;
     }
   };
 
   const restoreOriginalColor = async (): Promise<void> => {
     if (previewState.isActive) {
-      currentColor = previewState.originalColor;
-      previewState.isActive = false;
-      await recreateAllBracketLynxDecorations(previewState.originalColor);
+      try {
+        console.log(`🎨 Restoring original color: ${previewState.originalColor}`);
+        currentColor = previewState.originalColor;
+        previewState.isActive = false;
+        await recreateAllBracketLynxDecorations(previewState.originalColor);
+        console.log('🎨 Original color restored successfully');
+      } catch (error) {
+        console.error('🎨 Error restoring original color:', error);
+        vscode.window.showErrorMessage('🎨 Failed to restore original color');
+      }
     }
   };
 
@@ -125,8 +151,16 @@ export function changeDecorationColor(): void {
     if (items.length > 0) {
       const item = items[0];
       if (item.value !== 'write-custom') {
-        // Apply color as preview (temporary)
-        await applyColorToDecorations(item.value, true);
+        try {
+          // Apply color as preview (temporary)
+          const success = await applyColorToDecorations(item.value, true);
+          if (!success) {
+            console.warn(`🎨 Preview failed for color: ${item.value}`);
+          }
+        } catch (error) {
+          console.error('🎨 Error during color preview:', error);
+          // Don't show error to user during preview as it would be disruptive
+        }
       }
     }
   });
@@ -213,6 +247,7 @@ async function recreateAllBracketLynxDecorations(
   overrideColor?: string
 ): Promise<void> {
   if (!bracketLynxProvider) {
+    console.warn('🎨 No bracket provider available for color refresh');
     return;
   }
 
@@ -223,28 +258,82 @@ async function recreateAllBracketLynxDecorations(
 
     console.log(`🎨 Recreating decorations with color: ${currentColor}`);
 
-    // Clear all existing decorations first
-    bracketLynxProvider.clearAllDecorations();
+    // Clear all existing decorations from all providers simultaneously
+    const clearPromises: Promise<void>[] = [];
 
-    // Small delay to ensure decorations are cleared
+    // Clear main provider decorations
+    try {
+      bracketLynxProvider.clearAllDecorations();
+    } catch (error) {
+      console.warn('🎨 Warning: Error clearing main provider decorations:', error);
+    }
+
+    // Clear framework-specific decorators
+    const decorators = [
+      { name: 'Astro', decorator: astroDecorator },
+      { name: 'Vue', decorator: vueDecorator },
+      { name: 'Svelte', decorator: svelteDecorator }
+    ];
+
+    decorators.forEach(({ name, decorator }) => {
+      if (decorator && decorator.clearAllDecorations) {
+        try {
+          decorator.clearAllDecorations();
+          console.log(`🎨 Cleared ${name} decorator decorations`);
+        } catch (error) {
+          console.warn(`🎨 Warning: Error clearing ${name} decorator decorations:`, error);
+        }
+      }
+    });
+
+    // Wait for all clears to complete
     await new Promise((resolve) => setTimeout(resolve, DECORATION_CLEAR_DELAY));
 
-    // Force color refresh if available (this should handle the cache clearing and updating)
-    if (bracketLynxProvider.forceColorRefresh) {
-      bracketLynxProvider.forceColorRefresh();
-    } else {
-      // Fallback: trigger configuration change and update manually
-      if (bracketLynxProvider.onDidChangeConfiguration) {
-        bracketLynxProvider.onDidChangeConfiguration();
+    // Refresh main provider
+    try {
+      if (bracketLynxProvider.forceColorRefresh) {
+        bracketLynxProvider.forceColorRefresh();
+        console.log('🎨 Main provider color refreshed');
+      } else {
+        // Fallback: trigger configuration change and update manually
+        if (bracketLynxProvider.onDidChangeConfiguration) {
+          bracketLynxProvider.onDidChangeConfiguration();
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, DECORATION_CLEAR_DELAY));
+        bracketLynxProvider.updateAllDecoration();
+        console.log('🎨 Main provider fallback refresh completed');
       }
-
-      await new Promise((resolve) =>
-        setTimeout(resolve, DECORATION_CLEAR_DELAY)
-      );
-
-      // Update all decorations with new color
-      bracketLynxProvider.updateAllDecoration();
+    } catch (error) {
+      console.error('🎨 Error refreshing main provider:', error);
     }
+
+    // Small delay to ensure main provider refresh is complete before framework decorators
+    await new Promise((resolve) => setTimeout(resolve, DECORATION_CLEAR_DELAY));
+
+    // Refresh framework-specific decorators with error handling
+    const refreshPromises = decorators.map(async ({ name, decorator }) => {
+      if (decorator && decorator.forceColorRefresh) {
+        try {
+          decorator.forceColorRefresh();
+          console.log(`🎨 ${name} decorator color refreshed`);
+          return true;
+        } catch (error) {
+          console.warn(`🎨 Warning: Error refreshing ${name} decorator:`, error);
+          return false;
+        }
+      }
+      return null;
+    });
+
+    // Wait for all decorator refreshes to complete
+    const refreshResults = await Promise.allSettled(refreshPromises);
+    const successfulRefreshes = refreshResults.filter(
+      (result, index) => result.status === 'fulfilled' && result.value === true
+    ).length;
+
+    console.log(`🎨 Color refresh completed: ${successfulRefreshes}/${decorators.length} decorators refreshed successfully`);
+
   } catch (error) {
     console.error('🎨 Error recreating decorations:', error);
     throw error;
@@ -304,16 +393,37 @@ export function initializeColorSystem(): void {
     }
   });
 
-  if (bracketLynxProvider) {
-    setTimeout(async () => {
-      try {
+  // Wait for all decorators to be properly initialized
+  setTimeout(async () => {
+    try {
+      // Validate decorator availability
+      const decoratorStatus = {
+        main: !!bracketLynxProvider,
+        astro: !!astroDecorator,
+        vue: !!vueDecorator,
+        svelte: !!svelteDecorator
+      };
+
+      console.log('🎨 Decorator initialization status:', decoratorStatus);
+
+      if (bracketLynxProvider) {
         console.log(`🎨 Applying initial color decorations: ${currentColor}`);
         await recreateAllBracketLynxDecorations(currentColor);
-      } catch (error) {
-        console.error('🎨 Error applying initial color decorations:', error);
+        console.log('🎨 Initial color decorations applied successfully');
+      } else {
+        console.warn('🎨 Main bracket provider not available during initialization');
       }
-    }, INITIALIZATION_DELAY);
-  }
+    } catch (error) {
+      console.error('🎨 Error applying initial color decorations:', error);
+      // Try to restore to a valid state
+      try {
+        currentColor = DEFAULT_COLOR;
+        console.log(`🎨 Falling back to default color: ${DEFAULT_COLOR}`);
+      } catch (fallbackError) {
+        console.error('🎨 Failed to fallback to default color:', fallbackError);
+      }
+    }
+  }, INITIALIZATION_DELAY);
 }
 
 export function getEffectiveColor(): string {
@@ -437,14 +547,146 @@ export async function resetColorToDefault(): Promise<void> {
   try {
     currentColor = DEFAULT_COLOR;
     await saveColorToConfiguration(DEFAULT_COLOR);
-    
+
     if (bracketLynxProvider) {
       await recreateAllBracketLynxDecorations(DEFAULT_COLOR);
     }
-    
+
     console.log(`🎨 Color reset to default: ${DEFAULT_COLOR}`);
   } catch (error) {
     console.error('🎨 Error resetting color to default:', error);
     throw error;
   }
+}
+
+/**
+ * Diagnostic function to check decorator status and configuration.
+ * This function helps debug color preview issues by checking if all decorators
+ * are properly initialized and have the required methods.
+ *
+ * @returns Object containing status information for all decorators
+ */
+export function getDecoratorDiagnostics(): {
+  main: { available: boolean; hasForceRefresh: boolean; hasUpdateAll: boolean; hasClearAll: boolean };
+  astro: { available: boolean; hasForceRefresh: boolean; hasUpdateDecorations: boolean; hasClearAll: boolean };
+  vue: { available: boolean; hasForceRefresh: boolean; hasUpdateDecorations: boolean; hasClearAll: boolean };
+  svelte: { available: boolean; hasForceRefresh: boolean; hasUpdateDecorations: boolean; hasClearAll: boolean };
+  currentColor: string;
+  isExtensionEnabled: boolean;
+} {
+  return {
+    main: {
+      available: !!bracketLynxProvider,
+      hasForceRefresh: !!(bracketLynxProvider?.forceColorRefresh),
+      hasUpdateAll: !!(bracketLynxProvider?.updateAllDecoration),
+      hasClearAll: !!(bracketLynxProvider?.clearAllDecorations)
+    },
+    astro: {
+      available: !!astroDecorator,
+      hasForceRefresh: !!(astroDecorator?.forceColorRefresh),
+      hasUpdateDecorations: !!(astroDecorator?.updateDecorations),
+      hasClearAll: !!(astroDecorator?.clearAllDecorations)
+    },
+    vue: {
+      available: !!vueDecorator,
+      hasForceRefresh: !!(vueDecorator?.forceColorRefresh),
+      hasUpdateDecorations: !!(vueDecorator?.updateDecorations),
+      hasClearAll: !!(vueDecorator?.clearAllDecorations)
+    },
+    svelte: {
+      available: !!svelteDecorator,
+      hasForceRefresh: !!(svelteDecorator?.forceColorRefresh),
+      hasUpdateDecorations: !!(svelteDecorator?.updateDecorations),
+      hasClearAll: !!(svelteDecorator?.clearAllDecorations)
+    },
+    currentColor,
+    isExtensionEnabled: isExtensionEnabled()
+  };
+}
+
+/**
+ * Debug function to test color refresh for all decorators.
+ * This function performs a complete color refresh cycle to test
+ * if all decorators are responding correctly to color changes.
+ *
+ * @returns Promise that resolves when the debug test is complete
+ */
+export async function debugColorRefresh(): Promise<void> {
+  const diagnostics = getDecoratorDiagnostics();
+  console.log('🎨 Decorator diagnostics:', diagnostics);
+
+  if (!diagnostics.isExtensionEnabled) {
+    console.warn('🎨 Extension is disabled - cannot test color refresh');
+    return;
+  }
+
+  try {
+    console.log('🎨 Testing color refresh for all decorators...');
+    await recreateAllBracketLynxDecorations();
+    console.log('🎨 ✅ Color refresh test completed successfully - all decorators should be updated');
+  } catch (error) {
+    console.error('🎨 ❌ Color refresh test failed - check decorator initialization:', error);
+  }
+}
+
+/**
+ * Validates that all decorators are properly initialized and functional.
+ * Provides user-friendly status messages for troubleshooting.
+ *
+ * @returns Object with validation results and user-friendly messages
+ */
+export function validateDecoratorStatus(): {
+  isValid: boolean;
+  status: string;
+  issues: string[];
+  recommendations: string[];
+} {
+  const diagnostics = getDecoratorDiagnostics();
+  const issues: string[] = [];
+  const recommendations: string[] = [];
+
+  // Check main provider
+  if (!diagnostics.main.available) {
+    issues.push('Main bracket provider is not initialized');
+    recommendations.push('Restart VS Code or reload the extension');
+  } else if (!diagnostics.main.hasForceRefresh) {
+    issues.push('Main provider missing forceColorRefresh method');
+    recommendations.push('Update to latest version of Bracket Lynx');
+  }
+
+  // Check framework decorators
+  const frameworks = [
+    { name: 'Astro', data: diagnostics.astro },
+    { name: 'Vue', data: diagnostics.vue },
+    { name: 'Svelte', data: diagnostics.svelte }
+  ];
+
+  frameworks.forEach(({ name, data }) => {
+    if (data.available && !data.hasForceRefresh) {
+      issues.push(`${name} decorator missing forceColorRefresh method`);
+      recommendations.push(`${name} decorator may need updating`);
+    }
+  });
+
+  if (!diagnostics.isExtensionEnabled) {
+    issues.push('Extension is currently disabled');
+    recommendations.push('Enable Bracket Lynx extension in settings or command palette');
+  }
+
+  const isValid = issues.length === 0 && diagnostics.main.available;
+  const availableDecorators = frameworks.filter(f => f.data.available).length;
+
+  let status: string;
+  if (isValid) {
+    status = `✅ All decorators ready (${availableDecorators + 1}/4 loaded)`;
+  } else {
+    status = `⚠️ ${issues.length} issue(s) detected`;
+  }
+
+  return {
+    isValid,
+    status,
+    issues,
+    recommendations
+  };
 }

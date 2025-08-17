@@ -365,6 +365,30 @@ export class VueDecorator {
   }
 
   /**
+   * Force refresh color for all decorations - called by color system
+   */
+  public static forceColorRefresh(): void {
+    // Dispose current decoration type to force recreation with new color
+    if (this.decorationType) {
+      this.decorationType.dispose();
+      this.decorationType = undefined;
+    }
+
+    // Clear all existing decorations
+    this.clearAllDecorations();
+
+    // Small delay to ensure cleanup is complete
+    setTimeout(() => {
+      // Update all visible editors with supported files
+      vscode.window.visibleTextEditors
+        .filter(editor => this.isSupportedFile(editor.document))
+        .forEach(editor => {
+          this.updateDecorations(editor);
+        });
+    }, 50);
+  }
+
+  /**
    * Dispose and cleanup all resources
    */
   public static dispose(): void {

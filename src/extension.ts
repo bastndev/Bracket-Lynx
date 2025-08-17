@@ -61,6 +61,41 @@ function registerCommands(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('bracketLynx.restoreColor', async () => {
             const { restoreColorFromGlobal } = await import('./actions/colors.js');
             await restoreColorFromGlobal();
+        }),
+        vscode.commands.registerCommand('bracketLynx.diagnostics', async () => {
+            const { getDecoratorDiagnostics } = await import('./actions/colors.js');
+            const diagnostics = getDecoratorDiagnostics();
+            console.log('🔧 Bracket Lynx Diagnostics:', diagnostics);
+            vscode.window.showInformationMessage(
+                `🔧 Bracket Lynx Diagnostics: Main: ${diagnostics.main.available ? '✅' : '❌'}, ` +
+                `Astro: ${diagnostics.astro.available ? '✅' : '❌'}, ` +
+                `Vue: ${diagnostics.vue.available ? '✅' : '❌'}, ` +
+                `Svelte: ${diagnostics.svelte.available ? '✅' : '❌'}, ` +
+                `Color: ${diagnostics.currentColor}`
+            );
+        }),
+        vscode.commands.registerCommand('bracketLynx.debugColorRefresh', async () => {
+            const { debugColorRefresh } = await import('./actions/colors.js');
+            await debugColorRefresh();
+            vscode.window.showInformationMessage('🎨 Color refresh debug test completed - check console for details');
+        }),
+        vscode.commands.registerCommand('bracketLynx.validateStatus', async () => {
+            const { validateDecoratorStatus } = await import('./actions/colors.js');
+            const validation = validateDecoratorStatus();
+
+            let message = validation.status;
+            if (validation.issues.length > 0) {
+                message += '\n\nIssues:\n' + validation.issues.map(issue => `• ${issue}`).join('\n');
+            }
+            if (validation.recommendations.length > 0) {
+                message += '\n\nRecommendations:\n' + validation.recommendations.map(rec => `• ${rec}`).join('\n');
+            }
+
+            if (validation.isValid) {
+                vscode.window.showInformationMessage(message);
+            } else {
+                vscode.window.showWarningMessage(message);
+            }
         })
     );
 }
