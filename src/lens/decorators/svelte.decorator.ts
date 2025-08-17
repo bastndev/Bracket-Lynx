@@ -3,7 +3,9 @@ import { getCurrentColor } from '../../actions/colors';
 import { isEditorEnabled, isExtensionEnabled } from '../../actions/toggle';
 import { BracketLynxConfig } from '../lens';
 
+// ============================================================================
 // 🎯 TARGET ELEMENTS CONFIGURATION - GLOBAL MODULE CONSTANTS (Easy to maintain!)
+// ============================================================================
 const SVELTE_COMPONENTS = [
 	'script', 'style', 'main', 'section', 'header', 'footer', 'aside', 'nav', 'slot',
 	'svelte:head', 'svelte:body', 'svelte:window', 'svelte:options', 'svelte:fragment'
@@ -13,7 +15,9 @@ const TARGET_HTML_ELEMENTS = [
 	'div', 'span', 'section', 'article', 'main', 'ul', 'li', 'button', 'form', 'table', 'p'
 ];
 
-// 🎯 ULTRA-SPECIFIC Types for Svelte components and elements
+// ============================================================================
+// TYPES
+// ============================================================================
 export type SvelteComponentName = 'script' | 'style' | 'main' | 'header' | 'footer' | 'section' | 'article' | 'aside' | 'nav' | 'slot' | 'svelte:window' | 'svelte:body' | 'svelte:head' | 'svelte:options' | 'svelte:fragment';
 export type HtmlElementName = 'div' | 'ul' | 'li' | 'span' | 'button' | 'form' | 'table' | 'p';
 export type SupportedExtension = '.svelte';
@@ -35,10 +39,21 @@ interface ComponentStackEntry {
 	readonly timestamp?: number;
 }
 
+// ============================================================================
+// MAIN DECORATOR CLASS
+// ============================================================================
 export class SvelteDecorator {
 	private static decorationType: vscode.TextEditorDecorationType | undefined;
 	private static readonly SUPPORTED_EXTENSIONS = ['.svelte'];
 	private static readonly SUPPORTED_LANGUAGE_IDS = ['svelte'];
+
+	// 🚀 HYPER-OPTIMIZED Regex Cache - Compiled once, used forever!
+	private static readonly OPEN_TAG_REGEX = /<(\w+)(?:\s+[^>]*)?(?<!\/)\s*>/;
+	private static readonly CLOSE_TAG_REGEX = /<\/(\w+)\s*>/;
+	private static readonly TAG_DETECTOR_REGEX = /<[^>]+>/;
+
+	// 🚀 ULTRA-OPTIMIZED Content Analyzer - Smart early exits and caching
+	private static readonly INSIGNIFICANT_CONTENT = new Set(['{', '}', '', '<!--', '-->']);
 
 	private static ensureDecorationType(): vscode.TextEditorDecorationType {
 		if (this.decorationType) {
@@ -121,10 +136,6 @@ export class SvelteDecorator {
 		}
 		return decorations;
 	}
-
-	private static readonly OPEN_TAG_REGEX = /<(\w+)(?:\s+[^>]*)?(?<!\/)\s*>/;
-	private static readonly CLOSE_TAG_REGEX = /<\/(\w+)\s*>/;
-	private static readonly TAG_DETECTOR_REGEX = /<[^>]+>/;
 
 	private static findComponentRanges(lines: string[]): ComponentRange[] {
 		const componentStack: ComponentStackEntry[] = [];
@@ -316,4 +327,7 @@ export class SvelteDecorator {
 	}
 }
 
+// ============================================================================
+// EXPORT
+// ============================================================================
 export default SvelteDecorator;

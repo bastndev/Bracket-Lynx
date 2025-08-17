@@ -3,7 +3,9 @@ import { getCurrentColor } from '../../actions/colors';
 import { isEditorEnabled, isExtensionEnabled } from '../../actions/toggle';
 import { BracketLynxConfig } from '../lens';
 
+// ============================================================================
 // 🎯 TARGET ELEMENTS CONFIGURATION - GLOBAL MODULE CONSTANTS (Easy to maintain!)
+// ============================================================================
 const VUE_COMPONENTS = [
   'template', 'script', 'style', 'component',
   'transition', 'transition-group', 'keep-alive',
@@ -16,7 +18,9 @@ const TARGET_HTML_ELEMENTS = [
   'ul', 'ol', 'li', 'p', 'span', 'button'
 ];
 
-// 🎯 ULTRA-SPECIFIC Types for Vue components and elements
+// ============================================================================
+// TYPES
+// ============================================================================
 export type VueComponentName = 'template' | 'script' | 'style' | 'component' | 'transition' | 'transition-group' | 'keep-alive' | 'slot' | 'teleport' | 'suspense';
 export type VueDirectiveName = 'v-if' | 'v-else' | 'v-else-if' | 'v-for' | 'v-show' | 'v-model' | 'v-on' | 'v-bind' | 'v-slot';
 export type HtmlElementName = 'div' | 'section' | 'article' | 'main' | 'header' | 'footer' | 'aside' | 'nav' | 'form' | 'table';
@@ -34,17 +38,30 @@ export interface ComponentRange {
   readonly isScoped?: boolean;
 }
 
-// 🚀 Performance-optimized component stack entry
 interface ComponentStackEntry {
   readonly name: string;
   readonly startLine: number;
-  readonly timestamp?: number; // For debugging performance
+  readonly timestamp?: number;
 }
 
+// ============================================================================
+// MAIN DECORATOR CLASS
+// ============================================================================
 export class VueDecorator {
   private static decorationType: vscode.TextEditorDecorationType | undefined;
   private static readonly SUPPORTED_EXTENSIONS = ['.vue'];
   private static readonly SUPPORTED_LANGUAGE_IDS = ['vue'];
+
+  // 🚀 HYPER-OPTIMIZED Regex Cache - Compiled once, used forever!
+  private static readonly OPEN_TAG_REGEX = /<(\w+)(?:\s+[^>]*)?(?<!\/)\s*>/;
+  private static readonly CLOSE_TAG_REGEX = /<\/(\w+)\s*>/;
+  private static readonly TAG_DETECTOR_REGEX = /<[^>]+>/;
+  private static readonly SCOPED_STYLE_REGEX = /<style[^>]*\s+scoped[^>]*>/;
+
+  // 🚀 ULTRA-OPTIMIZED Content Analyzer - Smart early exits and caching
+  private static readonly INSIGNIFICANT_CONTENT = new Set(['{', '}', '', '<!--', '-->', '{{', '}}']);
+  private static readonly COMMENT_REGEX = /^<!--.*-->$/;
+  private static readonly VUE_COMMENT_REGEX = /^\/\*.*\*\/$/;
 
   /**
    * Ensure decoration type is created with current configuration
@@ -147,12 +164,6 @@ export class VueDecorator {
 
     return decorations;
   }
-
-  // 🚀 HYPER-OPTIMIZED Regex Cache - Compiled once, used forever!
-  private static readonly OPEN_TAG_REGEX = /<(\w+)(?:\s+[^>]*)?(?<!\/)\s*>/;
-  private static readonly CLOSE_TAG_REGEX = /<\/(\w+)\s*>/;
-  private static readonly TAG_DETECTOR_REGEX = /<[^>]+>/;
-  private static readonly SCOPED_STYLE_REGEX = /<style[^>]*\s+scoped[^>]*>/;
 
   /**
    * 🔥 LIGHTNING-FAST Component Range Finder - Multi-level optimization for Vue!
@@ -258,11 +269,6 @@ export class VueDecorator {
     const openingLine = lines[startIndex]?.trim();
     return openingLine ? this.SCOPED_STYLE_REGEX.test(openingLine) : false;
   }
-
-  // 🚀 ULTRA-OPTIMIZED Content Analyzer - Smart early exits and caching
-  private static readonly INSIGNIFICANT_CONTENT = new Set(['{', '}', '', '<!--', '-->', '{{', '}}']);
-  private static readonly COMMENT_REGEX = /^<!--.*-->$/;
-  private static readonly VUE_COMMENT_REGEX = /^\/\*.*\*\/$/;
 
   /**
    * 🧠 MEGA-SMART Content Detector - Optimized for Vue with early exits
@@ -413,4 +419,7 @@ export class VueDecorator {
   }
 }
 
+// ============================================================================
+// EXPORT
+// ============================================================================
 export default VueDecorator;

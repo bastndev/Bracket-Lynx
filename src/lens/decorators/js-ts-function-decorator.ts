@@ -1,41 +1,31 @@
+// ============================================================================
+// FUNCTION SYMBOLS CLASS - Centralized symbol management
+// ============================================================================
 class FunctionSymbols {
   private static arrowFunctionSymbol = '❨❩➤';
   private static asyncFunctionSymbol = '⧖';
   private static complexFunctionSymbol = '⇄';
-  
   private static collectionArrowSymbol = '⮞';
 
-  /**
-   * Get arrow function symbol
-   */
+  // ============================================================================
+  // GETTERS
+  // ============================================================================
   static getArrowSymbol(): string {
     return this.arrowFunctionSymbol;
   }
 
-  /**
-   * Get async function symbol
-   */
   static getAsyncSymbol(): string {
     return this.asyncFunctionSymbol;
   }
 
-  /**
-   * Get complex function symbol
-   */
   static getComplexSymbol(): string {
     return this.complexFunctionSymbol;
   }
 
-  /**
-   * Get collection arrow symbol
-   */
   static getCollectionArrowSymbol(): string {
     return this.collectionArrowSymbol;
   }
 
-  /**
-   * Get all symbols
-   */
   static getAllSymbols(): {
     arrow: string;
     async: string;
@@ -50,30 +40,21 @@ class FunctionSymbols {
     };
   }
 
-  /**
-   * Change arrow function symbol
-   */
+  // ============================================================================
+  // SETTERS
+  // ============================================================================
   static setArrowSymbol(newSymbol: string): void {
     this.arrowFunctionSymbol = newSymbol;
   }
 
-  /**
-   * Change async function symbol
-   */
   static setAsyncSymbol(newSymbol: string): void {
     this.asyncFunctionSymbol = newSymbol;
   }
 
-  /**
-   * Change complex function symbol
-   */
   static setComplexSymbol(newSymbol: string): void {
     this.complexFunctionSymbol = newSymbol;
   }
 
-  /**
-   * Change collection arrow symbol
-   */
   static setCollectionArrowSymbol(newSymbol: string): void {
     this.collectionArrowSymbol = newSymbol;
   }
@@ -82,7 +63,6 @@ class FunctionSymbols {
 // ============================================================================
 // CENTRALIZED SYMBOL EXPORTS - Single source of truth
 // ============================================================================
-
 export const FUNCTION_SYMBOLS = {
   NORMAL_ARROW: FunctionSymbols.getArrowSymbol(),
   COLLECTION_ARROW: FunctionSymbols.getCollectionArrowSymbol(),
@@ -90,12 +70,12 @@ export const FUNCTION_SYMBOLS = {
   COMPLEX_FUNCTION: FunctionSymbols.getComplexSymbol(),
 } as const;
 
-
+// ============================================================================
+// FUNCTION DETECTION AND FORMATTING
+// ============================================================================
 /**
  * Handles the decoration for exported arrow functions.
  * If the text is an exported arrow function, it removes 'const' and adds a symbol.
- * @param text The text content to analyze.
- * @returns The formatted string or null if it's not an arrow function.
  */
 export function handleArrowFunctionPattern(text: string): string | null {
   const lowerText = text.toLowerCase();
@@ -149,8 +129,6 @@ export function formatComplexFunction(words: string[]): string {
   return formatFunctionWithSymbol(words, FunctionSymbols.getComplexSymbol());
 }
 
-// Legacy classes and interfaces removed - use FunctionSymbols and individual functions instead
-
 /**
  * Main function to detect and decorate functions (arrow, regular, async, methods)
  * Returns decorated text with appropriate symbol
@@ -168,7 +146,6 @@ export function detectAndDecorate(content: string): string {
 // ============================================================================
 // PUBLIC API - EXPORTS FOR OTHER MODULES
 // ============================================================================
-
 /**
  * Get function symbols for configuration
  */
@@ -219,6 +196,9 @@ export function setCollectionArrowSymbol(newSymbol: string): void {
   FunctionSymbols.setCollectionArrowSymbol(newSymbol);
 }
 
+// ============================================================================
+// FUNCTION TYPE DETECTION
+// ============================================================================
 /**
  * Check if content contains an async function
  */

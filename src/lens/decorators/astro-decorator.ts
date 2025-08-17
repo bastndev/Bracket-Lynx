@@ -3,7 +3,9 @@ import { getCurrentColor } from '../../actions/colors';
 import { isEditorEnabled, isExtensionEnabled } from '../../actions/toggle';
 import { BracketLynxConfig } from '../lens';
 
+// ============================================================================
 // 🎯 TARGET ELEMENTS CONFIGURATION - GLOBAL MODULE CONSTANTS (Easy to maintain!)
+// ============================================================================
 const ASTRO_COMPONENTS = [
   'Fragment', 'Astro', 'Code', 'Markdown', 'Debug',
   'slot', 'Component'
@@ -15,7 +17,9 @@ const TARGET_HTML_ELEMENTS = [
   'html', 'body'
 ];
 
-// 🎯 ULTRA-SPECIFIC Types for maximum type safety and intellisense
+// ============================================================================
+// TYPES
+// ============================================================================
 export type AstroComponentName = 'Fragment' | 'Astro' | 'Code' | 'Markdown' | 'Debug' | 'slot' | 'Component';
 export type HtmlElementName = 'style' | 'script' | 'section' | 'article' | 'main' | 'header' | 'footer' | 'aside' | 'nav' | 'html' | 'body';
 export type SupportedExtension = '.astro' | '.html';
@@ -31,17 +35,28 @@ export interface ComponentRange {
   readonly lineSpan?: number;
 }
 
-// 🚀 Performance-optimized component stack entry
 interface ComponentStackEntry {
   readonly name: string;
   readonly startLine: number;
-  readonly timestamp?: number; // For debugging performance
+  readonly timestamp?: number;
 }
 
+// ============================================================================
+// MAIN DECORATOR CLASS
+// ============================================================================
 export class UniversalDecorator {
   private static decorationType: vscode.TextEditorDecorationType | undefined;
   private static readonly SUPPORTED_EXTENSIONS = ['.astro', '.html'];
   private static readonly SUPPORTED_LANGUAGE_IDS = ['astro', 'html'];
+
+  // 🚀 HYPER-OPTIMIZED Regex Cache - Compiled once, used forever!
+  private static readonly OPEN_TAG_REGEX = /<(\w+)(?:\s+[^>]*)?(?<!\/)\s*>/;
+  private static readonly CLOSE_TAG_REGEX = /<\/(\w+)\s*>/;
+  private static readonly TAG_DETECTOR_REGEX = /<[^>]+>/;
+
+  // 🚀 ULTRA-OPTIMIZED Content Analyzer - Smart early exits and caching
+  private static readonly INSIGNIFICANT_CONTENT = new Set(['{', '}', '', '<!--', '-->']);
+  private static readonly COMMENT_REGEX = /^<!--.*-->$/;
 
   /**
    * Ensure decoration type is created with current configuration
@@ -145,11 +160,6 @@ export class UniversalDecorator {
     return decorations;
   }
 
-  // 🚀 HYPER-OPTIMIZED Regex Cache - Compiled once, used forever!
-  private static readonly OPEN_TAG_REGEX = /<(\w+)(?:\s+[^>]*)?(?<!\/)\s*>/;
-  private static readonly CLOSE_TAG_REGEX = /<\/(\w+)\s*>/;
-  private static readonly TAG_DETECTOR_REGEX = /<[^>]+>/;
-
   /**
    * 🔥 LIGHTNING-FAST Component Range Finder - Multi-level optimization!
    */
@@ -241,10 +251,6 @@ export class UniversalDecorator {
   private static isTargetHtmlElement(tagName: string): boolean {
     return TARGET_HTML_ELEMENTS.includes(tagName.toLowerCase());
   }
-
-  // 🚀 ULTRA-OPTIMIZED Content Analyzer - Smart early exits and caching
-  private static readonly INSIGNIFICANT_CONTENT = new Set(['{', '}', '', '<!--', '-->']);
-  private static readonly COMMENT_REGEX = /^<!--.*-->$/;
 
   /**
    * 🧠 MEGA-SMART Content Detector - Optimized with early exits and pattern recognition
@@ -405,8 +411,9 @@ export class UniversalDecorator {
       this.decorationType = undefined;
     }
   }
-
-  // updateAstroDecorations method removed - use updateDecorations instead
 }
 
+// ============================================================================
+// EXPORT
+// ============================================================================
 export const AstroDecorator = UniversalDecorator;

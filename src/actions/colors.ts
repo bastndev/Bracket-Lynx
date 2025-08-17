@@ -1,11 +1,16 @@
 import * as vscode from 'vscode';
 import { isExtensionEnabled } from './toggle';
 
-// Configuration constants
+// ============================================================================
+// CONFIGURATION CONSTANTS
+// ============================================================================
 const DEFAULT_COLOR = '#515151';
 const DECORATION_CLEAR_DELAY = 50;
 const INITIALIZATION_DELAY = 100;
 
+// ============================================================================
+// INTERFACES
+// ============================================================================
 interface ColorOption extends vscode.QuickPickItem {
   value: string;
 }
@@ -18,18 +23,37 @@ export interface IBracketLynxProvider {
   forceColorRefresh?(): void;
 }
 
+// ============================================================================
+// STATE VARIABLES
+// ============================================================================
 let bracketLynxProvider: IBracketLynxProvider | undefined = undefined;
 let astroDecorator: any = undefined;
 let vueDecorator: any = undefined;
 let svelteDecorator: any = undefined;
+let currentColor: string = DEFAULT_COLOR;
+
+// ============================================================================
+// PROVIDER SETTERS
+// ============================================================================
+export function setBracketLynxProviderForColors(provider: IBracketLynxProvider): void {
+  bracketLynxProvider = provider;
+}
+
+export function setAstroDecoratorForColors(decorator: any): void {
+  astroDecorator = decorator;
+}
+
+export function setVueDecoratorForColors(decorator: any): void {
+  vueDecorator = decorator;
+}
+
 export function setSvelteDecoratorForColors(decorator: any): void {
   svelteDecorator = decorator;
 }
-let currentColor: string = DEFAULT_COLOR;
 
-/**
- * Get available color presets for the color picker
- */
+// ============================================================================
+// COLOR PICKER SYSTEM
+// ============================================================================
 function getAvailableColors(): ColorOption[] {
   return [
     { label: '⚫ Default Gray', value: '#515151', description: 'Default bracket color' },
@@ -40,20 +64,6 @@ function getAvailableColors(): ColorOption[] {
     { label: '🟣 Purple', value: '#6d5d73', description: 'Soft purple-gray decorations' },
     { label: '✏️ Write Custom', value: 'write-custom', description: 'Enter your own hex color' },
   ];
-}
-
-export function setBracketLynxProviderForColors(
-  provider: IBracketLynxProvider
-): void {
-  bracketLynxProvider = provider;
-}
-
-export function setAstroDecoratorForColors(decorator: any): void {
-  astroDecorator = decorator;
-}
-
-export function setVueDecoratorForColors(decorator: any): void {
-  vueDecorator = decorator;
 }
 
 export function changeDecorationColor(): void {
@@ -86,10 +96,7 @@ export function changeDecorationColor(): void {
     originalColor: currentColor,
   };
 
-  const applyColorToDecorations = async (
-    color: string,
-    isPreview: boolean = false
-  ): Promise<boolean> => {
+  const applyColorToDecorations = async (color: string, isPreview: boolean = false): Promise<boolean> => {
     try {
       if (isPreview && !previewState.isActive) {
         previewState = { isActive: true, originalColor: currentColor };
@@ -152,14 +159,12 @@ export function changeDecorationColor(): void {
       const item = items[0];
       if (item.value !== 'write-custom') {
         try {
-          // Apply color as preview (temporary)
           const success = await applyColorToDecorations(item.value, true);
           if (!success) {
             console.warn(`🎨 Preview failed for color: ${item.value}`);
           }
         } catch (error) {
           console.error('🎨 Error during color preview:', error);
-          // Don't show error to user during preview as it would be disruptive
         }
       }
     }
@@ -180,12 +185,8 @@ export function changeDecorationColor(): void {
         placeHolder: '#ffffff (example: #ff6b6b, #00ff00, #3498db)',
         value: originalColor,
         validateInput: (value) => {
-          if (!value) {
-            return 'Color is required';
-          }
-          if (!isValidHexColor(value)) {
-            return 'Please enter a valid hex color (e.g., #ff6b6b)';
-          }
+          if (!value) return 'Color is required';
+          if (!isValidHexColor(value)) return 'Please enter a valid hex color (e.g., #ff6b6b)';
           return null;
         },
       });
@@ -193,18 +194,14 @@ export function changeDecorationColor(): void {
       quickPick.dispose();
 
       if (!customColor) {
-        // Restore original color if user cancels
         await restoreOriginalColor();
         return;
       }
 
-      // Apply final color (not preview)
       const success = await applyColorToDecorations(customColor, false);
       if (success) {
         await saveColorToConfiguration(customColor);
-        vscode.window.showInformationMessage(
-          `🎨 Bracket Lynx: Color changed to ${customColor}`
-        );
+        vscode.window.showInformationMessage(`🎨 Bracket Lynx: Color changed to ${customColor}`);
       } else {
         vscode.window.showErrorMessage('🎨 Failed to change color');
         await restoreOriginalColor();
@@ -212,14 +209,11 @@ export function changeDecorationColor(): void {
     } else {
       quickPick.dispose();
 
-      // Apply final color (not preview)
       const finalColor = selectedItem.value;
       const success = await applyColorToDecorations(finalColor, false);
       if (success) {
         await saveColorToConfiguration(finalColor);
-        vscode.window.showInformationMessage(
-          `🎨 Bracket Lynx: Color changed to ${selectedItem.label}`
-        );
+        vscode.window.showInformationMessage(`🎨 Bracket Lynx: Color changed to ${selectedItem.label}`);
       } else {
         vscode.window.showErrorMessage('🎨 Failed to change color');
         await restoreOriginalColor();
@@ -229,7 +223,6 @@ export function changeDecorationColor(): void {
 
   quickPick.onDidHide(() => {
     if (quickPick.selectedItems.length === 0) {
-      // User cancelled without selecting - restore original color
       restoreOriginalColor().catch((error) => {
         console.error('🎨 Error restoring original color:', error);
       });
@@ -240,12 +233,10 @@ export function changeDecorationColor(): void {
   quickPick.show();
 }
 
-/**
- * Recreate all bracket decorations with the specified color
- */
-async function recreateAllBracketLynxDecorations(
-  overrideColor?: string
-): Promise<void> {
+// ============================================================================
+// DECORATION MANAGEMENT
+// ============================================================================
+async function recreateAllBracketLynxDecorations(overrideColor?: string): Promise<void> {
   if (!bracketLynxProvider) {
     console.warn('🎨 No bracket provider available for color refresh');
     return;
@@ -259,22 +250,14 @@ async function recreateAllBracketLynxDecorations(
     console.log(`🎨 Recreating decorations with color: ${currentColor}`);
 
     // Clear all existing decorations from all providers simultaneously
-    const clearPromises: Promise<void>[] = [];
-
-    // Clear main provider decorations
-    try {
-      bracketLynxProvider.clearAllDecorations();
-    } catch (error) {
-      console.warn('🎨 Warning: Error clearing main provider decorations:', error);
-    }
-
-    // Clear framework-specific decorators
     const decorators = [
+      { name: 'Main', decorator: bracketLynxProvider },
       { name: 'Astro', decorator: astroDecorator },
       { name: 'Vue', decorator: vueDecorator },
       { name: 'Svelte', decorator: svelteDecorator }
     ];
 
+    // Clear all decorators
     decorators.forEach(({ name, decorator }) => {
       if (decorator && decorator.clearAllDecorations) {
         try {
@@ -295,11 +278,9 @@ async function recreateAllBracketLynxDecorations(
         bracketLynxProvider.forceColorRefresh();
         console.log('🎨 Main provider color refreshed');
       } else {
-        // Fallback: trigger configuration change and update manually
         if (bracketLynxProvider.onDidChangeConfiguration) {
           bracketLynxProvider.onDidChangeConfiguration();
         }
-
         await new Promise((resolve) => setTimeout(resolve, DECORATION_CLEAR_DELAY));
         bracketLynxProvider.updateAllDecoration();
         console.log('🎨 Main provider fallback refresh completed');
@@ -308,11 +289,11 @@ async function recreateAllBracketLynxDecorations(
       console.error('🎨 Error refreshing main provider:', error);
     }
 
-    // Small delay to ensure main provider refresh is complete before framework decorators
+    // Small delay to ensure main provider refresh is complete
     await new Promise((resolve) => setTimeout(resolve, DECORATION_CLEAR_DELAY));
 
-    // Refresh framework-specific decorators with error handling
-    const refreshPromises = decorators.map(async ({ name, decorator }) => {
+    // Refresh framework-specific decorators
+    const refreshPromises = decorators.slice(1).map(async ({ name, decorator }) => {
       if (decorator && decorator.forceColorRefresh) {
         try {
           decorator.forceColorRefresh();
@@ -326,13 +307,12 @@ async function recreateAllBracketLynxDecorations(
       return null;
     });
 
-    // Wait for all decorator refreshes to complete
     const refreshResults = await Promise.allSettled(refreshPromises);
     const successfulRefreshes = refreshResults.filter(
       (result, index) => result.status === 'fulfilled' && result.value === true
     ).length;
 
-    console.log(`🎨 Color refresh completed: ${successfulRefreshes}/${decorators.length} decorators refreshed successfully`);
+    console.log(`🎨 Color refresh completed: ${successfulRefreshes}/${decorators.length - 1} decorators refreshed successfully`);
 
   } catch (error) {
     console.error('🎨 Error recreating decorations:', error);
@@ -371,7 +351,6 @@ function loadColorFromConfiguration(): string {
 // ============================================================================
 // PUBLIC API
 // ============================================================================
-
 export async function setColor(color: string): Promise<void> {
   if (!isValidHexColor(color)) {
     throw new Error(`Invalid hex color: ${color}`);
@@ -396,7 +375,6 @@ export function initializeColorSystem(): void {
   // Wait for all decorators to be properly initialized
   setTimeout(async () => {
     try {
-      // Validate decorator availability
       const decoratorStatus = {
         main: !!bracketLynxProvider,
         astro: !!astroDecorator,
@@ -415,7 +393,6 @@ export function initializeColorSystem(): void {
       }
     } catch (error) {
       console.error('🎨 Error applying initial color decorations:', error);
-      // Try to restore to a valid state
       try {
         currentColor = DEFAULT_COLOR;
         console.log(`🎨 Falling back to default color: ${DEFAULT_COLOR}`);
@@ -434,9 +411,6 @@ export function getCurrentColor(): string {
   return currentColor;
 }
 
-/**
- * Force synchronization of color state with configuration
- */
 export async function forceSyncColorWithConfiguration(): Promise<void> {
   const configColor = loadColorFromConfiguration();
   if (configColor !== currentColor) {
@@ -458,40 +432,27 @@ export function isValidHexColor(color: string): boolean {
 
 export async function onConfigurationChanged(): Promise<void> {
   const newColor = loadColorFromConfiguration();
-  console.log(
-    `🎨 Configuration changed - new color: ${newColor}, current color: ${currentColor}`
-  );
+  console.log(`🎨 Configuration changed - new color: ${newColor}, current color: ${currentColor}`);
 
   if (isValidHexColor(newColor)) {
     const wasColorChanged = newColor !== currentColor;
     currentColor = newColor;
 
-    console.log(
-      `🎨 Color ${
-        wasColorChanged ? 'changed' : 'unchanged'
-      } - updating to: ${currentColor}`
-    );
+    console.log(`🎨 Color ${wasColorChanged ? 'changed' : 'unchanged'} - updating to: ${currentColor}`);
 
     if (bracketLynxProvider && wasColorChanged) {
       try {
         await recreateAllBracketLynxDecorations(newColor);
         console.log('🎨 Decorations updated successfully');
       } catch (error) {
-        console.error(
-          '🎨 Error updating decorations after configuration change:',
-          error
-        );
+        console.error('🎨 Error updating decorations after configuration change:', error);
       }
     }
   } else {
     console.warn(`🎨 Invalid color detected: ${newColor}`);
-    // If the color is invalid, keep the current color and save a valid one
-    const fallbackColor = isValidHexColor(currentColor)
-      ? currentColor
-      : DEFAULT_COLOR;
+    const fallbackColor = isValidHexColor(currentColor) ? currentColor : DEFAULT_COLOR;
     currentColor = fallbackColor;
 
-    // Save the valid color back to the configuration
     try {
       await saveColorToConfiguration(fallbackColor);
       console.log(`🎨 Fallback color saved: ${fallbackColor}`);
@@ -509,10 +470,6 @@ export async function onConfigurationChanged(): Promise<void> {
   }
 }
 
-/**
- * Restores the custom color from global configuration
- * Useful after a git reset that may have affected workspace settings
- */
 export async function restoreColorFromGlobal(): Promise<void> {
   try {
     const globalConfig = vscode.workspace.getConfiguration('bracketLynx');
@@ -528,21 +485,14 @@ export async function restoreColorFromGlobal(): Promise<void> {
         );
       }
     } else {
-      vscode.window.showWarningMessage(
-        '🎨 No valid global color configuration found'
-      );
+      vscode.window.showWarningMessage('🎨 No valid global color configuration found');
     }
   } catch (error) {
     console.error('🎨 Error restoring color from global:', error);
-    vscode.window.showErrorMessage(
-      '🎨 Failed to restore color from global settings'
-    );
+    vscode.window.showErrorMessage('🎨 Failed to restore color from global settings');
   }
 }
 
-/**
- * Reset color to factory default
- */
 export async function resetColorToDefault(): Promise<void> {
   try {
     currentColor = DEFAULT_COLOR;
@@ -559,13 +509,9 @@ export async function resetColorToDefault(): Promise<void> {
   }
 }
 
-/**
- * Diagnostic function to check decorator status and configuration.
- * This function helps debug color preview issues by checking if all decorators
- * are properly initialized and have the required methods.
- *
- * @returns Object containing status information for all decorators
- */
+// ============================================================================
+// DIAGNOSTICS
+// ============================================================================
 export function getDecoratorDiagnostics(): {
   main: { available: boolean; hasForceRefresh: boolean; hasUpdateAll: boolean; hasClearAll: boolean };
   astro: { available: boolean; hasForceRefresh: boolean; hasUpdateDecorations: boolean; hasClearAll: boolean };
@@ -604,13 +550,6 @@ export function getDecoratorDiagnostics(): {
   };
 }
 
-/**
- * Debug function to test color refresh for all decorators.
- * This function performs a complete color refresh cycle to test
- * if all decorators are responding correctly to color changes.
- *
- * @returns Promise that resolves when the debug test is complete
- */
 export async function debugColorRefresh(): Promise<void> {
   const diagnostics = getDecoratorDiagnostics();
   console.log('🎨 Decorator diagnostics:', diagnostics);
@@ -629,12 +568,6 @@ export async function debugColorRefresh(): Promise<void> {
   }
 }
 
-/**
- * Validates that all decorators are properly initialized and functional.
- * Provides user-friendly status messages for troubleshooting.
- *
- * @returns Object with validation results and user-friendly messages
- */
 export function validateDecoratorStatus(): {
   isValid: boolean;
   status: string;
