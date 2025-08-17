@@ -60,6 +60,7 @@ interface PendingDecoration {
 // UNIFIED FRAMEWORKS DECORATOR - Eliminates all duplication
 // ============================================================================
 class FrameworksDecorator {
+  private static isInitialLoad = true;
   private static decorationTypes = new Map<FrameworkName, vscode.TextEditorDecorationType>();
   private static decorationTypeOptions = new Map<FrameworkName, { color: string; fontStyle: string }>();
   private static pendingDecorations: PendingDecoration[] = [];
@@ -112,12 +113,16 @@ class FrameworksDecorator {
       this.pendingDecorations = [];
 
       for (const { editor, framework } of decorationsToProcess) {
-        // Delay for Astro, Vue, Svelte so all appear together
-        if (framework === 'astro' || framework === 'vue' || framework === 'svelte') {
+        // first load
+        if (this.isInitialLoad && (framework === 'astro' || framework === 'vue' || framework === 'svelte')) {
           await new Promise(resolve => setTimeout(resolve, 225));
         }
         await this.processEditorDecorations(editor, framework);
         await new Promise(resolve => setTimeout(resolve, 5)); // Small delay for smoothness
+      }
+      // nest, disable el delay
+      if (this.isInitialLoad) {
+        this.isInitialLoad = false;
       }
     } catch (error) {
       console.error('FrameworksDecorator: Error processing decoration queue:', error);
@@ -496,23 +501,16 @@ class FrameworksDecorator {
    * Force color refresh for all decorations
    */
   public static async forceColorRefresh(): Promise<void> {
-    // Dispose all decoration types
-    for (const decorationType of this.decorationTypes.values()) {
-      decorationType.dispose();
+    // Actualiza el tipo de decoración en caliente para cada framework
+    for (const framework of Object.keys(FRAMEWORK_CONFIGS) as FrameworkName[]) {
+      this.ensureDecorationType(framework);
     }
-    this.decorationTypes.clear();
 
-    // Clear all decorations
-    this.clearAllDecorations();
-
-    // Small delay for cleanup
-    await new Promise(resolve => setTimeout(resolve, 50));
-
-    // Update all visible editors
+    // Reaplica decoraciones en todos los editores visibles sin limpiar primero
     for (const editor of vscode.window.visibleTextEditors) {
       const framework = this.detectFramework(editor.document);
-      if (framework && isEditorEnabled(editor)) {
-        await this.updateDecorations(editor);
+      if (framework) {
+        await this.processEditorDecorations(editor, framework);
         console.log(`FrameworksDecorator: Force refreshed color for ${framework} in ${editor.document.fileName}`);
       }
     }

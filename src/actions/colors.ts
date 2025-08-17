@@ -340,6 +340,10 @@ export async function setColor(color: string): Promise<void> {
   currentColor = color;
   await saveColorToConfiguration(color);
   await recreateAllBracketLynxDecorations(color);
+  // Refresh framework decorations immediately
+  if (frameworksDecorator && typeof frameworksDecorator.forceColorRefresh === 'function') {
+    await frameworksDecorator.forceColorRefresh();
+  }
 }
 
 export function initializeColorSystem(): void {
