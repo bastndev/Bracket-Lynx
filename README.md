@@ -20,16 +20,12 @@
 | **🎨 Change Color**  | Change bracket color with live preview and picker                | Workspace-wide | Persistent (Config) |
 | **♻️ Refresh**       | Reset all changes and restore to initial default state           | Current file   | Immediate           |
 
-### 🎨 Color System
+**🎨 Color System** Default color: (`#515151 ⚫`) 🌟
 
-**Default color:** (`#515151 ⚫`) 🌟
-
-
-</br>
+![Colors](https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/colors.png)
 
 ## 🌐 Language Compatibility
 
-Bracket Lynx can only be used in the following languages:
 
 | 📝 **Language**     |     | 📝 **Language**     |
 | ------------------- | --- | ------------------- |
