@@ -1,11 +1,9 @@
 import * as vscode from 'vscode';
+import { BracketLynxConfig } from '../lens';
 import { getCurrentColor } from '../../actions/colors';
 import { isEditorEnabled, isExtensionEnabled } from '../../actions/toggle';
-import { BracketLynxConfig } from '../lens';
 
-// ============================================================================
 // FRAMEWORK CONFIGURATIONS - Centralized to eliminate duplication
-// ============================================================================
 const FRAMEWORK_CONFIGS = {
   astro: {
     name: 'Astro',

@@ -2,8 +2,8 @@ import * as vscode from 'vscode';
 import { BracketLynx } from './lens/lens';
 import FrameworksDecorator from './lens/decorators/frameworks-decorator';
 import { setBracketLynxProviderForColors, setFrameworkDecoratorForColors } from './actions/colors';
-import { showBracketLynxMenu, setBracketLynxProvider, setFrameworkDecorator, cleanupClosedEditor, initializePersistedState } from './actions/toggle';
 import { initializeErrorHandling, LogLevel, logger } from './core/performance-config';
+import { showBracketLynxMenu, setBracketLynxProvider, setFrameworkDecorator, cleanupClosedEditor, initializePersistedState } from './actions/toggle';
 
 export let extensionContext: vscode.ExtensionContext;
 

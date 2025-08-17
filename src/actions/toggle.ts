@@ -2,32 +2,24 @@ import * as vscode from 'vscode';
 import { setBracketLynxProviderForColors, initializeColorSystem, changeDecorationColor, setFrameworkDecoratorForColors } from './colors';
 import { safeExecute, safeExecuteAsync, validateTextEditor, validateDocument, BracketLynxError, logger, LogCategory } from '../core/performance-config';
 
-// ============================================================================
 // CONFIGURATION CONSTANTS
-// ============================================================================
 const CONFIG_SECTION = 'bracketLynx';
 const GLOBAL_ENABLED_KEY = 'globalEnabled';
 const DISABLED_FILES_KEY = 'disabledFiles';
 const INDIVIDUALLY_ENABLED_FILES_KEY = 'individuallyEnabledFiles';
 
-// ============================================================================
 // TIMING CONSTANTS
-// ============================================================================
 const DECORATION_UPDATE_DELAY_SHORT = 50;
 const DECORATION_UPDATE_DELAY_LONG = 200;
 
-// ============================================================================
 // STATE VARIABLES
-// ============================================================================
 let isEnabled = true;
 let bracketLynxProvider: any = undefined;
 let frameworksDecorator: any = undefined;
 const disabledEditors = new Map<string, boolean>();
 const individuallyEnabledEditors = new Map<string, boolean>();
 
-// ============================================================================
 // MENU & UI HELPERS
-// ============================================================================
 function getMenuOptions(): any[] {
   const globalStatus = isEnabled ? '🟢' : '⭕';
   const currentFileStatus = getCurrentFileStatus();

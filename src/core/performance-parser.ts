@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { BracketEntry,TokenEntry,LanguageConfiguration,BracketLynxConfig,HeaderMode,} from '../lens/lens';
 import { containsControlFlowKeyword } from '../lens/lens-rules';
+import { BracketEntry,TokenEntry,LanguageConfiguration,BracketLynxConfig,HeaderMode,} from '../lens/lens';
 import { PROBLEMATIC_LANGUAGES, PROBLEMATIC_EXTENSIONS,PERFORMANCE_LIMITS,createHash} from './performance-config';
 
 // ============================================================================

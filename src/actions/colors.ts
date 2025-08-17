@@ -1,16 +1,12 @@
 import * as vscode from 'vscode';
 import { isExtensionEnabled } from './toggle';
 
-// ============================================================================
 // CONFIGURATION CONSTANTS
-// ============================================================================
 const DEFAULT_COLOR = '#515151';
 const DECORATION_CLEAR_DELAY = 50;
 const INITIALIZATION_DELAY = 100;
 
-// ============================================================================
 // INTERFACES
-// ============================================================================
 interface ColorOption extends vscode.QuickPickItem {
   value: string;
 }
@@ -23,16 +19,12 @@ export interface IBracketLynxProvider {
   forceColorRefresh?(): void;
 }
 
-// ============================================================================
 // STATE VARIABLES
-// ============================================================================
 let bracketLynxProvider: IBracketLynxProvider | undefined = undefined;
 let frameworksDecorator: any = undefined;
 let currentColor: string = DEFAULT_COLOR;
 
-// ============================================================================
 // PROVIDER SETTERS
-// ============================================================================
 export function setBracketLynxProviderForColors(provider: IBracketLynxProvider): void {
 	bracketLynxProvider = provider;
 }
@@ -41,9 +33,7 @@ export function setFrameworkDecoratorForColors(decorator: any): void {
 	frameworksDecorator = decorator;
 }
 
-// ============================================================================
 // COLOR PICKER SYSTEM
-// ============================================================================
 function getAvailableColors(): ColorOption[] {
   return [
     { label: '⚫ Default Gray', value: '#515151', description: 'Default bracket color' },

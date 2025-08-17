@@ -1,15 +1,10 @@
-// ============================================================================
-// FUNCTION SYMBOLS CLASS - Centralized symbol management
-// ============================================================================
 class FunctionSymbols {
   private static arrowFunctionSymbol = '❨❩➤';
   private static asyncFunctionSymbol = '⧖';
   private static complexFunctionSymbol = '⇄';
   private static collectionArrowSymbol = '⮞';
 
-  // ============================================================================
   // GETTERS
-  // ============================================================================
   static getArrowSymbol(): string {
     return this.arrowFunctionSymbol;
   }
