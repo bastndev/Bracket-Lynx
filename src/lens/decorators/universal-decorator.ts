@@ -4,7 +4,7 @@ import { isEditorEnabled, isExtensionEnabled } from '../../actions/toggle';
 import { BracketLynxConfig } from '../lens';
 
 // ============================================================================
-// 🎯 CONFIGURACIÓN UNIVERSAL DE ELEMENTOS TARGET
+// 🎯 UNIVERSAL CONFIGURATION OF TARGET ELEMENTS
 // ============================================================================
 const FRAMEWORK_COMPONENTS = {
   astro: ['Fragment', 'Astro', 'Code', 'Markdown', 'Debug', 'slot', 'Component'],
@@ -18,7 +18,7 @@ const COMMON_HTML_ELEMENTS = [
 ];
 
 // ============================================================================
-// TIPOS UNIVERSALES
+// UNIVERSAL TYPES
 // ============================================================================
 export type SupportedFramework = 'astro' | 'vue' | 'svelte' | 'html';
 export type SupportedExtension = '.astro' | '.vue' | '.svelte' | '.html';
@@ -47,7 +47,7 @@ interface PendingDecoration {
 }
 
 // ============================================================================
-// DECORADOR UNIVERSAL - SOLUCIÓN UNIFICADA SIN PARPADEO
+// UNIVERSAL DECORATOR - UNIFIED SOLUTION WITHOUT FLICKERING
 // ============================================================================
 export class UniversalDecorator {
   private static decorationType: vscode.TextEditorDecorationType | undefined;
@@ -55,11 +55,11 @@ export class UniversalDecorator {
   private static isProcessing = false;
   private static updateQueue = new Set<vscode.TextEditor>();
 
-  // Configuración de archivos soportados
+  // Supported file configuration
   private static readonly SUPPORTED_EXTENSIONS: SupportedExtension[] = ['.astro', '.vue', '.svelte', '.html'];
   private static readonly SUPPORTED_LANGUAGE_IDS: SupportedLanguageId[] = ['astro', 'vue', 'svelte', 'html'];
 
-  // Regex optimizados - compilados una sola vez
+  // Optimized regex - compiled only once
   private static readonly OPEN_TAG_REGEX = /<(\w+)(?:\s+[^>]*)?(?<!\/)\s*>/;
   private static readonly CLOSE_TAG_REGEX = /<\/(\w+)\s*>/;
   private static readonly TAG_DETECTOR_REGEX = /<[^>]+>/;
@@ -68,11 +68,11 @@ export class UniversalDecorator {
   private static readonly COMMENT_REGEX = /^<!--.*-->$/;
 
   // ============================================================================
-  // 🚀 SISTEMA DE COORDINACIÓN SIN PARPADEO
+  // 🚀 COORDINATION SYSTEM WITHOUT FLICKERING
   // ============================================================================
 
   /**
-   * Método principal coordinado para actualizar decoraciones
+   * Main coordinated method to update decorations
    */
   public static async updateDecorations(editor: vscode.TextEditor): Promise<void> {
     if (!editor || !this.isSupportedFile(editor.document)) {
@@ -81,20 +81,20 @@ export class UniversalDecorator {
 
     const editorKey = this.getEditorKey(editor);
 
-    // Agregar a la cola de procesamiento
+    // Add to processing queue
     this.updateQueue.add(editor);
 
-    // Si ya está procesando, esperar
+    // If already processing, wait
     if (this.isProcessing) {
       return;
     }
 
-    // Procesar cola de forma coordinada
+    // Process queue in a coordinated way
     await this.processDecorationQueue();
   }
 
   /**
-   * Procesa la cola de decoraciones de forma coordinada para evitar parpadeo
+   * Processes the decoration queue in a coordinated way to avoid flickering
    */
   private static async processDecorationQueue(): Promise<void> {
     if (this.isProcessing || this.updateQueue.size === 0) {
@@ -104,10 +104,10 @@ export class UniversalDecorator {
     this.isProcessing = true;
 
     try {
-      // Crear decoration type una sola vez para todos los editores
+      // Create decoration type only once for all editors
       const decorationType = this.ensureDecorationType();
 
-      // Procesar todos los editores en la cola
+      // Process all editors in the queue
       const editorsToProcess = Array.from(this.updateQueue);
       this.updateQueue.clear();
 
@@ -120,7 +120,7 @@ export class UniversalDecorator {
     } finally {
       this.isProcessing = false;
 
-      // Si hay más editores en cola, procesarlos
+      // If there are more editors in the queue, process them
       if (this.updateQueue.size > 0) {
         setTimeout(() => this.processDecorationQueue(), 10);
       }
@@ -128,14 +128,14 @@ export class UniversalDecorator {
   }
 
   /**
-   * Procesa las decoraciones para un editor específico
+   * Processes decorations for a specific editor
    */
   private static async processEditorDecorations(
     editor: vscode.TextEditor,
     decorationType: vscode.TextEditorDecorationType
   ): Promise<void> {
     try {
-      // Verificaciones de habilitación
+      // Enable checks
       const editorEnabled = isEditorEnabled(editor);
       const extensionEnabled = isExtensionEnabled();
 
@@ -144,10 +144,10 @@ export class UniversalDecorator {
         return;
       }
 
-      // Generar decoraciones
+      // Generate decorations
       const decorations = this.generateDecorations(editor.document);
 
-      // Aplicar decoraciones de forma atómica
+      // Apply decorations atomically
       editor.setDecorations(decorationType, decorations);
 
       if (BracketLynxConfig.debug) {
@@ -162,7 +162,7 @@ export class UniversalDecorator {
   }
 
   /**
-   * Asegura que el tipo de decoración esté creado con la configuración actual
+   * Ensures the decoration type is created with the current configuration
    */
   private static ensureDecorationType(): vscode.TextEditorDecorationType {
     if (this.decorationType) {
@@ -181,7 +181,7 @@ export class UniversalDecorator {
   }
 
   /**
-   * Genera las opciones de decoración para los componentes
+   * Generates decoration options for components
    */
   private static generateDecorations(document: vscode.TextDocument): vscode.DecorationOptions[] {
     const decorations: vscode.DecorationOptions[] = [];
@@ -211,7 +211,7 @@ export class UniversalDecorator {
       }
     }
 
-    // Limitar decoraciones por archivo
+    // Limit decorations per file
     const maxDecorations = BracketLynxConfig.maxDecorationsPerFile;
     if (decorations.length > maxDecorations) {
       if (BracketLynxConfig.debug) {
@@ -224,7 +224,7 @@ export class UniversalDecorator {
   }
 
   /**
-   * 🔥 Buscador optimizado de rangos de componentes
+   * 🔥 Optimized finder for component ranges
    */
   private static findComponentRanges(lines: string[], framework: SupportedFramework): ComponentRange[] {
     const componentStack: ComponentStackEntry[] = [];
@@ -234,14 +234,14 @@ export class UniversalDecorator {
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
 
-      // Saltar líneas sin tags
+      // Skip lines without tags
       if (!line || !this.TAG_DETECTOR_REGEX.test(line)) {
         continue;
       }
 
       const trimmedLine = line.trim();
 
-      // Procesar tags de apertura
+      // Process opening tags
       const openTagMatch = trimmedLine.match(this.OPEN_TAG_REGEX);
       if (openTagMatch) {
         const componentName = openTagMatch[1];
@@ -255,12 +255,12 @@ export class UniversalDecorator {
         continue;
       }
 
-      // Procesar tags de cierre
+      // Process closing tags
       const closeTagMatch = trimmedLine.match(this.CLOSE_TAG_REGEX);
       if (closeTagMatch) {
         const componentName = closeTagMatch[1];
 
-        // Buscar tag de apertura correspondiente (LIFO)
+        // Find corresponding opening tag (LIFO)
         for (let j = componentStack.length - 1; j >= 0; j--) {
           if (componentStack[j].name === componentName) {
             const openComponent = componentStack[j];
@@ -292,7 +292,7 @@ export class UniversalDecorator {
   }
 
   /**
-   * Detecta el framework basado en el documento
+   * Detects the framework based on the document
    */
   private static detectFramework(document: vscode.TextDocument): SupportedFramework {
     if (document.fileName.endsWith('.astro') || document.languageId === 'astro') {
@@ -308,10 +308,10 @@ export class UniversalDecorator {
   }
 
   /**
-   * Verifica si un elemento es target para el framework específico
+   * Checks if an element is a target for the specific framework
    */
   private static isTargetElement(tagName: string, framework: SupportedFramework): boolean {
-    // Componentes específicos del framework
+    // Framework-specific components
     if (framework !== 'html') {
       const frameworkComponents = FRAMEWORK_COMPONENTS[framework] || [];
       if (frameworkComponents.includes(tagName)) {
@@ -319,17 +319,17 @@ export class UniversalDecorator {
       }
     }
 
-    // Componentes con primera letra mayúscula (componentes custom)
+    // Components with uppercase first letter (custom components)
     if (tagName[0] === tagName[0].toUpperCase()) {
       return true;
     }
 
-    // Elementos HTML comunes
+    // Common HTML elements
     return COMMON_HTML_ELEMENTS.includes(tagName.toLowerCase());
   }
 
   /**
-   * Verifica si un style tag tiene el atributo scoped (Vue)
+   * Checks if a style tag has the scoped attribute (Vue)
    */
   private static isStyleScoped(lines: string[], startIndex: number): boolean {
     const openingLine = lines[startIndex]?.trim();
@@ -337,7 +337,7 @@ export class UniversalDecorator {
   }
 
   /**
-   * 🧠 Detector inteligente de contenido significativo
+   * 🧠 Smart detector of significant content
    */
   private static hasSignificantContent(lines: string[], startIndex: number, endIndex: number): boolean {
     if (endIndex - startIndex < 2) {
@@ -353,7 +353,7 @@ export class UniversalDecorator {
     const tagName = tagMatch?.[1]?.toLowerCase();
     const isSpecialTag = ['style', 'script', 'template'].includes(tagName || '');
 
-    // Buscar contenido significativo
+    // Look for significant content
     for (let i = startIndex + 1; i < endIndex; i++) {
       const contentLine = lines[i]?.trim();
 
@@ -365,7 +365,7 @@ export class UniversalDecorator {
         continue;
       }
 
-      // Tags especiales siempre tienen contenido significativo
+      // Special tags always have significant content
       if (isSpecialTag) {
         return true;
       }
@@ -377,7 +377,7 @@ export class UniversalDecorator {
   }
 
   /**
-   * Verifica si el archivo es soportado
+   * Checks if the file is supported
    */
   private static isSupportedFile(document: vscode.TextDocument): boolean {
     const hasValidExtension = this.SUPPORTED_EXTENSIONS.some(ext =>
@@ -389,7 +389,7 @@ export class UniversalDecorator {
   }
 
   /**
-   * Verifica si el archivo debe procesarse (filtros de rendimiento)
+   * Checks if the file should be processed (performance filters)
    */
   private static shouldProcessFile(document: vscode.TextDocument): boolean {
     if (!BracketLynxConfig.enablePerformanceFilters) {
@@ -411,7 +411,7 @@ export class UniversalDecorator {
   }
 
   /**
-   * Verifica si debe mostrarse la decoración
+   * Checks if the decoration should be shown
    */
   private static shouldShowDecoration(component: ComponentRange): boolean {
     const minLines = Math.max(1, BracketLynxConfig.minBracketScopeLines - 2);
@@ -419,18 +419,18 @@ export class UniversalDecorator {
   }
 
   /**
-   * Obtiene una clave única para el editor
+   * Gets a unique key for the editor
    */
   private static getEditorKey(editor: vscode.TextEditor): string {
     return `${editor.document.uri.toString()}-${editor.document.version}`;
   }
 
   // ============================================================================
-  // 🧹 MÉTODOS DE LIMPIEZA Y GESTIÓN
+  // 🧹 CLEANUP AND MANAGEMENT METHODS
   // ============================================================================
 
   /**
-   * Limpia las decoraciones de un editor específico
+   * Clears decorations from a specific editor
    */
   public static clearDecorations(editor: vscode.TextEditor): void {
     if (this.decorationType && editor) {
@@ -439,7 +439,7 @@ export class UniversalDecorator {
   }
 
   /**
-   * Limpia todas las decoraciones de todos los editores visibles
+   * Clears all decorations from all visible editors
    */
   public static clearAllDecorations(): void {
     if (this.decorationType) {
@@ -450,7 +450,7 @@ export class UniversalDecorator {
   }
 
   /**
-   * Maneja cambios de configuración
+   * Handles configuration changes
    */
   public static onDidChangeConfiguration(): void {
     if (this.decorationType) {
@@ -462,22 +462,22 @@ export class UniversalDecorator {
   }
 
   /**
-   * Fuerza actualización de colores sin parpadeo
+   * Forces color refresh without flickering
    */
   public static async forceColorRefresh(): Promise<void> {
-    // Disponer del tipo de decoración actual
+    // Dispose current decoration type
     if (this.decorationType) {
       this.decorationType.dispose();
       this.decorationType = undefined;
     }
 
-    // Limpiar decoraciones existentes
+    // Clear existing decorations
     this.clearAllDecorations();
 
-    // Pequeña pausa para asegurar limpieza
+    // Small pause to ensure cleanup
     await new Promise(resolve => setTimeout(resolve, 50));
 
-    // Actualizar todos los editores visibles de forma coordinada
+    // Update all visible editors in a coordinated way
     const supportedEditors = vscode.window.visibleTextEditors
       .filter(editor => this.isSupportedFile(editor.document) && isEditorEnabled(editor));
 
@@ -493,7 +493,7 @@ export class UniversalDecorator {
   }
 
   /**
-   * Limpieza y disposición de recursos
+   * Cleanup and resource disposal
    */
   public static dispose(): void {
     this.updateQueue.clear();
@@ -507,7 +507,7 @@ export class UniversalDecorator {
 }
 
 // ============================================================================
-// EXPORTS COMPATIBLES CON LOS DECORADORES EXISTENTES
+// EXPORTS COMPATIBLE WITH EXISTING DECORATORS
 // ============================================================================
 export const AstroDecorator = UniversalDecorator;
 export const VueDecorator = UniversalDecorator;
