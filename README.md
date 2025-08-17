@@ -1,9 +1,9 @@
 ![Screenshot](https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/screenshot.jpg)
 
 <p align="center">
-    <img src="https://vsmarketplacebadges.dev/version-short/bastndev.bracket-lynx.jpg?style=for-the-badge&colorA=FFFFFF&colorB=000000&label=VERSION" alt="Version">&nbsp;
-    <img src="https://vsmarketplacebadges.dev/rating-short/bastndev.bracket-lynx.jpg?style=for-the-badge&colorA=FFFFFF&colorB=000000&label=RATING" alt="Rating">&nbsp;
-    <img src="https://vsmarketplacebadges.dev/downloads-short/bastndev.bracket-lynx.jpg?style=for-the-badge&colorA=FFFFFF&colorB=000000&label=DOWNLOADS" alt="Downloads">&nbsp;
+    <img src="https://vsmarketplacebadges.dev/version-short/bastndev.bracket-lynx.jpg?style=for-the-badge&colorA=FFFFFF&colorB=7A005C&label=VERSION" alt="Version">&nbsp;
+    <img src="https://vsmarketplacebadges.dev/rating-short/bastndev.bracket-lynx.jpg?style=for-the-badge&colorA=FFFFFF&colorB=7A005C&label=RATING" alt="Rating">&nbsp;
+    <img src="https://vsmarketplacebadges.dev/downloads-short/bastndev.bracket-lynx.jpg?style=for-the-badge&colorA=FFFFFF&colorB=7A005C&label=DOWNLOADS" alt="Downloads">&nbsp;
     <a href="https://github.com/bastndev/Bracket-Lynx"><img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/star.png" width="26.6px" alt="Github Star ⭐️"></a>
 </p>
 
