@@ -22,9 +22,10 @@
 
 ### 🎨 Color System
 
+**Default color:** (`#515151 ⚫`) 🌟
 
-**Tip:** You can reset to the default color (`#515151 ⚫`) or update your choice anytime. Color state is automatically restored after git reset or config changes.  
-Explore, experiment, and make your editor look the way you want! 🌟
+
+</br>
 
 ## 🌐 Language Compatibility
 
