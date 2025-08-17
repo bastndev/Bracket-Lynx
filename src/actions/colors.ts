@@ -38,6 +38,7 @@ function getAvailableColors(): ColorOption[] {
   return [
     { label: '⚫ Default Gray', value: '#515151', description: 'Default bracket color' },
     { label: '⚪ Light Gray', value: '#adb5bd', description: 'Light gray decorations' },
+    { label: '🔴 Red', value: '#b94a48', description: 'Warm muted red decorations' },
     { label: '🔵 Blue', value: '#4a4d66', description: 'Dark blue decorations' },
     { label: '🟡 Yellow', value: '#9d956b', description: 'Subtle yellow-beige' },
     { label: '🟢 Green', value: '#6b7c5d', description: 'Muted sage green decorations' },
