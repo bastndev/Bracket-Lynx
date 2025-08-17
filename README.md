@@ -13,12 +13,12 @@
 
 **Enable/disable bracket decorations:** & change **COLOR** Press `(Ctrl+Shift+P)` → `Bracket Lynx: Toggle, Color & Refresh 🛠️`
 
-| Option         | Description                                                      | Scope          | Persistence         |
-| -------------- | ---------------------------------------------------------------- | -------------- | ------------------- |
-| **🌐 Toggle**  | Enable/disable for all files, state saved across sessions        | Extension-wide | Persistent (Config) |
-| **📝 Toggle**  | Enable/disable decorations per file, state saved across sessions | Per-file       | Persistent (Config) |
-| **🎨 Change**  | Change bracket color with live preview and picker                | Workspace-wide | Persistent (Config) |
-| **♻️ Refresh** | Reset all changes and restore to initial default state           | Current file   | Immediate           |
+| Option               | Description                                                      | Scope          | Persistence         |
+| -------------------- | ---------------------------------------------------------------- | -------------- | ------------------- |
+| **🌐 Toggle/global** | Enable/disable for all files, state saved across sessions        | Extension-wide | Persistent (Config) |
+| **📝 Toggle/file**   | Enable/disable decorations per file, state saved across sessions | Per-file       | Persistent (Config) |
+| **🎨 Change**        | Change bracket color with live preview and picker                | Workspace-wide | Persistent (Config) |
+| **♻️ Refresh**       | Reset all changes and restore to initial default state           | Current file   | Immediate           |
 
 **🎨 Colors:** Default color: (`#515151 ⚫`) 🌟
 
