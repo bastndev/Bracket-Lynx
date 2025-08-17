@@ -132,7 +132,7 @@ async function initializeDecorations(): Promise<void> {
     await new Promise(resolve => setTimeout(resolve, 50));
 
     const visibleEditors = vscode.window.visibleTextEditors;
-    if (visibleEditors.length === 0) return;
+    if (visibleEditors.length === 0) {return;}
 
     for (const editor of visibleEditors) {
         try {
