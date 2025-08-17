@@ -37,12 +37,12 @@ export function setFrameworkDecoratorForColors(decorator: any): void {
 function getAvailableColors(): ColorOption[] {
   return [
     { label: '⚫ Default Gray', value: '#515151', description: 'Default bracket color' },
-    { label: '⚪ Light Gray', value: '#adb5bd', description: 'Light gray decorations' },
-    { label: '🔴 Red', value: '#b94a48', description: 'Warm muted red decorations' },
-    { label: '🔵 Blue', value: '#4a4d66', description: 'Dark blue decorations' },
-    { label: '🟡 Yellow', value: '#9d956b', description: 'Subtle yellow-beige' },
-    { label: '🟢 Green', value: '#6b7c5d', description: 'Muted sage green decorations' },
-    { label: '🟣 Purple', value: '#6d5d73', description: 'Soft purple-gray decorations' },
+    { label: '⚪ Light Gray', value: '#ADB5BD', description: 'Light gray decorations' },
+    { label: '🔴 Red', value: '#A13030', description: 'Warm muted red decorations' },
+    { label: '🔵 Blue', value: '#4A4D66', description: 'Dark blue decorations' },
+    { label: '🟡 Yellow', value: '#9D956B', description: 'Subtle yellow-beige' },
+    { label: '🟢 Green', value: '#6B7C5D', description: 'Muted sage green decorations' },
+    { label: '🟣 Purple', value: '#6D5D73', description: 'Soft purple-gray decorations' },
     { label: '✏️ Write Custom', value: 'write-custom', description: 'Enter your own hex color' },
   ];
 }
