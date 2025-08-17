@@ -290,68 +290,12 @@ export function makeRegExpPart(text: string): string {
 // ============================================================================
 
 /**
- * Base error class for all Bracket Lynx errors
+ * Simple error class for Bracket Lynx
  */
 export class BracketLynxError extends Error {
-  public readonly timestamp: Date;
-  public readonly context?: any;
-
-  constructor(message: string, public readonly code: string, context?: any) {
+  constructor(message: string, public readonly code?: string) {
     super(message);
     this.name = 'BracketLynxError';
-    this.timestamp = new Date();
-    this.context = context;
-    
-    // Maintain proper stack trace
-    if (Error.captureStackTrace) {
-      Error.captureStackTrace(this, this.constructor);
-    }
-  }
-
-  /**
-   * Get formatted error message for logging
-   */
-  public getFormattedMessage(): string {
-    return `[${this.code}] ${this.message}${this.context ? ` | Context: ${JSON.stringify(this.context)}` : ''}`;
-  }
-}
-
-/**
- * Specific error types
- */
-export class ParseError extends BracketLynxError {
-  constructor(message: string, context?: any) {
-    super(message, 'PARSE_ERROR', context);
-  }
-}
-
-export class CacheError extends BracketLynxError {
-  constructor(message: string, context?: any) {
-    super(message, 'CACHE_ERROR', context);
-  }
-}
-
-export class ConfigurationError extends BracketLynxError {
-  constructor(message: string, context?: any) {
-    super(message, 'CONFIG_ERROR', context);
-  }
-}
-
-export class PerformanceError extends BracketLynxError {
-  constructor(message: string, context?: any) {
-    super(message, 'PERFORMANCE_ERROR', context);
-  }
-}
-
-export class DecorationError extends BracketLynxError {
-  constructor(message: string, context?: any) {
-    super(message, 'DECORATION_ERROR', context);
-  }
-}
-
-export class DocumentError extends BracketLynxError {
-  constructor(message: string, context?: any) {
-    super(message, 'DOCUMENT_ERROR', context);
   }
 }
 
@@ -430,9 +374,8 @@ class Logger {
   /**
    * Log BracketLynxError
    */
-  public logError(error: BracketLynxError, category?: LogCategory): void {
-    const logCategory = category || this.getCategoryFromError(error);
-    this.log(LogLevel.ERROR, logCategory, error.getFormattedMessage(), error.context, error);
+  public logError(error: BracketLynxError, category: LogCategory = LogCategory.GENERAL): void {
+    this.log(LogLevel.ERROR, category, error.message, undefined, error);
   }
 
   private log(level: LogLevel, category: LogCategory, message: string, context?: any, error?: Error): void {
@@ -444,7 +387,7 @@ class Logger {
     const levelName = LogLevel[level];
     const prefix = `[BracketLynx:${levelName}:${category.toUpperCase()}]`;
     const timestamp = new Date().toISOString();
-    
+
     const logMessage = `${prefix} ${message}`;
     const logContext = context ? { context, timestamp } : { timestamp };
 
@@ -465,22 +408,7 @@ class Logger {
   }
 
   private getCategoryFromError(error: BracketLynxError): LogCategory {
-    switch (error.code) {
-      case 'PARSE_ERROR':
-        return LogCategory.PARSER;
-      case 'CACHE_ERROR':
-        return LogCategory.CACHE;
-      case 'CONFIG_ERROR':
-        return LogCategory.GENERAL;
-      case 'PERFORMANCE_ERROR':
-        return LogCategory.PERFORMANCE;
-      case 'DECORATION_ERROR':
-        return LogCategory.DECORATION;
-      case 'DOCUMENT_ERROR':
-        return LogCategory.GENERAL;
-      default:
-        return LogCategory.GENERAL;
-    }
+    return error.code ? LogCategory.GENERAL : LogCategory.GENERAL;
   }
 }
 
@@ -494,26 +422,11 @@ export const logger = Logger.getInstance();
 /**
  * Execute a synchronous operation safely with fallback
  */
-export function safeExecute<T>(
-  operation: () => T,
-  fallback: T,
-  context?: string,
-  category: LogCategory = LogCategory.GENERAL
-): T {
+export function safeExecute<T>(operation: () => T, fallback: T): T {
   try {
     return operation();
   } catch (error) {
-    const message = `Safe execution failed: ${context || 'Unknown operation'}`;
-    
-    if (error instanceof BracketLynxError) {
-      logger.logError(error, category);
-    } else {
-      logger.error(message, { 
-        originalError: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      }, category);
-    }
-    
+    logger.error('Safe execution failed', { error: error instanceof Error ? error.message : String(error) });
     return fallback;
   }
 }
@@ -521,78 +434,13 @@ export function safeExecute<T>(
 /**
  * Execute an asynchronous operation safely with fallback
  */
-export async function safeExecuteAsync<T>(
-  operation: () => Promise<T>,
-  fallback: T,
-  context?: string,
-  category: LogCategory = LogCategory.GENERAL
-): Promise<T> {
+export async function safeExecuteAsync<T>(operation: () => Promise<T>, fallback: T): Promise<T> {
   try {
     return await operation();
   } catch (error) {
-    const message = `Safe async execution failed: ${context || 'Unknown async operation'}`;
-    
-    if (error instanceof BracketLynxError) {
-      logger.logError(error, category);
-    } else {
-      logger.error(message, { 
-        originalError: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      }, category);
-    }
-    
+    logger.error('Safe async execution failed', { error: error instanceof Error ? error.message : String(error) });
     return fallback;
   }
-}
-
-/**
- * Execute operation with retry logic
- */
-export async function safeExecuteWithRetry<T>(
-  operation: () => Promise<T>,
-  fallback: T,
-  maxRetries: number = 3,
-  retryDelay: number = 100,
-  context?: string,
-  category: LogCategory = LogCategory.GENERAL
-): Promise<T> {
-  let lastError: any;
-  
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      return await operation();
-    } catch (error) {
-      lastError = error;
-      
-      if (attempt === maxRetries) {
-        break; // Don't retry on last attempt
-      }
-      
-      logger.warn(`Retry attempt ${attempt}/${maxRetries} failed: ${context || 'Unknown operation'}`, {
-        attempt,
-        maxRetries,
-        error: error instanceof Error ? error.message : String(error)
-      }, category);
-      
-      // Wait before retry
-      await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
-    }
-  }
-  
-  // All retries failed
-  const message = `All retry attempts failed: ${context || 'Unknown operation'}`;
-  
-  if (lastError instanceof BracketLynxError) {
-    logger.logError(lastError, category);
-  } else {
-    logger.error(message, { 
-      maxRetries,
-      originalError: lastError instanceof Error ? lastError.message : String(lastError),
-      stack: lastError instanceof Error ? lastError.stack : undefined
-    }, category);
-  }
-  
-  return fallback;
 }
 
 // ============================================================================
@@ -604,14 +452,11 @@ export async function safeExecuteWithRetry<T>(
  */
 export function validateDocument(document: vscode.TextDocument | undefined): asserts document is vscode.TextDocument {
   if (!document) {
-    throw new DocumentError('Document is required but was undefined or null');
+    throw new BracketLynxError('Document is required but was undefined or null');
   }
-  
+
   if (document.isClosed) {
-    throw new DocumentError('Cannot process closed document', { 
-      fileName: document.fileName,
-      languageId: document.languageId 
-    });
+    throw new BracketLynxError('Cannot process closed document');
   }
 }
 
@@ -620,41 +465,19 @@ export function validateDocument(document: vscode.TextDocument | undefined): ass
  */
 export function validateTextEditor(editor: vscode.TextEditor | undefined): asserts editor is vscode.TextEditor {
   if (!editor) {
-    throw new DocumentError('Text editor is required but was undefined or null');
+    throw new BracketLynxError('Text editor is required but was undefined or null');
   }
-  
-  validateDocument(editor.document);
-}
 
-/**
- * Validate file size
- */
-export function validateFileSize(document: vscode.TextDocument, maxSize: number): void {
-  const text = document.getText();
-  const size = Buffer.byteLength(text, 'utf8');
-  
-  if (size > maxSize) {
-    throw new PerformanceError('Document exceeds maximum size limit', {
-      fileName: document.fileName,
-      actualSize: size,
-      maxSize,
-      sizeInMB: (size / 1024 / 1024).toFixed(2)
-    });
-  }
+  validateDocument(editor.document);
 }
 
 /**
  * Validate configuration value
  */
-export function validateConfig<T>(value: T | undefined, defaultValue: T, configKey: string): T {
+export function validateConfig<T>(value: T | undefined, defaultValue: T): T {
   if (value === undefined || value === null) {
-    logger.warn(`Configuration value missing, using default`, { 
-      configKey, 
-      defaultValue 
-    }, LogCategory.GENERAL);
     return defaultValue;
   }
-  
   return value;
 }
 
@@ -662,33 +485,7 @@ export function validateConfig<T>(value: T | undefined, defaultValue: T, configK
 // ERROR RECOVERY UTILITIES
 // ============================================================================
 
-/**
- * Create a recovery function that attempts multiple strategies
- */
-export function createRecoveryChain<T>(...strategies: Array<() => T>): () => T {
-  return () => {
-    let lastError: any;
-    
-    for (let i = 0; i < strategies.length; i++) {
-      try {
-        return strategies[i]();
-      } catch (error) {
-        lastError = error;
-        logger.debug(`Recovery strategy ${i + 1} failed, trying next`, {
-          strategyIndex: i,
-          totalStrategies: strategies.length,
-          error: error instanceof Error ? error.message : String(error)
-        });
-      }
-    }
-    
-    // All strategies failed
-    throw new BracketLynxError('All recovery strategies failed', 'RECOVERY_FAILED', { 
-      totalStrategies: strategies.length,
-      lastError: lastError instanceof Error ? lastError.message : String(lastError)
-    });
-  };
-}
+
 
 // ============================================================================
 // INITIALIZATION
@@ -701,9 +498,9 @@ export function initializeErrorHandling(config?: {
   logLevel?: LogLevel;
 }): void {
   const logLevel = config?.logLevel ?? LogLevel.WARN;
-  
+
   logger.configure(logLevel);
-  
+
   logger.info('Error handling system initialized', {
     logLevel: LogLevel[logLevel]
   });

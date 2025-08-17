@@ -1,5 +1,5 @@
 import { SUPPORTED_LANGUAGES, ALLOWED_JSON_FILES, SupportedLanguage, escapeRegExp } from '../core/performance-config';
-import { formatAsyncFunction, formatComplexFunction, isAsyncFunction, isComplexFunction, FUNCTION_SYMBOLS } from './decorators/js-ts-decorator-function';
+import { formatAsyncFunction, formatComplexFunction, isAsyncFunction, isComplexFunction, FUNCTION_SYMBOLS } from './decorators/js-ts-function-decorator';
 
 // WORD LIMITS - Controls how many words are displayed
 export const WORD_LIMITS = {

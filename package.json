@@ -59,7 +59,7 @@
     "commands": [
       {
         "command": "bracketLynx.menu",
-        "title": "Bracket Lynx: Toggle & Refresh 🛠️"
+        "title": "Bracket Lynx: Toggle, Color & Refresh 🛠️"
       }
     ],
     "configuration": {

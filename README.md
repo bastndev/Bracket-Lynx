@@ -1,60 +1,45 @@
 ![Screenshot](https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/screenshot.jpg)
 
 <p align="center">
-    <img src="https://vsmarketplacebadges.dev/version-short/bastndev.bracket-lynx.jpg?style=for-the-badge&colorA=FFFFFF&colorB=000000&label=VERSION" alt="Version">&nbsp;
-    <img src="https://vsmarketplacebadges.dev/rating-short/bastndev.bracket-lynx.jpg?style=for-the-badge&colorA=FFFFFF&colorB=000000&label=RATING" alt="Rating">&nbsp;
-    <img src="https://vsmarketplacebadges.dev/downloads-short/bastndev.bracket-lynx.jpg?style=for-the-badge&colorA=FFFFFF&colorB=000000&label=DOWNLOADS" alt="Downloads">&nbsp;
+    <img src="https://vsmarketplacebadges.dev/version-short/bastndev.bracket-lynx.jpg?style=for-the-badge&colorA=FFFFFF&colorB=7A005C&label=VERSION" alt="Version">&nbsp;
+    <img src="https://vsmarketplacebadges.dev/rating-short/bastndev.bracket-lynx.jpg?style=for-the-badge&colorA=FFFFFF&colorB=7A005C&label=RATING" alt="Rating">&nbsp;
+    <img src="https://vsmarketplacebadges.dev/downloads-short/bastndev.bracket-lynx.jpg?style=for-the-badge&colorA=FFFFFF&colorB=7A005C&label=DOWNLOADS" alt="Downloads">&nbsp;
     <a href="https://github.com/bastndev/Bracket-Lynx"><img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/star.png" width="26.6px" alt="Github Star ⭐️"></a>
 </p>
 
 </br>
 
-## Toggle System
-
 ## 🛠️ Toggle System
 
-**Toggle bracket decorations:** Press `Ctrl+Shift+P` → `Bracket Lynx: Toggle & Refresh 🛠️`
+**Enable/disable bracket decorations:** & change **COLOR** Press `(Ctrl+Shift+P)` → `Bracket Lynx: Toggle, Color & Refresh 🛠️`
 
-| Option                  | Description                                                      | Scope          | Persistence         |
-| ----------------------- | ---------------------------------------------------------------- | -------------- | ------------------- |
-| **🌐 Toggle Global**    | Enable/disable for all files, state saved across sessions        | Extension-wide | Persistent (Config) |
-| **📝 Toggle File**      | Enable/disable decorations per file, state saved across sessions | Per-file       | Persistent (Config) |
-| **🎨 Change Color**     | Change bracket color with live preview and picker                | Workspace-wide | Persistent (Config) |
-| **🧹 Memory Cleanup**   | Clean up memory for closed/unused editors, auto and manual       | Extension-wide | Immediate           |
-| **♻️ Refresh**          | Force update decorations for current file                        | Current file   | Immediate           |
-| -                       | -                                                                | -              | -                   |
-| **🧠 Memory Stats**     | Show memory usage and health in menu                             | Extension-wide | Immediate           |
-| **🛠️ Interactive Menu** | QuickPick menu for all actions, with live stats                  | Extension-wide | Immediate           |
-
-</br>
+| Option               | Description                                                      | Scope          | Persistence         |
+| -------------------- | ---------------------------------------------------------------- | -------------- | ------------------- |
+| **🌐 Toggle Global** | Enable/disable for all files, state saved across sessions        | Extension-wide | Persistent (Config) |
+| **📝 Toggle File**   | Enable/disable decorations per file, state saved across sessions | Per-file       | Persistent (Config) |
+| **🎨 Change Color**  | Change bracket color with live preview and picker                | Workspace-wide | Persistent (Config) |
+| **♻️ Refresh**       | Reset all changes and restore to initial default state           | Current file   | Immediate           |
 
 ### 🎨 Color System
 
+**Default color:** (`#515151 ⚫`) 🌟
 
-| 🎨 **Feature**          | 📝 **Description**                      | ⚡ **How to Use**                                            | 💾 **Persistence**      |
-| ----------------------- | --------------------------------------- | ------------------------------------------------------------ | ----------------------- |
-| **🌈 Built-in Colors**  | Predefined color palette                | Select from the color picker menu                            | Workspace-wide (Config) |
-| **#️⃣ Custom Hex Color** | Any valid hex color                     | Use "✏️ Write Custom" in the picker and enter your hex value | Workspace-wide (Config) |
-| **👀 Live Preview**     | Real-time color changes                 | Hover/select colors in the picker                            | Temporary               |
-| **🎨 Color Picker**     | Interactive selection                   | QuickPick menu                                               | Immediate               |
-| **🔗 Settings Sync**    | Save color in workspace/global settings | Automatically saved after selection                          | Persistent (Config)     |
 
-**Tip:** You can reset to the default color (`#515151 ⚫`) or update your choice anytime. Color state is automatically restored after git reset or config changes.  
-Explore, experiment, and make your editor look the way you want! 🌟
+</br>
 
 ## 🌐 Language Compatibility
 
 Bracket Lynx can only be used in the following languages:
 
-| 📝 **Language**     |     | 📝 **Language**     |     |
-| ------------------- | --- | ------------------- | --- |
-| ✨ JavaScript       |     | ⚡ TypeScript       |     |
-| ⚛️ JavaScript React |     | ⚛️ TypeScript React |     |
-| 🎨 CSS              |     | 🎨 SCSS             |     |
-| 🎨 SASS             |     | 🎨 LESS             |     |
-| 🌐 HTML             |     | 🟠 Astro            |     |
-| 🟩 Vue              |     | 🟦 Svelte           |     |
-| 🗂️ JSON             |     | 🗂️ JSONC            |     |
+| 📝 **Language**     |     | 📝 **Language**     |
+| ------------------- | --- | ------------------- |
+| ✨ JavaScript       |     | ⚡ TypeScript       |
+| ⚛️ JavaScript React |     | ⚛️ TypeScript React |
+| 🎨 CSS              |     | 🎨 SCSS             |
+| 🎨 SASS             |     | 🎨 LESS             |
+| 🌐 HTML             |     | 🟠 Astro            |
+| 🟩 Vue              |     | 🟦 Svelte           |
+| 🗂️ JSON             |     | 🗂️ JSONC            |
 
 > **📌 Note:** Bracket Lynx is automatically activated only for these languages.
 

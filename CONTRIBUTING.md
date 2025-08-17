@@ -64,7 +64,7 @@ This will help you make more effective contributions and understand where your c
    ```
 
 2. **Branch naming conventions**:
-   - `feature/language-support-python` - New language support
+   - `feature/language-support-css` - New language support
    - `feature/performance-optimization` - Performance improvements
    - `feature/color-picker-ui` - UI enhancements
    - `bugfix/parser-memory-leak` - Bug fixes
@@ -114,7 +114,7 @@ This will help you make more effective contributions and understand where your c
 5. **Commit your changes** with descriptive messages:
    ```bash
    git add .
-   git commit -m "feat: add Python language support with smart bracket detection"
+   git commit -m "feat: add CSS language support with smart bracket detection"
    ```
 
 6. **Push to your fork**:
@@ -133,11 +133,11 @@ Add support for new programming languages:
 - Add language-specific formatting rules
 - Test with real-world files in that language
 
-**Currently supported**: JavaScript, TypeScript, React, Vue, Svelte, Astro, CSS/SCSS, HTML, JSON, Python, Java, C/C++, C#, Rust, Go, Dart, PHP
+**Currently supported**: JavaScript, TypeScript, React (JSX/TSX), Vue, Svelte, Astro, CSS/SCSS, HTML, JSON
 
 ### 2. ⚡ Performance Improvements
 
-**Location**: `src/core/performance-*.ts`
+**Location**: `src/core/performance-config.ts`, `src/core/performance-cache.ts`, `src/core/performance-parser.ts`
 
 Areas for optimization:
 - Parser performance for large files
@@ -147,20 +147,25 @@ Areas for optimization:
 
 ### 3. 🎯 Core Features
 
-**Parser System** (`src/core/`):
-- Bracket parsing algorithms
-- Exception handling for edge cases
-- Incremental parsing improvements
+**Performance Core** (`src/core/`):
+- Configuration and error handling (`performance-config.ts`)
+- Advanced multi-level caching (`performance-cache.ts`)
+- Optimized parsing engine (`performance-parser.ts`)
 
-**Lens System** (`src/lens/`):
-- Header generation logic
-- Decoration rendering
-- Smart filtering rules
+**Universal Lens System** (`src/lens/`):
+- Main bracket detection logic (`lens.ts`)
+- Language-specific formatting (`language-formatter.ts`)
+- Smart filtering rules (`lens-rules.ts`)
+
+**Specialized Decorators** (`src/lens/decorators/`):
+- Astro/HTML support (`astro-decorator.ts`)
+- Vue.js support (`vue.decorator.ts`)
+- Svelte support (`svelte.decorator.ts`)
+- JS/TS function symbols (`js-ts-function-decorator.ts`)
 
 **Control Systems** (`src/actions/`):
-- Toggle functionality
-- Color management
-- Configuration handling
+- Toggle & menu management (`toggle.ts`)
+- Dynamic color system (`colors.ts`)
 
 ### 4. 🎨 UI/UX Improvements
 
@@ -172,10 +177,12 @@ Areas for optimization:
 ### 5. 🐛 Bug Fixes
 
 Common areas where bugs might occur:
-- Parser edge cases with nested brackets
-- Memory leaks in large files
-- Decoration positioning issues
-- Cache invalidation problems
+- Parser edge cases with deeply nested brackets
+- Memory leaks in large files or long sessions
+- Decoration positioning issues with complex code structures
+- Cache invalidation problems affecting performance
+- Language-specific decorator conflicts
+- Performance issues with specialized decorators
 
 ### 6. 📚 Documentation
 
@@ -201,7 +208,7 @@ Help improve:
 2. **Create a Pull Request** targeting the `dev` branch (not `main`!)
 
 3. **PR Title Format**:
-   - `feat: add Python language support`
+   - `feat: add CSS language support`
    - `fix: resolve memory leak in parser cache`
    - `perf: optimize bracket parsing for large files`
    - `docs: update architecture documentation`
@@ -237,15 +244,19 @@ Help improve:
 **Before submitting, please test with:**
 - ✅ **JavaScript** (.js) files
 - ✅ **TypeScript** (.ts) files  
-- ✅ **React/JSX** components
-- ✅ **Vue** single-file components
-- ✅ **Svelte** components
-- ✅ **Astro** files
-- ✅ **CSS/SCSS** stylesheets
-- ✅ **Large files** (>1MB) for performance
-- ✅ **Nested bracket structures**
+- ✅ **React/JSX** components (.jsx/.tsx)
+- ✅ **Vue** single-file components (.vue)
+- ✅ **Svelte** components (.svelte)
+- ✅ **Astro** files (.astro)
+- ✅ **HTML** files (.html)
+- ✅ **CSS/SCSS** stylesheets (.css/.scss)
+- ✅ **JSON** configuration files (.json)
+- ✅ **Large files** (>1MB) for performance testing
+- ✅ **Deeply nested bracket structures**
+- ✅ **Mixed language files** (e.g., Vue SFC, Astro components)
 - ✅ **Toggle functionality** (global/per-file)
-- ✅ **Color picker** functionality
+- ✅ **Color picker** and live preview functionality
+- ✅ **Memory cleanup** and cache performance
 
 ## Important Notes ⚠️
 
@@ -284,21 +295,40 @@ The maintainer will handle merging `dev` → `main` for releases.
 ```
 bracket-lynx/
 ├── src/
-│   ├── extension.ts              # 🚀 Main entry point
-│   ├── core/                     # ⚡ Core systems
-│   │   ├── config.ts            # ⚙️ Configuration
-│   │   ├── performance-cache.ts  # 💾 Caching
-│   │   ├── performance-parser.ts # 🏃 Optimized parsing
-│   │   └── parser-exceptions.ts  # 🛡️ Exception handling
-│   ├── lens/                     # 👁️ Lens system
-│   │   ├── lens.ts              # 🎯 Main lens logic
-│   │   ├── language-formatter.ts # 🌐 Language support
-│   │   └── lens-rules.ts        # 📋 Filtering rules
-│   ├── actions/                  # 🎛️ Control systems
-│   │   ├── toggle.ts            # 🔄 Toggle management
-│   │   └── colors.ts            # 🎨 Color system
-│   └── __test__/                # 🧪 Test suite
-└── assets/                      # 🖼️ Resources
+│   ├── extension.ts                 # 🚀 Main entry point & orchestration
+│   ├── core/                        # ⚡ Performance & configuration
+│   │   ├── performance-config.ts    # 🛡️ Config, logging & error handling
+│   │   ├── performance-cache.ts     # 💾 Advanced multi-level caching
+│   │   └── performance-parser.ts    # 🏃 Optimized parsing engine
+│   ├── lens/                        # 👁️ Universal lens system
+│   │   ├── lens.ts                  # 🎯 BracketLynx main controller
+│   │   ├── language-formatter.ts    # 🌐 Language-specific formatting
+│   │   ├── lens-rules.ts            # 📋 Smart filtering rules
+│   │   └── decorators/              # 🎨 Specialized decorators
+│   │       ├── astro-decorator.ts   # 🌟 Astro/HTML support
+│   │       ├── vue.decorator.ts     # 💚 Vue.js support
+│   │       ├── svelte.decorator.ts  # 🧡 Svelte support
+│   │       └── js-ts-function-decorator.ts # ⚡ JS/TS function symbols
+│   ├── actions/                     # 🎛️ Control systems
+│   │   ├── toggle.ts                # 🔄 Toggle & menu management
+│   │   └── colors.ts                # 🎨 Dynamic color system
+│   └── __test__/                    # 🧪 Testing infrastructure
+│       ├── simple.test.ts           # 🧪 Comprehensive test suite
+│       ├── test-setup.ts            # 🛠️ Test utilities & mocks
+│       ├── TESTING_GUIDE.md         # 📖 Testing documentation
+│       └── test-history/            # 📚 Version test history
+│           ├── test_v0.4.0.md       # 📝 v0.4.0 tests
+│           ├── test_v0.5.0.md       # 📝 v0.5.0 tests
+│           ├── test_v0.6.0.md       # 📝 v0.6.0 tests
+│           └── test_v0.7.0.md       # 📝 v0.7.0 tests
+├── assets/                          # 🖼️ Resources
+│   ├── icon.png                     # 🖼️ Extension icon
+│   └── images/
+│       ├── screenshot.jpg           # 🖼️ Screenshot
+│       └── star.png                 # 🖼️ Star icon
+├── dist/                            # 📦 Build output
+├── node_modules/                    # 📚 Dependencies
+└── .vscode/                         # 🔧 VS Code workspace settings
 ```
 
 ## Getting Help 🆘

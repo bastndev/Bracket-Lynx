@@ -28,41 +28,19 @@ We strive to create a positive environment where everyone can contribute effecti
 - Spam or off-topic discussions that don't contribute to the project
 - Posting malicious code or content that could harm users' development environments
 
-## Types of Contributions
 
-We value all forms of contribution to Bracket Lynx, including:
 
-- **Bug reports**: Issues with bracket detection, incorrect labeling, or performance problems
-- **Feature requests**: Ideas for improving bracket visualization or adding new functionality  
-- **Code improvements and fixes**: Enhancements to the core extension logic
-- **Documentation updates**: Clarifications on installation, usage, and configuration
-- **Screenshots and usage examples**: Demonstrations of the extension in different coding scenarios
-- **Language support**: Adding or improving support for new programming languages
-- **Accessibility improvements**: Making the extension more accessible to developers with different needs
-- **Community support**: Helping other users with questions and troubleshooting
-- **Testing**: Reporting compatibility issues across different editors and environments
+## Reporting Issues
 
-For detailed guidelines on how to contribute, please see our [Contributing Guidelines](https://github.com/bastndev/Bracket-Lynx/blob/main/CONTRIBUTING.md).
+If you experience or witness behavior that violates these guidelines, please report it to **gobasdev@gmail.com**.
+
+**Email Subject Format: `[Bracket Lynx] - Code of Conduct Report`**
+
+This format helps ensure your report receives prompt attention. All reports will be handled confidentially and investigated promptly.
 
 ## Enforcement
 
-As the maintainer of this project, I am committed to fairly enforcing this Code of Conduct. If you experience or witness behavior that violates these guidelines, please report it to gobasdev@gmail.com.
-
-**Important: Email Subject Line Format**
-
-**When contacting the maintainer, please include the project name in your email subject line using this format:**
-
-**Subject: [Bracket Lynx] - [Brief description of your message]**
-
-**Examples:**
-* `[Bracket Lynx] - Code of Conduct Violation Report`
-* `[Bracket Lynx] - Bug Report Submission`
-* `[Bracket Lynx] - Feature Request Discussion`
-* `[Bracket Lynx] - General Project Discussion`
-
-This helps ensure your message is properly categorized and receives prompt attention, especially since the maintainer manages multiple open source projects.
-
-All reports will be handled confidentially and investigated promptly. Depending on the severity and context, responses may include:
+Depending on the severity and context, responses may include:
 
 1. **First violation**: Private discussion and clarification of expectations
 2. **Repeated issues**: Temporary restriction from participating in project discussions  

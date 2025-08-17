@@ -2,13 +2,15 @@
 
 Enhances the development experience by displaying a label next to each closing parenthesis, indicating the name of the corresponding block or function, along with the start and end line numbers.
 
-Bracket Lynx is a VS Code extension that provides intelligent bracket decorations for 25+ languages, helping developers quickly understand code structure and scope. It uses optimized parsing, smart filtering, and multi-level caching for high performance and accuracy. Granular control and color customization are available through the command palette.
+Bracket Lynx is a VS Code extension that provides intelligent bracket decorations for 11 programming languages and frameworks, helping developers quickly understand code structure and scope. It uses optimized parsing, smart filtering, and multi-level caching for high performance and accuracy. Granular control and color customization are available through the command palette.
 
 Discover more extensions at [bastndev.com/extensions](https://bastndev.com/extensions)
 
 ## Changelog
 
 Following VS Code best practices, Lynx Theme Pro uses semantic versioning for all releases.
+
+## [0.7.0] - 2025-08-12
 
 ## [0.6.1] - 2025-08-12
 
@@ -101,8 +103,8 @@ Following VS Code best practices, Lynx Theme Pro uses semantic versioning for al
 - Add regression, compatibility, memory, and concurrency tests
 - Improve benchmarks and load testing with real files
 
-**Status**: ✅ Tests fully implemented and functional  
-**Maintainer**: @bastndev  
+**Status**: ✅ Tests fully implemented and functional
+**Maintainer**: @bastndev
 **Last Update**: August 2025
 
 ## [0.3.0] - 2025-06-15
@@ -129,7 +131,7 @@ Following VS Code best practices, Lynx Theme Pro uses semantic versioning for al
 ## [0.2.0] - 2025-06-01
 
 ### Added
-- Multi-language support (25+ languages)
+- Multi-language support (11 programming languages and frameworks)
 
 ### Changed
 - Implemented smart filtering and error recovery
@@ -138,5 +140,5 @@ Following VS Code best practices, Lynx Theme Pro uses semantic versioning for al
 
 ### Added
 - Initial public release of Bracket Lynx
-- Intelligent bracket decorations for 25+ languages
+- Intelligent bracket decorations for 11 programming languages and frameworks
 - Core parsing, lens, and caching systems
