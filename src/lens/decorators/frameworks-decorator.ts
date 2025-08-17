@@ -61,6 +61,7 @@ interface PendingDecoration {
 // ============================================================================
 class FrameworksDecorator {
   private static decorationTypes = new Map<FrameworkName, vscode.TextEditorDecorationType>();
+  private static decorationTypeOptions = new Map<FrameworkName, { color: string; fontStyle: string }>();
   private static pendingDecorations: PendingDecoration[] = [];
   private static isProcessing = false;
   private static updateQueue = new Set<string>();
@@ -172,20 +173,28 @@ class FrameworksDecorator {
    * Ensure decoration type exists for framework
    */
   private static ensureDecorationType(framework: FrameworkName): vscode.TextEditorDecorationType {
+    const color = getCurrentColor();
+    const fontStyle = BracketLynxConfig.fontStyle;
+    const prevOptions = this.decorationTypeOptions.get(framework);
     const existing = this.decorationTypes.get(framework);
+
+    if (existing && prevOptions && prevOptions.color === color && prevOptions.fontStyle === fontStyle) {
+      return existing;
+    }
     if (existing) {
       existing.dispose();
     }
 
     const decorationType = vscode.window.createTextEditorDecorationType({
       after: {
-        color: getCurrentColor(),
-        fontStyle: BracketLynxConfig.fontStyle,
+        color,
+        fontStyle,
       },
       rangeBehavior: vscode.DecorationRangeBehavior.ClosedClosed
     });
 
     this.decorationTypes.set(framework, decorationType);
+    this.decorationTypeOptions.set(framework, { color, fontStyle });
     return decorationType;
   }
 
