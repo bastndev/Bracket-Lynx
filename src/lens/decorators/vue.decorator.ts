@@ -3,6 +3,19 @@ import { getCurrentColor } from '../../actions/colors';
 import { isEditorEnabled, isExtensionEnabled } from '../../actions/toggle';
 import { BracketLynxConfig } from '../lens';
 
+// 🎯 TARGET ELEMENTS CONFIGURATION - GLOBAL MODULE CONSTANTS (Easy to maintain!)
+const VUE_COMPONENTS = [
+  'template', 'script', 'style', 'component',
+  'transition', 'transition-group', 'keep-alive',
+  'slot', 'teleport', 'suspense'
+];
+
+const TARGET_HTML_ELEMENTS = [
+  'section', 'article', 'main', 'header',
+  'footer', 'aside', 'nav', 'form', 'table',
+  'ul', 'ol', 'li', 'p', 'span', 'button'
+];
+
 // 🎯 ULTRA-SPECIFIC Types for Vue components and elements
 export type VueComponentName = 'template' | 'script' | 'style' | 'component' | 'transition' | 'transition-group' | 'keep-alive' | 'slot' | 'teleport' | 'suspense';
 export type VueDirectiveName = 'v-if' | 'v-else' | 'v-else-if' | 'v-for' | 'v-show' | 'v-model' | 'v-on' | 'v-bind' | 'v-slot';
@@ -32,7 +45,7 @@ export class VueDecorator {
   private static decorationType: vscode.TextEditorDecorationType | undefined;
   private static readonly SUPPORTED_EXTENSIONS = ['.vue'];
   private static readonly SUPPORTED_LANGUAGE_IDS = ['vue'];
-  
+
   /**
    * Ensure decoration type is created with current configuration
    */
@@ -56,21 +69,16 @@ export class VueDecorator {
    * Main method to update decorations for an editor
    */
   public static updateDecorations(editor: vscode.TextEditor): void {
-    console.log('Vue Decorator: updateDecorations called for:', editor.document.fileName);
-    
     if (!editor || !this.isSupportedFile(editor.document)) {
-      console.log('Vue Decorator: File not supported:', editor.document.languageId, editor.document.fileName);
       return;
     }
 
     if (!isExtensionEnabled() || !isEditorEnabled(editor)) {
-      console.log('Vue Decorator: Extension or editor disabled');
       this.clearDecorations(editor);
       return;
     }
 
     if (!this.shouldProcessFile(editor.document)) {
-      console.log('Vue Decorator: Should not process file');
       this.clearDecorations(editor);
       return;
     }
@@ -79,8 +87,10 @@ export class VueDecorator {
       const decorationType = this.ensureDecorationType();
       const decorations = this.generateDecorations(editor.document);
       editor.setDecorations(decorationType, decorations);
-      
-      console.log(`Vue Decorator: Applied ${decorations.length} decorations to Vue file: ${editor.document.fileName}`);
+
+      if (BracketLynxConfig.debug) {
+        console.log(`Vue Decorator: Applied ${decorations.length} decorations to Vue file: ${editor.document.fileName}`);
+      }
     } catch (error) {
       console.error('Vue Decorator: Error updating decorations:', error);
       this.clearDecorations(editor);
@@ -145,19 +155,19 @@ export class VueDecorator {
     // 🚀 ULTRA-FAST Line Processing - Skip non-tag lines instantly
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      
+
       // 🔥 INSTANT SKIP - No tags, no processing!
       if (!line || !this.TAG_DETECTOR_REGEX.test(line)) {continue;}
-      
+
       const trimmedLine = line.trim();
-      
+
       // 🎯 SMART Tag Detection - Process opening tags first (more common)
       const openTagMatch = trimmedLine.match(this.OPEN_TAG_REGEX);
       if (openTagMatch) {
         const componentName = openTagMatch[1];
         if (this.isTargetElement(componentName)) {
-          componentStack.push({ 
-            name: componentName, 
+          componentStack.push({
+            name: componentName,
             startLine: i + 1,
             timestamp: BracketLynxConfig.debug ? Date.now() : undefined
           });
@@ -169,7 +179,7 @@ export class VueDecorator {
       const closeTagMatch = trimmedLine.match(this.CLOSE_TAG_REGEX);
       if (closeTagMatch) {
         const componentName = closeTagMatch[1];
-        
+
         // 🚀 REVERSE SEARCH - LIFO stack behavior for better performance
         for (let j = componentStack.length - 1; j >= 0; j--) {
           if (componentStack[j].name === componentName) {
@@ -177,12 +187,12 @@ export class VueDecorator {
             componentStack.splice(j, 1);
 
             const lineSpan = (i + 1) - openComponent.startLine;
-            
+
             // 🎯 SMART Content Analysis - Only if meets minimum requirements
             if (lineSpan >= minLines && this.hasSignificantContent(lines, openComponent.startLine - 1, i)) {
               const componentType = this.isVueComponent(componentName) ? 'vue' : 'html';
               const isScoped = componentName === 'style' && this.isStyleScoped(lines, openComponent.startLine - 1);
-              
+
               componentRanges.push({
                 name: componentName,
                 startLine: openComponent.startLine,
@@ -214,13 +224,7 @@ export class VueDecorator {
    * Check if a tag name represents a Vue component or built-in element
    */
   private static isVueComponent(tagName: string): boolean {
-    const vueElements = [
-      'template', 'script', 'style', 'component',
-      'transition', 'transition-group', 'keep-alive',
-      'slot', 'teleport', 'suspense'
-    ];
-    
-    return vueElements.includes(tagName.toLowerCase());
+    return VUE_COMPONENTS.includes(tagName.toLowerCase());
   }
 
   /**
@@ -234,13 +238,7 @@ export class VueDecorator {
    * Check if a tag name is one of the target HTML elements we want to decorate
    */
   private static isTargetHtmlElement(tagName: string): boolean {
-    const targetHtmlElements = [
-      'section', 'article', 'main', 'header', 
-      'footer', 'aside', 'nav', 'form', 'table',
-      'ul', 'ol', 'li', 'p', 'span', 'button'
-    ];
-    
-    return targetHtmlElements.includes(tagName.toLowerCase());
+    return TARGET_HTML_ELEMENTS.includes(tagName.toLowerCase());
   }
 
   /**
@@ -255,41 +253,41 @@ export class VueDecorator {
   private static readonly INSIGNIFICANT_CONTENT = new Set(['{', '}', '', '<!--', '-->', '{{', '}}']);
   private static readonly COMMENT_REGEX = /^<!--.*-->$/;
   private static readonly VUE_COMMENT_REGEX = /^\/\*.*\*\/$/;
-  
+
   /**
    * 🧠 MEGA-SMART Content Detector - Optimized for Vue with early exits
    */
   private static hasSignificantContent(lines: string[], startIndex: number, endIndex: number): boolean {
     // 🚀 Quick validation - avoid processing if range is too small
     if (endIndex - startIndex < 2) {return false;}
-    
+
     // 🎯 Smart tag detection with cached regex
     const openingLine = lines[startIndex]?.trim();
     if (!openingLine) {return false;}
-    
+
     const tagMatch = openingLine.match(/<(\w+)/);
     const tagName = tagMatch?.[1]?.toLowerCase();
     const isStyleTag = tagName === 'style';
     const isScriptTag = tagName === 'script';
     const isTemplateTag = tagName === 'template';
-    
+
     // 🔥 OPTIMIZED Content Scanner - Early exit on first significant content
     for (let i = startIndex + 1; i < endIndex; i++) {
       const contentLine = lines[i]?.trim();
-      
+
       // 🚀 Ultra-fast insignificant content check
       if (!contentLine || this.INSIGNIFICANT_CONTENT.has(contentLine)) {continue;}
-      
+
       // 🎯 Smart comment detection (HTML and Vue/JS comments)
       if (this.COMMENT_REGEX.test(contentLine) || this.VUE_COMMENT_REGEX.test(contentLine)) {continue;}
-      
+
       // 🔥 INSTANT RETURN for Vue special tags - no need to count
       if (isStyleTag || isScriptTag || isTemplateTag) {return true;}
-      
+
       // 🚀 IMMEDIATE SUCCESS - Found significant content!
       return true;
     }
-    
+
     return false;
   }
 
@@ -297,11 +295,11 @@ export class VueDecorator {
    * Check if file is a supported Vue file
    */
   private static isSupportedFile(document: vscode.TextDocument): boolean {
-    const hasValidExtension = this.SUPPORTED_EXTENSIONS.some(ext => 
+    const hasValidExtension = this.SUPPORTED_EXTENSIONS.some(ext =>
       document.fileName.endsWith(ext)
     );
     const hasValidLanguageId = this.SUPPORTED_LANGUAGE_IDS.includes(document.languageId);
-    
+
     return hasValidExtension || hasValidLanguageId;
   }
 
@@ -332,7 +330,7 @@ export class VueDecorator {
   private static shouldShowDecoration(component: ComponentRange): boolean {
     const lineSpan = component.endLine - component.startLine;
     const minLines = Math.max(1, BracketLynxConfig.minBracketScopeLines - 2);
-    
+
     return lineSpan >= minLines;
   }
 

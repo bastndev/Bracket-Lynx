@@ -3,6 +3,16 @@ import { getCurrentColor } from '../../actions/colors';
 import { isEditorEnabled, isExtensionEnabled } from '../../actions/toggle';
 import { BracketLynxConfig } from '../lens';
 
+// 🎯 TARGET ELEMENTS CONFIGURATION - GLOBAL MODULE CONSTANTS (Easy to maintain!)
+const SVELTE_COMPONENTS = [
+	'script', 'style', 'main', 'section', 'header', 'footer', 'aside', 'nav', 'slot',
+	'svelte:head', 'svelte:body', 'svelte:window', 'svelte:options', 'svelte:fragment'
+];
+
+const TARGET_HTML_ELEMENTS = [
+	'div', 'span', 'section', 'article', 'main', 'ul', 'li', 'button', 'form', 'table', 'p'
+];
+
 // 🎯 ULTRA-SPECIFIC Types for Svelte components and elements
 export type SvelteComponentName = 'script' | 'style' | 'main' | 'header' | 'footer' | 'section' | 'article' | 'aside' | 'nav' | 'slot' | 'svelte:window' | 'svelte:body' | 'svelte:head' | 'svelte:options' | 'svelte:fragment';
 export type HtmlElementName = 'div' | 'ul' | 'li' | 'span' | 'button' | 'form' | 'table' | 'p';
@@ -119,8 +129,8 @@ export class SvelteDecorator {
 			if (openTagMatch) {
 				const componentName = openTagMatch[1];
 				if (this.isTargetElement(componentName)) {
-					componentStack.push({ 
-						name: componentName, 
+					componentStack.push({
+						name: componentName,
 						startLine: i + 1,
 						timestamp: BracketLynxConfig.debug ? Date.now() : undefined
 					});
@@ -160,60 +170,104 @@ export class SvelteDecorator {
 	}
 
 	private static isSvelteComponent(tagName: string): boolean {
-		const svelteElements = [
-			'script', 'style', 'main', 'section', 'header', 'footer', 'aside', 'nav', 'slot',
-			'svelte:head', 'svelte:body', 'svelte:window', 'svelte:options', 'svelte:fragment'
-		];
-		return svelteElements.includes(tagName) || (tagName[0] === tagName[0].toUpperCase());
+		return SVELTE_COMPONENTS.includes(tagName) || (tagName[0] === tagName[0].toUpperCase());
 	}
 
 	private static isTargetHtmlElement(tagName: string): boolean {
-		const targetHtmlElements = [
-			'div', 'span', 'section', 'article', 'main', 'ul', 'li', 'button', 'form', 'table', 'p'
-		];
-		return targetHtmlElements.includes(tagName);
+		return TARGET_HTML_ELEMENTS.includes(tagName);
 	}
 
 	private static hasSignificantContent(lines: string[], startIndex: number, endIndex: number): boolean {
+		// 🚀 Quick validation - avoid processing if range is too small
+		if (endIndex - startIndex < 2) {
+			return false;
+		}
+
+		// 🎯 Smart tag detection
+		const openingLine = lines[startIndex]?.trim();
+		if (!openingLine) {
+			return false;
+		}
+
+		const tagMatch = openingLine.match(/<(\w+)/);
+		const tagName = tagMatch?.[1]?.toLowerCase();
+		const isSpecialTag = tagName === 'style' || tagName === 'script';
+
+		// 🔥 OPTIMIZED Content Scanner - Early exit on first significant content
 		for (let i = startIndex + 1; i < endIndex; i++) {
-			const line = lines[i];
-			if (line && line.trim() !== '') {
+			const contentLine = lines[i]?.trim();
+
+			// Skip empty lines and basic symbols
+			if (!contentLine || contentLine === '{' || contentLine === '}' ||
+				contentLine.startsWith('<!--') || contentLine.endsWith('-->')) {
+				continue;
+			}
+
+			// 🔥 INSTANT RETURN for special tags - no need to count
+			if (isSpecialTag) {
 				return true;
 			}
+
+			// 🚀 IMMEDIATE SUCCESS - Found significant content!
+			return true;
 		}
+
 		return false;
 	}
 
 	private static shouldShowDecoration(component: ComponentRange): boolean {
-		return typeof component.lineSpan === 'number' && component.lineSpan >= BracketLynxConfig.minBracketScopeLines;
+		const lineSpan = component.endLine - component.startLine;
+		const minLines = Math.max(1, BracketLynxConfig.minBracketScopeLines - 2);
+
+		return lineSpan >= minLines;
 	}
 
 	private static isSupportedFile(document: vscode.TextDocument): boolean {
-		return this.SUPPORTED_EXTENSIONS.some(ext => document.fileName.endsWith(ext)) ||
-			this.SUPPORTED_LANGUAGE_IDS.includes(document.languageId);
+		const hasValidExtension = this.SUPPORTED_EXTENSIONS.some(ext =>
+			document.fileName.endsWith(ext)
+		);
+		const hasValidLanguageId = this.SUPPORTED_LANGUAGE_IDS.includes(document.languageId);
+
+		return hasValidExtension || hasValidLanguageId;
 	}
 
 	private static shouldProcessFile(document: vscode.TextDocument): boolean {
-		return this.isSupportedFile(document);
+		if (!BracketLynxConfig.enablePerformanceFilters) {
+			return true;
+		}
+
+		const fileSize = document.getText().length;
+		const maxFileSize = BracketLynxConfig.maxFileSize;
+
+		if (fileSize > maxFileSize) {
+			if (BracketLynxConfig.debug) {
+				console.log(`Svelte Decorator: Skipping large Svelte file: ${document.fileName} (${fileSize} bytes)`);
+			}
+			return false;
+		}
+
+		return true;
 	}
 
 	public static clearDecorations(editor: vscode.TextEditor): void {
-		if (this.decorationType) {
+		if (this.decorationType && editor) {
 			editor.setDecorations(this.decorationType, []);
 		}
 	}
 
 	public static clearAllDecorations(): void {
-		vscode.window.visibleTextEditors.forEach(editor => {
-			this.clearDecorations(editor);
-		});
+		if (this.decorationType) {
+			vscode.window.visibleTextEditors
+				.filter(editor => this.isSupportedFile(editor.document))
+				.forEach(editor => this.clearDecorations(editor));
+		}
 	}
 
 	public static onDidChangeConfiguration(): void {
-		this.clearAllDecorations();
-		vscode.window.visibleTextEditors.forEach(editor => {
-			this.updateDecorations(editor);
-		});
+		if (this.decorationType) {
+			this.decorationType.dispose();
+			this.decorationType = undefined;
+		}
 	}
 
 	public static dispose(): void {

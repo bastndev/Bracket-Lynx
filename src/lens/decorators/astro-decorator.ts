@@ -3,6 +3,18 @@ import { getCurrentColor } from '../../actions/colors';
 import { isEditorEnabled, isExtensionEnabled } from '../../actions/toggle';
 import { BracketLynxConfig } from '../lens';
 
+// 🎯 TARGET ELEMENTS CONFIGURATION - GLOBAL MODULE CONSTANTS (Easy to maintain!)
+const ASTRO_COMPONENTS = [
+  'Fragment', 'Astro', 'Code', 'Markdown', 'Debug',
+  'slot', 'Component'
+];
+
+const TARGET_HTML_ELEMENTS = [
+  'style', 'script', 'section', 'article',
+  'main', 'header', 'footer', 'aside', 'nav',
+  'html', 'body'
+];
+
 // 🎯 ULTRA-SPECIFIC Types for maximum type safety and intellisense
 export type AstroComponentName = 'Fragment' | 'Astro' | 'Code' | 'Markdown' | 'Debug' | 'slot' | 'Component';
 export type HtmlElementName = 'style' | 'script' | 'section' | 'article' | 'main' | 'header' | 'footer' | 'aside' | 'nav' | 'html' | 'body';
@@ -30,7 +42,7 @@ export class UniversalDecorator {
   private static decorationType: vscode.TextEditorDecorationType | undefined;
   private static readonly SUPPORTED_EXTENSIONS = ['.astro', '.html'];
   private static readonly SUPPORTED_LANGUAGE_IDS = ['astro', 'html'];
-  
+
   /**
    * Ensure decoration type is created with current configuration
    */
@@ -72,7 +84,7 @@ export class UniversalDecorator {
       const decorationType = this.ensureDecorationType();
       const decorations = this.generateDecorations(editor.document);
       editor.setDecorations(decorationType, decorations);
-      
+
       if (BracketLynxConfig.debug) {
         const fileType = this.getFileType(editor.document);
         console.log(`Universal Decorator: Applied ${decorations.length} decorations to ${fileType} file: ${editor.document.fileName}`);
@@ -139,19 +151,19 @@ export class UniversalDecorator {
     // 🚀 ULTRA-FAST Line Processing - Skip non-tag lines instantly
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      
+
       // 🔥 INSTANT SKIP - No tags, no processing!
       if (!line || !this.TAG_DETECTOR_REGEX.test(line)) {continue;}
-      
+
       const trimmedLine = line.trim();
-      
+
       // 🎯 SMART Tag Detection - Process opening tags first (more common)
       const openTagMatch = trimmedLine.match(this.OPEN_TAG_REGEX);
       if (openTagMatch) {
         const componentName = openTagMatch[1];
         if (this.isTargetElement(componentName)) {
-          componentStack.push({ 
-            name: componentName, 
+          componentStack.push({
+            name: componentName,
             startLine: i + 1,
             timestamp: BracketLynxConfig.debug ? Date.now() : undefined
           });
@@ -163,7 +175,7 @@ export class UniversalDecorator {
       const closeTagMatch = trimmedLine.match(this.CLOSE_TAG_REGEX);
       if (closeTagMatch) {
         const componentName = closeTagMatch[1];
-        
+
         // 🚀 REVERSE SEARCH - LIFO stack behavior for better performance
         for (let j = componentStack.length - 1; j >= 0; j--) {
           if (componentStack[j].name === componentName) {
@@ -171,11 +183,11 @@ export class UniversalDecorator {
             componentStack.splice(j, 1);
 
             const lineSpan = (i + 1) - openComponent.startLine;
-            
+
             // 🎯 SMART Content Analysis - Only if meets minimum requirements
             if (lineSpan >= minLines && this.hasSignificantContent(lines, openComponent.startLine - 1, i)) {
               const componentType = this.isAstroComponent(componentName) ? 'astro' : 'html';
-              
+
               componentRanges.push({
                 name: componentName,
                 startLine: openComponent.startLine,
@@ -210,63 +222,52 @@ export class UniversalDecorator {
       return true;
     }
 
-    const astroElements = [
-      'Fragment', 'Astro', 'Code', 'Markdown', 'Debug',
-      'slot', 'Component'
-    ];
-    
-    return astroElements.includes(tagName);
+    return ASTRO_COMPONENTS.includes(tagName);
   }
 
   /**
    * Check if a tag name is one of the target HTML elements we want to decorate
    */
   private static isTargetHtmlElement(tagName: string): boolean {
-    const targetHtmlElements = [
-      'style', 'script', 'section', 'article',
-      'main', 'header', 'footer', 'aside', 'nav',
-      'html', 'body'
-    ];
-    
-    return targetHtmlElements.includes(tagName.toLowerCase());
+    return TARGET_HTML_ELEMENTS.includes(tagName.toLowerCase());
   }
 
   // 🚀 ULTRA-OPTIMIZED Content Analyzer - Smart early exits and caching
   private static readonly INSIGNIFICANT_CONTENT = new Set(['{', '}', '', '<!--', '-->']);
   private static readonly COMMENT_REGEX = /^<!--.*-->$/;
-  
+
   /**
    * 🧠 MEGA-SMART Content Detector - Optimized with early exits and pattern recognition
    */
   private static hasSignificantContent(lines: string[], startIndex: number, endIndex: number): boolean {
     // 🚀 Quick validation - avoid processing if range is too small
     if (endIndex - startIndex < 2) {return false;}
-    
+
     // 🎯 Smart tag detection with cached regex
     const openingLine = lines[startIndex]?.trim();
     if (!openingLine) {return false;}
-    
+
     const tagMatch = openingLine.match(/<(\w+)/);
     const tagName = tagMatch?.[1]?.toLowerCase();
     const isStyleTag = tagName === 'style';
-    
+
     // 🔥 OPTIMIZED Content Scanner - Early exit on first significant content
     for (let i = startIndex + 1; i < endIndex; i++) {
       const contentLine = lines[i]?.trim();
-      
+
       // 🚀 Ultra-fast insignificant content check
       if (!contentLine || this.INSIGNIFICANT_CONTENT.has(contentLine)) {continue;}
-      
+
       // 🎯 Smart comment detection
       if (this.COMMENT_REGEX.test(contentLine)) {continue;}
-      
+
       // 🔥 INSTANT RETURN for style tags - no need to count
       if (isStyleTag) {return true;}
-      
+
       // 🚀 IMMEDIATE SUCCESS - Found significant content!
       return true;
     }
-    
+
     return false;
   }
 
@@ -274,11 +275,11 @@ export class UniversalDecorator {
    * Check if file is a supported file (Astro or HTML)
    */
   private static isSupportedFile(document: vscode.TextDocument): boolean {
-    const hasValidExtension = this.SUPPORTED_EXTENSIONS.some(ext => 
+    const hasValidExtension = this.SUPPORTED_EXTENSIONS.some(ext =>
       document.fileName.endsWith(ext)
     );
     const hasValidLanguageId = this.SUPPORTED_LANGUAGE_IDS.includes(document.languageId);
-    
+
     return hasValidExtension || hasValidLanguageId;
   }
 
@@ -323,7 +324,7 @@ export class UniversalDecorator {
   private static shouldShowDecoration(component: ComponentRange): boolean {
     const lineSpan = component.endLine - component.startLine;
     const minLines = Math.max(1, BracketLynxConfig.minBracketScopeLines - 2);
-    
+
     return lineSpan >= minLines;
   }
 
