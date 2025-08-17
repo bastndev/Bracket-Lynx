@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { BracketLynx } from './lens/lens';
-import UniversalDecorator from './lens/decorators/universal-decorator';
+import FrameworksDecorator from './lens/decorators/frameworks-decorator';
 import { setBracketLynxProviderForColors, setAstroDecoratorForColors, setVueDecoratorForColors, setSvelteDecoratorForColors } from './actions/colors';
 import { showBracketLynxMenu, setBracketLynxProvider, setAstroDecorator, setVueDecorator, setSvelteDecorator, cleanupClosedEditor, initializePersistedState } from './actions/toggle';
 import { initializeErrorHandling, LogLevel, logger } from './core/performance-config';
@@ -8,7 +8,7 @@ import { initializeErrorHandling, LogLevel, logger } from './core/performance-co
 export let extensionContext: vscode.ExtensionContext;
 
 // ============================================================================
-// UNIVERSAL COORDINATOR WITHOUT FLICKERING - Single source of truth
+// FRAMEWORKS COORDINATOR WITHOUT FLICKERING - Single source of truth
 // ============================================================================
 class DecorationCoordinator {
     private static updateInProgress = false;
@@ -50,7 +50,7 @@ class DecorationCoordinator {
 
             BracketLynx.delayUpdateDecoration(editor);
 
-            await UniversalDecorator.updateDecorations(editor);
+            await FrameworksDecorator.updateDecorations(editor);
 
         } catch (error) {
             console.error('DecorationCoordinator: Error in processPendingUpdates:', error);
@@ -67,7 +67,7 @@ class DecorationCoordinator {
         this.updateInProgress = false;
 
         BracketLynx.clearAllDecorations();
-        UniversalDecorator.clearAllDecorations();
+        FrameworksDecorator.clearAllDecorations();
     }
 
     /**
@@ -78,7 +78,7 @@ class DecorationCoordinator {
         this.updateInProgress = false;
 
         BracketLynx.onDidChangeConfiguration();
-        UniversalDecorator.onDidChangeConfiguration();
+        FrameworksDecorator.onDidChangeConfiguration();
     }
 }
 
@@ -104,12 +104,12 @@ export const activate = async (context: vscode.ExtensionContext) => {
         setBracketLynxProvider(BracketLynx);
         setBracketLynxProviderForColors(BracketLynx);
 
-        setAstroDecorator(UniversalDecorator);
-        setVueDecorator(UniversalDecorator);
-        setSvelteDecorator(UniversalDecorator);
-        setAstroDecoratorForColors(UniversalDecorator);
-        setVueDecoratorForColors(UniversalDecorator);
-        setSvelteDecoratorForColors(UniversalDecorator);
+        setAstroDecorator(FrameworksDecorator);
+        setVueDecorator(FrameworksDecorator);
+        setSvelteDecorator(FrameworksDecorator);
+        setAstroDecoratorForColors(FrameworksDecorator);
+        setVueDecoratorForColors(FrameworksDecorator);
+        setSvelteDecoratorForColors(FrameworksDecorator);
 
         const { initializeColorSystem } = await import('./actions/colors.js');
         initializeColorSystem();
@@ -168,7 +168,7 @@ function registerCommands(context: vscode.ExtensionContext) {
             console.log('🔧 Bracket Lynx Diagnostics:', diagnostics);
             vscode.window.showInformationMessage(
                 `🔧 Bracket Lynx Diagnostics: Main: ${diagnostics.main.available ? '✅' : '❌'}, ` +
-                `Universal: ${diagnostics.astro.available ? '✅' : '❌'}, ` +
+                `Frameworks: ${diagnostics.astro.available ? '✅' : '❌'}, ` +
                 `Color: ${diagnostics.currentColor}`
             );
         }),
@@ -187,7 +187,7 @@ function registerCommands(context: vscode.ExtensionContext) {
                 `🔄 Toggle Status: Global: ${diagnostics.globalEnabled ? '✅' : '❌'}, ` +
                 `Current File: ${diagnostics.currentFileStatus}, ` +
                 `Systems: ${diagnostics.decorators.main.available ? '✅' : '❌'} Main, ` +
-                `${diagnostics.decorators.astro.available ? '✅' : '❌'} Universal`
+                `${diagnostics.decorators.astro.available ? '✅' : '❌'} Frameworks`
             );
         }),
 
@@ -309,7 +309,7 @@ function handleActiveTextEditorChange(editor?: vscode.TextEditor) {
 export const deactivate = () => {
     try {
         DecorationCoordinator.clearAll();
-        UniversalDecorator.dispose();
+        FrameworksDecorator.dispose();
         BracketLynx.dispose();
 
         logger.info('🧹 Bracket Lynx: Extension deactivated successfully');

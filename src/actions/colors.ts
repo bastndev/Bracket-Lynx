@@ -27,7 +27,7 @@ export interface IBracketLynxProvider {
 // STATE VARIABLES
 // ============================================================================
 let bracketLynxProvider: IBracketLynxProvider | undefined = undefined;
-let universalDecorator: any = undefined;
+let frameworksDecorator: any = undefined;
 let currentColor: string = DEFAULT_COLOR;
 
 // ============================================================================
@@ -38,15 +38,15 @@ export function setBracketLynxProviderForColors(provider: IBracketLynxProvider):
 }
 
 export function setAstroDecoratorForColors(decorator: any): void {
-	universalDecorator = decorator;
+	frameworksDecorator = decorator;
 }
 
 export function setVueDecoratorForColors(decorator: any): void {
-	universalDecorator = decorator;
+	frameworksDecorator = decorator;
 }
 
 export function setSvelteDecoratorForColors(decorator: any): void {
-	universalDecorator = decorator;
+	frameworksDecorator = decorator;
 }
 
 // ============================================================================
@@ -254,7 +254,7 @@ async function recreateAllBracketLynxDecorations(overrideColor?: string): Promis
     // Clear all existing decorations from all providers simultaneously
     const decorators = [
       { name: 'Main', decorator: bracketLynxProvider },
-      { name: 'Universal', decorator: universalDecorator }
+      { name: 'frameworks', decorator: frameworksDecorator }
     ];
 
     // Clear all decorators
@@ -377,7 +377,7 @@ export function initializeColorSystem(): void {
     try {
       const decoratorStatus = {
         main: !!bracketLynxProvider,
-        universal: !!universalDecorator
+        frameworks: !!frameworksDecorator
       };
 
       console.log('🎨 Decorator initialization status:', decoratorStatus);
@@ -526,22 +526,22 @@ export function getDecoratorDiagnostics(): {
       hasClearAll: !!(bracketLynxProvider?.clearAllDecorations)
     },
     astro: {
-      available: !!universalDecorator,
-      hasForceRefresh: !!(universalDecorator?.forceColorRefresh),
-      hasUpdateDecorations: !!(universalDecorator?.updateDecorations),
-      hasClearAll: !!(universalDecorator?.clearAllDecorations)
+      available: !!frameworksDecorator,
+      hasForceRefresh: !!(frameworksDecorator?.forceColorRefresh),
+      hasUpdateDecorations: !!(frameworksDecorator?.updateDecorations),
+      hasClearAll: !!(frameworksDecorator?.clearAllDecorations)
     },
     vue: {
-      available: !!universalDecorator,
-      hasForceRefresh: !!(universalDecorator?.forceColorRefresh),
-      hasUpdateDecorations: !!(universalDecorator?.updateDecorations),
-      hasClearAll: !!(universalDecorator?.clearAllDecorations)
+      available: !!frameworksDecorator,
+      hasForceRefresh: !!(frameworksDecorator?.forceColorRefresh),
+      hasUpdateDecorations: !!(frameworksDecorator?.updateDecorations),
+      hasClearAll: !!(frameworksDecorator?.clearAllDecorations)
     },
     svelte: {
-      available: !!universalDecorator,
-      hasForceRefresh: !!(universalDecorator?.forceColorRefresh),
-      hasUpdateDecorations: !!(universalDecorator?.updateDecorations),
-      hasClearAll: !!(universalDecorator?.clearAllDecorations)
+      available: !!frameworksDecorator,
+      hasForceRefresh: !!(frameworksDecorator?.forceColorRefresh),
+      hasUpdateDecorations: !!(frameworksDecorator?.updateDecorations),
+      hasClearAll: !!(frameworksDecorator?.clearAllDecorations)
     },
     currentColor,
     isExtensionEnabled: isExtensionEnabled()

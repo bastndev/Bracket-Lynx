@@ -21,7 +21,7 @@ const DECORATION_UPDATE_DELAY_LONG = 200;
 // ============================================================================
 let isEnabled = true;
 let bracketLynxProvider: any = undefined;
-let universalDecorator: any = undefined;
+let frameworksDecorator: any = undefined;
 const disabledEditors = new Map<string, boolean>();
 const individuallyEnabledEditors = new Map<string, boolean>();
 
@@ -365,17 +365,17 @@ export function setBracketLynxProvider(provider: any): void {
 }
 
 export function setAstroDecorator(decorator: any): void {
-  universalDecorator = decorator;
+  frameworksDecorator = decorator;
   setAstroDecoratorForColors(decorator);
 }
 
 export function setVueDecorator(decorator: any): void {
-  universalDecorator = decorator;
+  frameworksDecorator = decorator;
   setVueDecoratorForColors(decorator);
 }
 
 export function setSvelteDecorator(decorator: any): void {
-  universalDecorator = decorator;
+  frameworksDecorator = decorator;
   setSvelteDecoratorForColors(decorator);
 }
 
@@ -483,13 +483,13 @@ function reactivateExtension(): void {
       }
     }
 
-    // Clear universal decorator first to ensure clean state
-    if (universalDecorator && universalDecorator.clearAllDecorations) {
+    // Clear frameworks decorator first to ensure clean state
+    if (frameworksDecorator && frameworksDecorator.clearAllDecorations) {
       try {
-        universalDecorator.clearAllDecorations();
-        console.log(`🔄 Universal decorator cleared for reactivation`);
+        frameworksDecorator.clearAllDecorations();
+        console.log(`🔄 frameworks decorator cleared for reactivation`);
       } catch (error) {
-        console.warn(`Toggle: Error clearing Universal decorator:`, error);
+        console.warn(`Toggle: Error clearing frameworks decorator:`, error);
       }
     }
 
@@ -506,13 +506,13 @@ function reactivateExtension(): void {
             bracketLynxProvider.updateDecoration(editor);
           }
 
-          // Update universal decorator for this editor
-          if (universalDecorator && universalDecorator.updateDecorations) {
+          // Update frameworks decorator for this editor
+          if (frameworksDecorator && frameworksDecorator.updateDecorations) {
             try {
-              universalDecorator.updateDecorations(editor);
-              console.log(`🔄 Universal decorator updated for ${editor.document.fileName}`);
+              frameworksDecorator.updateDecorations(editor);
+              console.log(`🔄 frameworks decorator updated for ${editor.document.fileName}`);
             } catch (error) {
-              console.warn(`Toggle: Error updating Universal decorator:`, error);
+              console.warn(`Toggle: Error updating frameworks decorator:`, error);
             }
           }
         }
@@ -539,15 +539,15 @@ function deactivateExtension(): void {
       bracketLynxProvider.clearAllDecorations?.();
     }
 
-    // Clear universal decorator
-    if (universalDecorator) {
+    // Clear frameworks decorator
+    if (frameworksDecorator) {
       try {
-        if (universalDecorator.clearAllDecorations) {
-          universalDecorator.clearAllDecorations();
+        if (frameworksDecorator.clearAllDecorations) {
+          frameworksDecorator.clearAllDecorations();
         }
-        console.log(`Toggle: Universal decorator deactivated`);
+        console.log(`Toggle: frameworks decorator deactivated`);
       } catch (error) {
-        console.warn(`Toggle: Error deactivating Universal decorator:`, error);
+        console.warn(`Toggle: Error deactivating frameworks decorator:`, error);
       }
     }
   } catch (error) {
@@ -573,43 +573,43 @@ function updateEditorDecorations(editor: vscode.TextEditor): void {
     }
   }
 
-  // Update universal decorator for all frameworks
-  if (universalDecorator) {
+  // Update frameworks decorator for all frameworks
+  if (frameworksDecorator) {
     try {
       if (isEditorEnabledForThisFile) {
         // Editor is enabled - update decorations
-        if (universalDecorator.updateDecorations) {
-          universalDecorator.updateDecorations(editor);
-          console.log(`🔄 Universal decorator updated for ${editor.document.fileName}`);
+        if (frameworksDecorator.updateDecorations) {
+          frameworksDecorator.updateDecorations(editor);
+          console.log(`🔄 frameworks decorator updated for ${editor.document.fileName}`);
         } else {
-          console.warn(`🔄 Universal decorator missing updateDecorations method`);
+          console.warn(`🔄 frameworks decorator missing updateDecorations method`);
         }
       } else {
         // Editor is disabled - clear decorations
-        if (universalDecorator.clearDecorations) {
-          universalDecorator.clearDecorations(editor);
-          console.log(`🔄 Universal decorator cleared for ${editor.document.fileName}`);
+        if (frameworksDecorator.clearDecorations) {
+          frameworksDecorator.clearDecorations(editor);
+          console.log(`🔄 frameworks decorator cleared for ${editor.document.fileName}`);
         }
       }
     } catch (error) {
-      console.error(`Toggle: Error updating Universal decorator for editor:`, error);
+      console.error(`Toggle: Error updating frameworks decorator for editor:`, error);
     }
   } else {
-    console.warn(`🔄 Universal decorator not available`);
+    console.warn(`🔄 frameworks decorator not available`);
   }
 
 
 
   // Additional verification for individual mode
-  if (!isEnabled && individuallyEnabledEditors.has(editorKey) && universalDecorator) {
-    console.log(`🔄 Individual mode verification - forcing universal decorator update`);
+  if (!isEnabled && individuallyEnabledEditors.has(editorKey) && frameworksDecorator) {
+    console.log(`🔄 Individual mode verification - forcing frameworks decorator update`);
     setTimeout(() => {
-      if (universalDecorator && universalDecorator.updateDecorations) {
+      if (frameworksDecorator && frameworksDecorator.updateDecorations) {
         try {
-          universalDecorator.updateDecorations(editor);
-          console.log(`🔄 Universal decorator force-updated (individual mode)`);
+          frameworksDecorator.updateDecorations(editor);
+          console.log(`🔄 frameworks decorator force-updated (individual mode)`);
         } catch (error) {
-          console.error(`🔄 Error force-updating Universal decorator:`, error);
+          console.error(`🔄 Error force-updating frameworks decorator:`, error);
         }
       }
     }, 50);
@@ -620,8 +620,8 @@ export function clearEditorDecorations(editor: vscode.TextEditor): void {
   if (bracketLynxProvider && bracketLynxProvider.clearDecorations) {
     bracketLynxProvider.clearDecorations(editor);
   }
-  if (universalDecorator && universalDecorator.clearDecorations) {
-    universalDecorator.clearDecorations(editor);
+  if (frameworksDecorator && frameworksDecorator.clearDecorations) {
+    frameworksDecorator.clearDecorations(editor);
   }
 }
 
@@ -659,19 +659,19 @@ export function getToggleDiagnostics(): {
         hasClearAll: !!(bracketLynxProvider?.clearAllDecorations)
       },
       astro: {
-        available: !!universalDecorator,
-        hasUpdateDecorations: !!(universalDecorator?.updateDecorations),
-        hasClearAll: !!(universalDecorator?.clearAllDecorations)
+        available: !!frameworksDecorator,
+        hasUpdateDecorations: !!(frameworksDecorator?.updateDecorations),
+        hasClearAll: !!(frameworksDecorator?.clearAllDecorations)
       },
       vue: {
-        available: !!universalDecorator,
-        hasUpdateDecorations: !!(universalDecorator?.updateDecorations),
-        hasClearAll: !!(universalDecorator?.clearAllDecorations)
+        available: !!frameworksDecorator,
+        hasUpdateDecorations: !!(frameworksDecorator?.updateDecorations),
+        hasClearAll: !!(frameworksDecorator?.clearAllDecorations)
       },
       svelte: {
-        available: !!universalDecorator,
-        hasUpdateDecorations: !!(universalDecorator?.updateDecorations),
-        hasClearAll: !!(universalDecorator?.clearAllDecorations)
+        available: !!frameworksDecorator,
+        hasUpdateDecorations: !!(frameworksDecorator?.updateDecorations),
+        hasClearAll: !!(frameworksDecorator?.clearAllDecorations)
       }
     }
   };

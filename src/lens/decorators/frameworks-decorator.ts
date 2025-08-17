@@ -4,7 +4,7 @@ import { isEditorEnabled, isExtensionEnabled } from '../../actions/toggle';
 import { BracketLynxConfig } from '../lens';
 
 // ============================================================================
-// 🎯 UNIVERSAL CONFIGURATION OF TARGET ELEMENTS
+// 🎯 FRAMEWORKS CONFIGURATION OF TARGET ELEMENTS
 // ============================================================================
 const FRAMEWORK_COMPONENTS = {
   astro: ['Fragment', 'Astro', 'Code', 'Markdown', 'Debug', 'slot', 'Component'],
@@ -18,7 +18,7 @@ const COMMON_HTML_ELEMENTS = [
 ];
 
 // ============================================================================
-// UNIVERSAL TYPES
+// FRAMEWORKS TYPES
 // ============================================================================
 export type SupportedFramework = 'astro' | 'vue' | 'svelte' | 'html';
 export type SupportedExtension = '.astro' | '.vue' | '.svelte' | '.html';
@@ -47,9 +47,9 @@ interface PendingDecoration {
 }
 
 // ============================================================================
-// UNIVERSAL DECORATOR - UNIFIED SOLUTION WITHOUT FLICKERING
+// FRAMEWORKS DECORATOR - UNIFIED SOLUTION WITHOUT FLICKERING
 // ============================================================================
-export class UniversalDecorator {
+export class FrameworksDecorator {
   private static decorationType: vscode.TextEditorDecorationType | undefined;
   private static pendingDecorations = new Map<string, PendingDecoration>();
   private static isProcessing = false;
@@ -116,7 +116,7 @@ export class UniversalDecorator {
       }
 
     } catch (error) {
-      console.error('Universal Decorator: Error in processDecorationQueue:', error);
+      console.error('frameworks Decorator: Error in processDecorationQueue:', error);
     } finally {
       this.isProcessing = false;
 
@@ -152,11 +152,11 @@ export class UniversalDecorator {
 
       if (BracketLynxConfig.debug) {
         const framework = this.detectFramework(editor.document);
-        console.log(`Universal Decorator: Applied ${decorations.length} decorations to ${framework} file: ${editor.document.fileName}`);
+        console.log(`frameworks Decorator: Applied ${decorations.length} decorations to ${framework} file: ${editor.document.fileName}`);
       }
 
     } catch (error) {
-      console.error('Universal Decorator: Error processing editor decorations:', error);
+      console.error('frameworks Decorator: Error processing editor decorations:', error);
       this.clearDecorations(editor);
     }
   }
@@ -215,7 +215,7 @@ export class UniversalDecorator {
     const maxDecorations = BracketLynxConfig.maxDecorationsPerFile;
     if (decorations.length > maxDecorations) {
       if (BracketLynxConfig.debug) {
-        console.log(`Universal Decorator: Limiting decorations from ${decorations.length} to ${maxDecorations}`);
+        console.log(`frameworks Decorator: Limiting decorations from ${decorations.length} to ${maxDecorations}`);
       }
       return decorations.slice(0, maxDecorations);
     }
@@ -402,7 +402,7 @@ export class UniversalDecorator {
     if (fileSize > maxFileSize) {
       if (BracketLynxConfig.debug) {
         const framework = this.detectFramework(document);
-        console.log(`Universal Decorator: Skipping large ${framework} file: ${document.fileName} (${fileSize} bytes)`);
+        console.log(`frameworks Decorator: Skipping large ${framework} file: ${document.fileName} (${fileSize} bytes)`);
       }
       return false;
     }
@@ -488,7 +488,7 @@ export class UniversalDecorator {
     await this.processDecorationQueue();
 
     if (BracketLynxConfig.debug) {
-      console.log(`Universal Decorator: Force refreshed colors for ${supportedEditors.length} editors`);
+      console.log(`frameworks Decorator: Force refreshed colors for ${supportedEditors.length} editors`);
     }
   }
 
@@ -509,7 +509,7 @@ export class UniversalDecorator {
 // ============================================================================
 // EXPORTS COMPATIBLE WITH EXISTING DECORATORS
 // ============================================================================
-export const AstroDecorator = UniversalDecorator;
-export const VueDecorator = UniversalDecorator;
-export const SvelteDecorator = UniversalDecorator;
-export default UniversalDecorator;
+export const AstroDecorator = FrameworksDecorator;
+export const VueDecorator = FrameworksDecorator;
+export const SvelteDecorator = FrameworksDecorator;
+export default FrameworksDecorator;
