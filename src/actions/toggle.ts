@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { setBracketLynxProviderForColors, initializeColorSystem, changeDecorationColor, setAstroDecoratorForColors, setVueDecoratorForColors, setSvelteDecoratorForColors } from './colors';
-import { safeExecute, safeExecuteAsync, validateTextEditor, validateDocument, ConfigurationError, logger, LogCategory } from '../core/performance-config';
+import { setBracketLynxProviderForColors, initializeColorSystem, changeDecorationColor, setFrameworkDecoratorForColors } from './colors';
+import { safeExecute, safeExecuteAsync, validateTextEditor, validateDocument, BracketLynxError, logger, LogCategory } from '../core/performance-config';
 
 // ============================================================================
 // CONFIGURATION CONSTANTS
@@ -364,20 +364,15 @@ export function setBracketLynxProvider(provider: any): void {
   initializeColorSystem();
 }
 
-export function setAstroDecorator(decorator: any): void {
+export function setFrameworkDecorator(decorator: any): void {
   frameworksDecorator = decorator;
-  setAstroDecoratorForColors(decorator);
+  setFrameworkDecoratorForColors(decorator);
 }
 
-export function setVueDecorator(decorator: any): void {
-  frameworksDecorator = decorator;
-  setVueDecoratorForColors(decorator);
-}
-
-export function setSvelteDecorator(decorator: any): void {
-  frameworksDecorator = decorator;
-  setSvelteDecoratorForColors(decorator);
-}
+// Backward compatibility exports
+export const setAstroDecorator = setFrameworkDecorator;
+export const setVueDecorator = setFrameworkDecorator;
+export const setSvelteDecorator = setFrameworkDecorator;
 
 export function showBracketLynxMenu(): void {
   safeExecute(
@@ -411,9 +406,7 @@ export function showBracketLynxMenu(): void {
                     { action: selected.action }, LogCategory.TOGGLE);
               }
             },
-            undefined,
-            `Executing menu action: ${selected.action}`,
-            LogCategory.TOGGLE
+            undefined
           );
         }, (error: any) => {
           logger.error('Failed to show Bracket Lynx menu', {
@@ -421,9 +414,7 @@ export function showBracketLynxMenu(): void {
           }, LogCategory.TOGGLE);
         });
     },
-    undefined,
-    'Showing Bracket Lynx menu',
-    LogCategory.TOGGLE
+    undefined
   );
 }
 

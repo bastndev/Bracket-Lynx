@@ -37,15 +37,7 @@ export function setBracketLynxProviderForColors(provider: IBracketLynxProvider):
 	bracketLynxProvider = provider;
 }
 
-export function setAstroDecoratorForColors(decorator: any): void {
-	frameworksDecorator = decorator;
-}
-
-export function setVueDecoratorForColors(decorator: any): void {
-	frameworksDecorator = decorator;
-}
-
-export function setSvelteDecoratorForColors(decorator: any): void {
+export function setFrameworkDecoratorForColors(decorator: any): void {
 	frameworksDecorator = decorator;
 }
 

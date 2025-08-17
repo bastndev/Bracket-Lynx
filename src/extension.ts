@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { BracketLynx } from './lens/lens';
 import FrameworksDecorator from './lens/decorators/frameworks-decorator';
-import { setBracketLynxProviderForColors, setAstroDecoratorForColors, setVueDecoratorForColors, setSvelteDecoratorForColors } from './actions/colors';
-import { showBracketLynxMenu, setBracketLynxProvider, setAstroDecorator, setVueDecorator, setSvelteDecorator, cleanupClosedEditor, initializePersistedState } from './actions/toggle';
+import { setBracketLynxProviderForColors, setFrameworkDecoratorForColors } from './actions/colors';
+import { showBracketLynxMenu, setBracketLynxProvider, setFrameworkDecorator, cleanupClosedEditor, initializePersistedState } from './actions/toggle';
 import { initializeErrorHandling, LogLevel, logger } from './core/performance-config';
 
 export let extensionContext: vscode.ExtensionContext;
@@ -98,18 +98,15 @@ export const activate = async (context: vscode.ExtensionContext) => {
     logger.info('Bracket Lynx extension activating...', { version: '0.6.1' });
 
     try {
-        // Initialize state and providers - IMPORTANT ORDER to avoid conflicts
+        // Initialize state and providers
         initializePersistedState();
 
+        // Set up providers - unified approach
         setBracketLynxProvider(BracketLynx);
         setBracketLynxProviderForColors(BracketLynx);
 
-        setAstroDecorator(FrameworksDecorator);
-        setVueDecorator(FrameworksDecorator);
-        setSvelteDecorator(FrameworksDecorator);
-        setAstroDecoratorForColors(FrameworksDecorator);
-        setVueDecoratorForColors(FrameworksDecorator);
-        setSvelteDecoratorForColors(FrameworksDecorator);
+        // Set up unified framework decorator
+        setFrameworkDecorator(FrameworksDecorator);
 
         const { initializeColorSystem } = await import('./actions/colors.js');
         initializeColorSystem();
@@ -117,7 +114,7 @@ export const activate = async (context: vscode.ExtensionContext) => {
         registerCommands(context);
         registerEventListeners(context);
 
-        // Coordinated decoration initialization - NO FLICKERING
+        // Initialize decorations
         await initializeDecorations();
 
         logger.info('Bracket Lynx extension activated successfully');
@@ -129,21 +126,17 @@ export const activate = async (context: vscode.ExtensionContext) => {
 };
 
 /**
- * Coordinated decoration initialization to avoid flickering
+ * Initialize decorations for all visible editors
  */
 async function initializeDecorations(): Promise<void> {
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise(resolve => setTimeout(resolve, 50));
 
     const visibleEditors = vscode.window.visibleTextEditors;
-
-    if (visibleEditors.length === 0) {
-        return;
-    }
+    if (visibleEditors.length === 0) return;
 
     for (const editor of visibleEditors) {
         try {
             await DecorationCoordinator.coordinatedUpdate(editor);
-            await new Promise(resolve => setTimeout(resolve, 10));
         } catch (error) {
             console.error(`Error initializing decorations for ${editor.document.fileName}:`, error);
         }
@@ -219,7 +212,7 @@ function registerCommands(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('bracketLynx.refreshDecorations', async () => {
             DecorationCoordinator.clearAll();
             await initializeDecorations();
-            vscode.window.showInformationMessage('🔄 Decorations refreshed successfully');
+            vscode.window.showInformationMessage('Decorations refreshed successfully');
         })
     );
 }
@@ -246,10 +239,8 @@ async function handleConfigurationChange(event: vscode.ConfigurationChangeEvent)
     if (event.affectsConfiguration('bracketLynx')) {
         try {
             DecorationCoordinator.onConfigurationChange();
-
             const { onConfigurationChanged } = await import('./actions/colors.js');
             await onConfigurationChanged();
-
         } catch (error) {
             console.error('Error handling configuration change:', error);
         }
@@ -299,7 +290,7 @@ function handleActiveTextEditorChange(editor?: vscode.TextEditor) {
     if (editor) {
         setTimeout(() => {
             DecorationCoordinator.coordinatedUpdate(editor);
-        }, 50);
+        }, 30);
     }
 }
 
@@ -312,7 +303,7 @@ export const deactivate = () => {
         FrameworksDecorator.dispose();
         BracketLynx.dispose();
 
-        logger.info('🧹 Bracket Lynx: Extension deactivated successfully');
+        logger.info('Bracket Lynx: Extension deactivated successfully');
     } catch (error) {
         console.error('Error during extension deactivation:', error);
     }

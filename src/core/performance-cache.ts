@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { DocumentDecorationCacheEntry,EditorDecorationCacheEntry,BracketEntry,BracketDecorationSource,} from '../lens/lens';
-import { CACHE_CONFIG, createHash,safeExecute, safeExecuteAsync, CacheError, PerformanceError,logger, LogCategory,validateDocument} from './performance-config';
+import { CACHE_CONFIG, createHash,safeExecute, safeExecuteAsync, BracketLynxError,logger, LogCategory,validateDocument} from './performance-config';
 
 // ============================================================================
 // 🎯 UNIFIED CACHE INTERFACES - Clean and Simple
@@ -286,7 +286,7 @@ export class AdvancedCacheManager {
    */
   private cleanupInvisibleEditors(): void {
     const visibleEditors = new Set(vscode.window.visibleTextEditors);
-    
+
     for (const [editor, editorEntry] of this.editorCache) {
       if (!visibleEditors.has(editor)) {
         editorEntry.dispose();
@@ -370,7 +370,7 @@ export class AdvancedCacheManager {
    */
   private performMemoryCheck(): void {
     const memoryUsage = this.getEstimatedMemoryUsage();
-    
+
     if (memoryUsage > this.config.aggressiveCleanupThreshold) {
       this.performCriticalCleanup();
       this.showMemoryWarning(memoryUsage, 'critical');
@@ -387,10 +387,10 @@ export class AdvancedCacheManager {
     // 🎯 Rough estimation based on cache sizes and average entry size
     const avgDocumentEntrySize = 2048; // 2KB per document entry estimate
     const avgEditorEntrySize = 512; // 512B per editor entry estimate
-    
+
     const documentMemory = this.documentCache.size * avgDocumentEntrySize;
     const editorMemory = this.editorCache.size * avgEditorEntrySize;
-    
+
     return (documentMemory + editorMemory) / (1024 * 1024); // Convert to MB
   }
 
@@ -401,7 +401,7 @@ export class AdvancedCacheManager {
     // 🔥 Aggressive cleanup - remove 75% of cache
     const documentsToRemove = Math.floor(this.documentCache.size * 0.75);
     const editorsToRemove = Math.floor(this.editorCache.size * 0.75);
-    
+
     // Remove oldest documents
     let removedDocs = 0;
     for (const [uri] of this.documentCache) {
@@ -409,7 +409,7 @@ export class AdvancedCacheManager {
       this.documentCache.delete(uri);
       removedDocs++;
     }
-    
+
     // Remove oldest editors
     let removedEditors = 0;
     for (const [editor, entry] of this.editorCache) {
@@ -418,10 +418,10 @@ export class AdvancedCacheManager {
       this.editorCache.delete(editor);
       removedEditors++;
     }
-    
+
     this.adjustConfigForLowMemory();
     this.updateMetrics();
-    
+
     console.log(`🚨 Critical memory cleanup: removed ${removedDocs} documents, ${removedEditors} editors`);
   }
 
@@ -432,14 +432,14 @@ export class AdvancedCacheManager {
     // 🎯 Medium cleanup - remove 50% of cache
     const documentsToRemove = Math.floor(this.documentCache.size * 0.5);
     const editorsToRemove = Math.floor(this.editorCache.size * 0.5);
-    
+
     let removedDocs = 0;
     for (const [uri] of this.documentCache) {
       if (removedDocs >= documentsToRemove) {break;}
       this.documentCache.delete(uri);
       removedDocs++;
     }
-    
+
     let removedEditors = 0;
     for (const [editor, entry] of this.editorCache) {
       if (removedEditors >= editorsToRemove) {break;}
@@ -447,7 +447,7 @@ export class AdvancedCacheManager {
       this.editorCache.delete(editor);
       removedEditors++;
     }
-    
+
     this.updateMetrics();
     console.log(`⚡ Aggressive cleanup: removed ${removedDocs} documents, ${removedEditors} editors`);
   }
@@ -471,7 +471,7 @@ export class AdvancedCacheManager {
    */
   private showMemoryWarning(usage: number, level: 'high' | 'critical'): void {
     const message = `🧠 Bracket Lynx: ${level === 'critical' ? 'Critical' : 'High'} memory usage detected (${usage.toFixed(1)}MB). Cache cleaned up automatically.`;
-    
+
     if (level === 'critical') {
       vscode.window.showWarningMessage(message);
     } else {
@@ -562,7 +562,7 @@ export class AdvancedCacheManager {
       clearInterval(this.cleanupTimer);
       this.cleanupTimer = undefined;
     }
-    
+
     if (this.memoryMonitorTimer) {
       clearInterval(this.memoryMonitorTimer);
       this.memoryMonitorTimer = undefined;
