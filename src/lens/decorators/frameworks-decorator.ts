@@ -114,7 +114,7 @@ class FrameworksDecorator {
       for (const { editor, framework } of decorationsToProcess) {
         // Delay for Astro, Vue, Svelte so all appear together
         if (framework === 'astro' || framework === 'vue' || framework === 'svelte') {
-          await new Promise(resolve => setTimeout(resolve, 250));
+          await new Promise(resolve => setTimeout(resolve, 225));
         }
         await this.processEditorDecorations(editor, framework);
         await new Promise(resolve => setTimeout(resolve, 5)); // Small delay for smoothness
