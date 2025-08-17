@@ -9,11 +9,9 @@
 
 </br>
 
-## Toggle System
-
 ## 🛠️ Toggle System
 
-**Enable/disable bracket decorations:** Press `(Ctrl+Shift+P)` → `Bracket Lynx: Toggle, Color & Refresh 🛠️`
+**Enable/disable bracket decorations:** & change **COLOR** Press `(Ctrl+Shift+P)` → `Bracket Lynx: Toggle, Color & Refresh 🛠️`
 
 | Option               | Description                                                      | Scope          | Persistence         |
 | -------------------- | ---------------------------------------------------------------- | -------------- | ------------------- |
