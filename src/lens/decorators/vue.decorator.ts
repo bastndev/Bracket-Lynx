@@ -73,7 +73,16 @@ export class VueDecorator {
       return;
     }
 
-    if (!isExtensionEnabled() || !isEditorEnabled(editor)) {
+    // Check if this specific editor should have decorations
+    const editorEnabled = isEditorEnabled(editor);
+    const extensionEnabled = isExtensionEnabled();
+
+    if (!extensionEnabled && !editorEnabled) {
+      this.clearDecorations(editor);
+      return;
+    }
+
+    if (!editorEnabled) {
       this.clearDecorations(editor);
       return;
     }
@@ -90,6 +99,7 @@ export class VueDecorator {
 
       if (BracketLynxConfig.debug) {
         console.log(`Vue Decorator: Applied ${decorations.length} decorations to Vue file: ${editor.document.fileName}`);
+        console.log(`Vue Decorator: Extension enabled: ${extensionEnabled}, Editor enabled: ${editorEnabled}`);
       }
     } catch (error) {
       console.error('Vue Decorator: Error updating decorations:', error);
@@ -383,7 +393,11 @@ export class VueDecorator {
       vscode.window.visibleTextEditors
         .filter(editor => this.isSupportedFile(editor.document))
         .forEach(editor => {
-          this.updateDecorations(editor);
+          // Force update regardless of current state for color refresh
+          if (isEditorEnabled(editor)) {
+            this.updateDecorations(editor);
+            console.log(`Vue Decorator: Force refreshed color for ${editor.document.fileName}`);
+          }
         });
     }, 50);
   }

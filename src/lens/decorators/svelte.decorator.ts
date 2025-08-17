@@ -58,7 +58,16 @@ export class SvelteDecorator {
 		if (!editor || !this.isSupportedFile(editor.document)) {
 			return;
 		}
-		if (!isExtensionEnabled() || !isEditorEnabled(editor)) {
+		// Check if this specific editor should have decorations
+		const editorEnabled = isEditorEnabled(editor);
+		const extensionEnabled = isExtensionEnabled();
+
+		if (!extensionEnabled && !editorEnabled) {
+			this.clearDecorations(editor);
+			return;
+		}
+
+		if (!editorEnabled) {
 			this.clearDecorations(editor);
 			return;
 		}
@@ -72,6 +81,7 @@ export class SvelteDecorator {
 			editor.setDecorations(decorationType, decorations);
 			if (BracketLynxConfig.debug) {
 				console.log(`Svelte Decorator: Applied ${decorations.length} decorations to Svelte file: ${editor.document.fileName}`);
+				console.log(`Svelte Decorator: Extension enabled: ${extensionEnabled}, Editor enabled: ${editorEnabled}`);
 			}
 		} catch (error) {
 			console.error('Svelte Decorator: Error updating decorations:', error);
@@ -289,7 +299,11 @@ export class SvelteDecorator {
 			vscode.window.visibleTextEditors
 				.filter(editor => this.isSupportedFile(editor.document))
 				.forEach(editor => {
-					this.updateDecorations(editor);
+					// Force update regardless of current state for color refresh
+					if (isEditorEnabled(editor)) {
+						this.updateDecorations(editor);
+						console.log(`Svelte Decorator: Force refreshed color for ${editor.document.fileName}`);
+					}
 				});
 		}, 50);
 	}

@@ -79,6 +79,24 @@ function registerCommands(context: vscode.ExtensionContext) {
             await debugColorRefresh();
             vscode.window.showInformationMessage('🎨 Color refresh debug test completed - check console for details');
         }),
+        vscode.commands.registerCommand('bracketLynx.toggleDiagnostics', async () => {
+            const { getToggleDiagnostics } = await import('./actions/toggle.js');
+            const diagnostics = getToggleDiagnostics();
+            console.log('🔄 Toggle System Diagnostics:', diagnostics);
+            vscode.window.showInformationMessage(
+                `🔄 Toggle Status: Global: ${diagnostics.globalEnabled ? '✅' : '❌'}, ` +
+                `Current File: ${diagnostics.currentFileStatus}, ` +
+                `Main: ${diagnostics.decorators.main.available ? '✅' : '❌'}, ` +
+                `Astro: ${diagnostics.decorators.astro.available ? '✅' : '❌'}, ` +
+                `Vue: ${diagnostics.decorators.vue.available ? '✅' : '❌'}, ` +
+                `Svelte: ${diagnostics.decorators.svelte.available ? '✅' : '❌'}`
+            );
+        }),
+        vscode.commands.registerCommand('bracketLynx.debugToggleSync', async () => {
+            const { debugToggleSync } = await import('./actions/toggle.js');
+            await debugToggleSync();
+            vscode.window.showInformationMessage('🔄 Toggle sync debug test completed - check console for details');
+        }),
         vscode.commands.registerCommand('bracketLynx.validateStatus', async () => {
             const { validateDecoratorStatus } = await import('./actions/colors.js');
             const validation = validateDecoratorStatus();

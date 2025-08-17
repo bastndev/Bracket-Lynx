@@ -83,10 +83,19 @@ export async function toggleBracketLynx(): Promise<void> {
   await saveGlobalEnabledState(isEnabled);
 
   if (isEnabled) {
-    // Notification in bottom Right
+    // Clear individual settings when enabling globally
     individuallyEnabledEditors.clear();
-    await saveIndividuallyEnabledFilesState();
-    reactivateExtension();
+    disabledEditors.clear();
+    await Promise.all([
+      saveIndividuallyEnabledFilesState(),
+      saveDisabledFilesState()
+    ]);
+
+    // Small delay to ensure state is saved
+    setTimeout(() => {
+      reactivateExtension();
+    }, 50);
+
     vscode.window.showInformationMessage(
       'Bracket Lynx: (Activated ✅) globally - 🌐'
     );
@@ -114,6 +123,12 @@ export async function toggleCurrentEditor(): Promise<void> {
     if (isCurrentlyDisabled) {
       disabledEditors.delete(editorKey);
       await saveDisabledFilesState();
+
+      // Force update all decorators for this file
+      setTimeout(() => {
+        updateEditorDecorations(activeEditor);
+      }, 100);
+
       vscode.window.showInformationMessage(
         '📝 Bracket Lynx: Enabled for current file'
       );
@@ -156,8 +171,11 @@ export async function toggleCurrentEditor(): Promise<void> {
       individuallyEnabledEditors.set(editorKey, true);
       await saveIndividuallyEnabledFilesState();
 
-      // Activate decorations for this specific file
+      // Activate decorations for this specific file - IMPROVED VERSION
       try {
+        console.log(`🔄 Activating individual file: ${activeEditor.document.fileName}`);
+
+        // Force immediate update for main provider
         if (bracketLynxProvider) {
           if (bracketLynxProvider.updateDecoration) {
             bracketLynxProvider.updateDecoration(activeEditor);
@@ -166,12 +184,25 @@ export async function toggleCurrentEditor(): Promise<void> {
           }
         }
 
-        // Initial update
+        // Force immediate update for all framework decorators
         updateEditorDecorations(activeEditor);
 
-        // Force multiple updates to ensure decorations appear
-        setTimeout(() => updateEditorDecorations(activeEditor), DECORATION_UPDATE_DELAY_SHORT);
-        setTimeout(() => updateEditorDecorations(activeEditor), DECORATION_UPDATE_DELAY_LONG);
+        // Multiple delayed updates to ensure all decorators respond
+        setTimeout(() => {
+          console.log(`🔄 Delayed update 1 for: ${activeEditor.document.fileName}`);
+          updateEditorDecorations(activeEditor);
+        }, DECORATION_UPDATE_DELAY_SHORT);
+
+        setTimeout(() => {
+          console.log(`🔄 Delayed update 2 for: ${activeEditor.document.fileName}`);
+          updateEditorDecorations(activeEditor);
+        }, DECORATION_UPDATE_DELAY_LONG);
+
+        // Final update to ensure framework decorators are active
+        setTimeout(() => {
+          console.log(`🔄 Final update for: ${activeEditor.document.fileName}`);
+          updateEditorDecorations(activeEditor);
+        }, DECORATION_UPDATE_DELAY_LONG + 100);
 
         vscode.window.showInformationMessage(
           '📝 Bracket Lynx: Enabled for current file (individual mode)'
@@ -300,10 +331,10 @@ export async function resetToDefault(): Promise<void> {
 // ============================================================================
 
 export function isExtensionEnabled(): boolean {
-  // Extension is enabled if either:
+  // Extension is considered enabled if:
   // 1. Global mode is enabled, OR
-  // 2. Individual mode is enabled and there are individually enabled files
-  return isEnabled || (!isEnabled && individuallyEnabledEditors.size > 0);
+  // 2. Individual mode with at least one enabled file
+  return isEnabled || individuallyEnabledEditors.size > 0;
 }
 
 export function isEditorEnabled(editor: vscode.TextEditor): boolean {
@@ -471,35 +502,104 @@ export async function cleanupClosedEditor(document: vscode.TextDocument): Promis
 
 function reactivateExtension(): void {
   try {
+    console.log(`🔄 Reactivating extension - Global: ${isEnabled}, Individual files: ${individuallyEnabledEditors.size}`);
+
+    // First, update main provider
     if (bracketLynxProvider) {
       if (bracketLynxProvider.updateAllDecoration) {
         bracketLynxProvider.updateAllDecoration();
+        console.log(`🔄 Main provider reactivated`);
       }
     }
 
-    // Force update for all visible editors
-    vscode.window.visibleTextEditors.forEach(editor => {
-      if (isEditorEnabled(editor)) {
-        updateEditorDecorations(editor);
+    // Get all framework decorators
+    const decorators = [
+      { name: 'Astro', decorator: astroDecorator },
+      { name: 'Vue', decorator: vueDecorator },
+      { name: 'Svelte', decorator: svelteDecorator }
+    ];
+
+    // Clear all decorators first to ensure clean state
+    decorators.forEach(({ name, decorator }) => {
+      if (decorator && decorator.clearAllDecorations) {
+        try {
+          decorator.clearAllDecorations();
+          console.log(`🔄 ${name} decorator cleared for reactivation`);
+        } catch (error) {
+          console.warn(`Toggle: Error clearing ${name} decorator:`, error);
+        }
       }
     });
+
+    // Small delay to ensure clears are complete
+    setTimeout(() => {
+      // Now update all editors based on their individual states
+      vscode.window.visibleTextEditors.forEach(editor => {
+        const editorEnabled = isEditorEnabled(editor);
+        console.log(`🔄 Processing ${editor.document.fileName} - Enabled: ${editorEnabled}`);
+
+        if (editorEnabled) {
+          // Update main provider for this editor
+          if (bracketLynxProvider && bracketLynxProvider.updateDecoration) {
+            bracketLynxProvider.updateDecoration(editor);
+          }
+
+          // Update framework decorators for this editor
+          decorators.forEach(({ name, decorator }) => {
+            if (decorator && decorator.updateDecorations) {
+              try {
+                decorator.updateDecorations(editor);
+                console.log(`🔄 ${name} decorator updated for ${editor.document.fileName}`);
+              } catch (error) {
+                console.warn(`Toggle: Error updating ${name} decorator:`, error);
+              }
+            }
+          });
+        }
+      });
+
+      // Final pass to ensure all decorations are correct
+      setTimeout(() => {
+        vscode.window.visibleTextEditors.forEach(editor => {
+          updateEditorDecorations(editor);
+        });
+        console.log(`🔄 Extension reactivation complete`);
+      }, 100);
+    }, 50);
+
   } catch (error) {
     console.error('Error reactivating extension:', error);
   }
 }
 
 function deactivateExtension(): void {
-  if (bracketLynxProvider) {
-    bracketLynxProvider.clearAllDecorations?.();
-  }
-  if (astroDecorator) {
-    astroDecorator.clearAllDecorations?.();
-  }
-  if (vueDecorator) {
-    vueDecorator.clearAllDecorations?.();
-  }
-  if (svelteDecorator) {
-    svelteDecorator.clearAllDecorations?.();
+  try {
+    // Clear main provider decorations
+    if (bracketLynxProvider) {
+      bracketLynxProvider.clearAllDecorations?.();
+    }
+
+    // Clear all framework decorators
+    const decorators = [
+      { name: 'Astro', decorator: astroDecorator },
+      { name: 'Vue', decorator: vueDecorator },
+      { name: 'Svelte', decorator: svelteDecorator }
+    ];
+
+    decorators.forEach(({ name, decorator }) => {
+      if (decorator) {
+        try {
+          if (decorator.clearAllDecorations) {
+            decorator.clearAllDecorations();
+          }
+          console.log(`Toggle: ${name} decorator deactivated`);
+        } catch (error) {
+          console.warn(`Toggle: Error deactivating ${name} decorator:`, error);
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error deactivating extension:', error);
   }
 }
 
@@ -507,17 +607,71 @@ function deactivateExtension(): void {
  * Helper function to update decorations for a specific editor
  */
 function updateEditorDecorations(editor: vscode.TextEditor): void {
-  if (bracketLynxProvider && bracketLynxProvider.updateDecoration) {
-    bracketLynxProvider.updateDecoration(editor);
+  const isEditorEnabledForThisFile = isEditorEnabled(editor);
+  const editorKey = getEditorKey(editor);
+
+  console.log(`🔄 Updating decorations for ${editor.document.fileName} - Enabled: ${isEditorEnabledForThisFile}`);
+  console.log(`🔄 Global enabled: ${isEnabled}, Individual files: ${individuallyEnabledEditors.size}`);
+
+  // Update main provider
+  if (bracketLynxProvider) {
+    if (isEditorEnabledForThisFile && bracketLynxProvider.updateDecoration) {
+      bracketLynxProvider.updateDecoration(editor);
+      console.log(`🔄 Main provider updated for ${editor.document.fileName}`);
+    } else if (!isEditorEnabledForThisFile && bracketLynxProvider.clearEditorDecorations) {
+      bracketLynxProvider.clearEditorDecorations(editor);
+      console.log(`🔄 Main provider cleared for ${editor.document.fileName}`);
+    }
   }
-  if (astroDecorator && astroDecorator.updateDecorations) {
-    astroDecorator.updateDecorations(editor);
-  }
-  if (vueDecorator && vueDecorator.updateDecorations) {
-    vueDecorator.updateDecorations(editor);
-  }
-  if (svelteDecorator && svelteDecorator.updateDecorations) {
-    svelteDecorator.updateDecorations(editor);
+
+  // Update framework decorators with enhanced state handling
+  const decorators = [
+    { name: 'Astro', decorator: astroDecorator },
+    { name: 'Vue', decorator: vueDecorator },
+    { name: 'Svelte', decorator: svelteDecorator }
+  ];
+
+  decorators.forEach(({ name, decorator }) => {
+    if (decorator) {
+      try {
+        if (isEditorEnabledForThisFile) {
+          // Editor is enabled - force update decorations
+          if (decorator.updateDecorations) {
+            decorator.updateDecorations(editor);
+            console.log(`🔄 ${name} decorator updated for ${editor.document.fileName}`);
+          } else {
+            console.warn(`🔄 ${name} decorator missing updateDecorations method`);
+          }
+        } else {
+          // Editor is disabled - clear decorations
+          if (decorator.clearDecorations) {
+            decorator.clearDecorations(editor);
+            console.log(`🔄 ${name} decorator cleared for ${editor.document.fileName}`);
+          }
+        }
+      } catch (error) {
+        console.error(`Toggle: Error updating ${name} decorator for editor:`, error);
+      }
+    } else {
+      console.warn(`🔄 ${name} decorator not available`);
+    }
+  });
+
+  // Additional verification for individual mode
+  if (!isEnabled && individuallyEnabledEditors.has(editorKey)) {
+    console.log(`🔄 Individual mode verification - forcing framework decorator updates`);
+    setTimeout(() => {
+      decorators.forEach(({ name, decorator }) => {
+        if (decorator && decorator.updateDecorations) {
+          try {
+            decorator.updateDecorations(editor);
+            console.log(`🔄 ${name} decorator force-updated (individual mode)`);
+          } catch (error) {
+            console.error(`🔄 Error force-updating ${name} decorator:`, error);
+          }
+        }
+      });
+    }, 50);
   }
 }
 
@@ -536,6 +690,101 @@ function clearEditorDecorations(editor: vscode.TextEditor): void {
   }
   if (svelteDecorator && svelteDecorator.clearDecorations) {
     svelteDecorator.clearDecorations(editor);
+  }
+}
+
+/**
+ * Diagnostic function to check toggle system status and synchronization
+ */
+export function getToggleDiagnostics(): {
+  globalEnabled: boolean;
+  activeEditor: string | null;
+  currentFileStatus: string;
+  disabledFilesCount: number;
+  enabledFilesCount: number;
+  decorators: {
+    main: { available: boolean; hasUpdate: boolean; hasClear: boolean };
+    astro: { available: boolean; hasUpdate: boolean; hasClear: boolean };
+    vue: { available: boolean; hasUpdate: boolean; hasClear: boolean };
+    svelte: { available: boolean; hasUpdate: boolean; hasClear: boolean };
+  };
+} {
+  const activeEditor = vscode.window.activeTextEditor;
+  const currentFileStatus = activeEditor ?
+    (isEditorEnabled(activeEditor) ? 'Enabled' : 'Disabled') :
+    'No active editor';
+
+  return {
+    globalEnabled: isEnabled,
+    activeEditor: activeEditor ? activeEditor.document.fileName : null,
+    currentFileStatus,
+    disabledFilesCount: disabledEditors.size,
+    enabledFilesCount: individuallyEnabledEditors.size,
+    decorators: {
+      main: {
+        available: !!bracketLynxProvider,
+        hasUpdate: !!(bracketLynxProvider?.updateDecoration),
+        hasClear: !!(bracketLynxProvider?.clearEditorDecorations)
+      },
+      astro: {
+        available: !!astroDecorator,
+        hasUpdate: !!(astroDecorator?.updateDecorations),
+        hasClear: !!(astroDecorator?.clearDecorations)
+      },
+      vue: {
+        available: !!vueDecorator,
+        hasUpdate: !!(vueDecorator?.updateDecorations),
+        hasClear: !!(vueDecorator?.clearDecorations)
+      },
+      svelte: {
+        available: !!svelteDecorator,
+        hasUpdate: !!(svelteDecorator?.updateDecorations),
+        hasClear: !!(svelteDecorator?.clearDecorations)
+      }
+    }
+  };
+}
+
+/**
+ * Test toggle synchronization across all decorators
+ */
+export async function debugToggleSync(): Promise<void> {
+  const diagnostics = getToggleDiagnostics();
+  console.log('🔄 Toggle System Diagnostics:', diagnostics);
+
+  if (!diagnostics.decorators.main.available) {
+    console.warn('🔄 Main decorator not available - toggle may not work properly');
+    return;
+  }
+
+  const activeEditor = vscode.window.activeTextEditor;
+  if (!activeEditor) {
+    console.warn('🔄 No active editor for toggle sync test');
+    return;
+  }
+
+  console.log('🔄 Testing toggle synchronization...');
+
+  try {
+    // Test reactivation
+    console.log('🔄 Testing reactivateExtension()...');
+    reactivateExtension();
+
+    // Test editor-specific updates
+    console.log('🔄 Testing updateEditorDecorations()...');
+    updateEditorDecorations(activeEditor);
+
+    // Test clearing
+    console.log('🔄 Testing clearEditorDecorations()...');
+    clearEditorDecorations(activeEditor);
+
+    // Restore decorations
+    console.log('🔄 Restoring decorations...');
+    updateEditorDecorations(activeEditor);
+
+    console.log('🔄 ✅ Toggle sync test completed successfully');
+  } catch (error) {
+    console.error('🔄 ❌ Toggle sync test failed:', error);
   }
 }
 
