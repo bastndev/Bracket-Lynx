@@ -20,13 +20,13 @@
 | **🎨 Change**           | Change bracket color with live preview and picker                | Persistent (Config) |
 | **♻️ Refresh**          | Reset all changes and restore to initial default state           | Immediate           |
 
-**🎨 Colors:** Default color: (`#515151 ⚫`) 🌟
+**🎨 Colors:** Default color: (`#515151 ⚫`) & You can also assign your own color.
 
 ![Colors](https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/colors.png)
 
 </br>
 
-## 🌐 Language Compatibility
+## ⚡ Tech Stack Support
 
 <div align="center">
   <table>
