@@ -8,9 +8,33 @@ Discover more extensions at [bastndev.com/extensions](https://bastndev.com/exten
 
 ## Changelog
 
-Following VS Code best practices, Lynx Theme Pro uses semantic versioning for all releases.
+</br>
+
+## [0.7.1] - 2025-08-17
+
+### Added
+- Extension logo added for improved branding
+- Enhanced README with clearer instructions and updated screenshots
+
+### Changed
+- Improved documentation structure and formatting
+
+### Fixed
+- Minor typos and formatting issues in README
+
+---
 
 ## [0.7.0] - 2025-08-12
+
+### Added
+- Support for Astro, Vue, and Svelte frameworks
+- New color option for bracket decorations
+
+### Changed
+- Improved bracket decoration visuals for better clarity and readability
+
+
+---
 
 ## [0.6.1] - 2025-08-12
 
@@ -22,6 +46,8 @@ Following VS Code best practices, Lynx Theme Pro uses semantic versioning for al
 ### Changed
 - Expanded language support matrix with modern web technologies
 - Improved automatic activation system for supported file types
+
+---
 
 ## [0.6.0] - 2025-08-11
 
@@ -53,6 +79,8 @@ Following VS Code best practices, Lynx Theme Pro uses semantic versioning for al
 - Create architecture diagrams
 - Implement real-time metrics system
 
+---
+
 ## [0.5.0] - 2025-08-10
 
 ### Added
@@ -80,6 +108,8 @@ Following VS Code best practices, Lynx Theme Pro uses semantic versioning for al
 - Create architecture diagrams
 - Implement real-time metrics system
 
+---
+
 ## [0.4.0] - 2025-08-05
 
 ### Added
@@ -103,9 +133,11 @@ Following VS Code best practices, Lynx Theme Pro uses semantic versioning for al
 - Add regression, compatibility, memory, and concurrency tests
 - Improve benchmarks and load testing with real files
 
-**Status**: ✅ Tests fully implemented and functional
-**Maintainer**: @bastndev
+**Status**: ✅ Tests fully implemented and functional  
+**Maintainer**: @bastndev  
 **Last Update**: August 2025
+
+---
 
 ## [0.3.0] - 2025-06-15
 
@@ -128,6 +160,8 @@ Following VS Code best practices, Lynx Theme Pro uses semantic versioning for al
 - Optimizations for minified files
 - Cache metrics and hit ratio
 
+---
+
 ## [0.2.0] - 2025-06-01
 
 ### Added
@@ -136,9 +170,12 @@ Following VS Code best practices, Lynx Theme Pro uses semantic versioning for al
 ### Changed
 - Implemented smart filtering and error recovery
 
+---
+
 ## [0.0.1] - 2025-05-18
 
 ### Added
 - Initial public release of Bracket Lynx
 - Intelligent bracket decorations for 11 programming languages and frameworks
 - Core parsing, lens, and caching systems
+
