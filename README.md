@@ -13,20 +13,46 @@
 
 **Enable/disable bracket decorations:** & change **COLOR** Press `(Ctrl+Shift+P)` → `Bracket Lynx: Toggle, Color & Refresh 🛠️`
 
-| Option                                         | Description                                                      | Scope          | Persistence         |
-| ---------------------------------------------- | ---------------------------------------------------------------- | -------------- | ------------------- |
-| <div align="center">**🌐 Toggle/global**</div> | Enable/disable for all files, state saved across sessions        | Extension-wide | Persistent (Config) |
-| **📝 Toggle/file**                             | Enable/disable decorations per file, state saved across sessions | Per-file       | Persistent (Config) |
-| **🎨 Change**                                  | Change bracket color with live preview and picker                | Workspace-wide | Persistent (Config) |
-| **♻️ Refresh**                                 | Reset all changes and restore to initial default state           | Current file   | Immediate           |
+| Option                  | Description                                                      | Persistence         |
+| ----------------------- | ---------------------------------------------------------------- | ------------------- |
+| **🌐 Toggle/global** ㅤ | Enable/disable for all files, state saved across sessions        | Persistent (Config) |
+| **📝 Toggle/file**      | Enable/disable decorations per file, state saved across sessions | Persistent (Config) |
+| **🎨 Change**           | Change bracket color with live preview and picker                | Persistent (Config) |
+| **♻️ Refresh**          | Reset all changes and restore to initial default state           | Immediate           |
 
 **🎨 Colors:** Default color: (`#515151 ⚫`) 🌟
 
 ![Colors](https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/colors.png)
 
+</br>
+
 ## 🌐 Language Compatibility
 
-> **📌 Note:** Bracket Lynx is automatically activated only for these languages.
+<!-- First file -->
+<table align="center" width="100%" style="table-layout: fixed;">
+    <tr align="center">
+        <td align="center">
+            <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/728e94abc145dc23052e589c18b81e3d65583ac5/assets/images/icons/html.svg" alt="HTML Support" width="70"/>
+            <br/>
+            <sub><b>HTML</b></sub>
+        </td>
+        <td>
+            <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/728e94abc145dc23052e589c18b81e3d65583ac5/assets/images/icons/css.svg" alt="Lynx JS Snippets" width="70"/>
+        </td>
+        <td>
+            <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/728e94abc145dc23052e589c18b81e3d65583ac5/assets/images/icons/js.svg" alt="Bracket Lynx" width="60"/>
+        </td>
+        <td>
+            <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/728e94abc145dc23052e589c18b81e3d65583ac5/assets/images/icons/ts.svg" alt="F1 Quick Switch" width="70"/>
+        </td>
+        <td>
+            <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/728e94abc145dc23052e589c18b81e3d65583ac5/assets/images/icons/package-json.svg" alt="Lynx Keymap" width="70"/>
+        </td>
+        <td>
+            <img src="https://bastndev.gallerycdn.vsassets.io/extensions/bastndev/lynx-keymap-75/1.3.5/1754931477790/Microsoft.VisualStudio.Services.Icons.Default" alt="Lynx Keymap 75%" width="45"/>
+        </td>
+    </tr>
+</table>
 
 </br>
 
