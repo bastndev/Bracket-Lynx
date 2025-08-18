@@ -53,7 +53,7 @@
       </td>
       <td align="center" width="120">
         <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/icons/json.png" alt="JSON" width="65" height="65" />
-        <br /><strong>JSON</strong>
+        <br /><strong>package.json</strong>
       </td>
     </tr>
   </table>
