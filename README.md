@@ -28,31 +28,63 @@
 
 ## 🌐 Language Compatibility
 
-<!-- First file -->
-<table align="center" width="100%" style="table-layout: fixed;">
-    <tr align="center">
-        <td align="center">
-            <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/728e94abc145dc23052e589c18b81e3d65583ac5/assets/images/icons/html.svg" alt="HTML Support" width="70"/>
-            <br/>
-            <sub><b>HTML</b></sub>
-        </td>
-        <td>
-            <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/728e94abc145dc23052e589c18b81e3d65583ac5/assets/images/icons/css.svg" alt="Lynx JS Snippets" width="70"/>
-        </td>
-        <td>
-            <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/728e94abc145dc23052e589c18b81e3d65583ac5/assets/images/icons/js.svg" alt="Bracket Lynx" width="60"/>
-        </td>
-        <td>
-            <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/728e94abc145dc23052e589c18b81e3d65583ac5/assets/images/icons/ts.svg" alt="F1 Quick Switch" width="70"/>
-        </td>
-        <td>
-            <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/728e94abc145dc23052e589c18b81e3d65583ac5/assets/images/icons/package-json.svg" alt="Lynx Keymap" width="70"/>
-        </td>
-        <td>
-            <img src="https://bastndev.gallerycdn.vsassets.io/extensions/bastndev/lynx-keymap-75/1.3.5/1754931477790/Microsoft.VisualStudio.Services.Icons.Default" alt="Lynx Keymap 75%" width="45"/>
-        </td>
+<div align="center">
+  <table>
+    <tr>
+      <td align="center" width="120">
+        <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/icons/html.png" alt="HTML5" width="65" height="65" />
+        <br /><strong>HTML5</strong>
+      </td>
+      <td align="center" width="120">
+        <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/icons/css.png" alt="CSS3" width="65" height="65" />
+        <br /><strong>CSS3</strong>
+      </td>
+      <td align="center" width="120">
+        <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/icons/scss.png" alt="SCSS" width="65" height="65" />
+        <br /><strong>SCSS</strong>
+      </td>
+      <td align="center" width="120">
+        <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/icons/js.png" alt="JavaScript" width="65" height="65" />
+        <br /><strong>JavaScript</strong>
+      </td>
+      <td align="center" width="120">
+        <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/icons/jsx.png" alt="JSX" width="65" height="65" />
+        <br /><strong>JSX</strong>
+      </td>
+      <td align="center" width="120">
+        <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/icons/json.png" alt="JSON" width="65" height="65" />
+        <br /><strong>JSON</strong>
+      </td>
     </tr>
-</table>
+  </table>
+</div>
+
+<div align="center">
+  <table>
+    <tr>
+      <td align="center" width="120">
+        <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/icons/astro.png" alt="Astro" width="65" height="65" />
+        <br /><strong>Astro</strong>
+      </td>
+      <td align="center" width="120">
+        <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/icons/vue.png" alt="Vue.js" width="65" height="65" />
+        <br /><strong>Vue.js</strong>
+      </td>
+      <td align="center" width="120">
+        <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/icons/svelte.png" alt="Svelte" width="65" height="65" />
+        <br /><strong>Svelte</strong>
+      </td>
+      <td align="center" width="120">
+        <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/icons/ts.png" alt="TypeScript" width="65" height="65" />
+        <br /><strong>TypeScript</strong>
+      </td>
+      <td align="center" width="120">
+        <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/icons/tsx.png" alt="TSX" width="65" height="65" />
+        <br /><strong>TSX</strong>
+      </td>
+    </tr>
+  </table>
+</div>
 
 </br>
 
