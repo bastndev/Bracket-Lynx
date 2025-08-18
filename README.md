@@ -22,7 +22,7 @@
 
 **🎨 Colors:** Default color: (`#515151 ⚫`) & You can also assign your own color.
 
-![Colors](https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/colors.png)
+![Colors](https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/colors.jpg)
 
 </br>
 
