@@ -234,68 +234,39 @@ async function recreateAllBracketLynxDecorations(overrideColor?: string): Promis
 
     console.log(`🎨 Recreating decorations with color: ${currentColor}`);
 
-    // Clear all existing decorations from all providers simultaneously
+    // Prepare decorators (no clearing; in-place refresh to avoid flicker)
     const decorators = [
       { name: 'Main', decorator: bracketLynxProvider },
       { name: 'frameworks', decorator: frameworksDecorator }
     ];
 
-    // Clear all decorators
-    decorators.forEach(({ name, decorator }) => {
-      if (decorator && decorator.clearAllDecorations) {
-        try {
-          decorator.clearAllDecorations();
-          console.log(`🎨 Cleared ${name} decorator decorations`);
-        } catch (error) {
-          console.warn(`🎨 Warning: Error clearing ${name} decorator decorations:`, error);
-        }
-      }
-    });
-
-    // Wait for all clears to complete
-    await new Promise((resolve) => setTimeout(resolve, DECORATION_CLEAR_DELAY));
-
-    // Refresh main provider
+    // Refresh main provider first
     try {
-      if (bracketLynxProvider.forceColorRefresh) {
-        bracketLynxProvider.forceColorRefresh();
-        console.log('🎨 Main provider color refreshed');
-      } else {
-        if (bracketLynxProvider.onDidChangeConfiguration) {
+      if (typeof bracketLynxProvider.forceColorRefresh === 'function') {
+        await bracketLynxProvider.forceColorRefresh();
+        console.log('🎨 Main provider color refreshed (in-place)');
+      } else if (typeof bracketLynxProvider.updateAllDecoration === 'function') {
+        // Fallback without clearing
+        if (typeof bracketLynxProvider.onDidChangeConfiguration === 'function') {
           bracketLynxProvider.onDidChangeConfiguration();
         }
-        await new Promise((resolve) => setTimeout(resolve, DECORATION_CLEAR_DELAY));
-        bracketLynxProvider.updateAllDecoration();
-        console.log('🎨 Main provider fallback refresh completed');
+        await bracketLynxProvider.updateAllDecoration();
+        console.log('🎨 Main provider fallback refresh (in-place)');
       }
     } catch (error) {
       console.error('🎨 Error refreshing main provider:', error);
     }
 
-    // Small delay to ensure main provider refresh is complete
-    await new Promise((resolve) => setTimeout(resolve, DECORATION_CLEAR_DELAY));
-
-    // Refresh framework-specific decorators
-    const refreshPromises = decorators.slice(1).map(async ({ name, decorator }) => {
-      if (decorator && decorator.forceColorRefresh) {
-        try {
-          decorator.forceColorRefresh();
-          console.log(`🎨 ${name} decorator color refreshed`);
-          return true;
-        } catch (error) {
-          console.warn(`🎨 Warning: Error refreshing ${name} decorator:`, error);
-          return false;
-        }
+    // Refresh framework decorator
+    try {
+      const fw = decorators[1].decorator;
+      if (fw && typeof fw.forceColorRefresh === 'function') {
+        await fw.forceColorRefresh();
+        console.log('🎨 Frameworks decorator color refreshed (in-place)');
       }
-      return null;
-    });
-
-    const refreshResults = await Promise.allSettled(refreshPromises);
-    const successfulRefreshes = refreshResults.filter(
-      (result, index) => result.status === 'fulfilled' && result.value === true
-    ).length;
-
-    console.log(`🎨 Color refresh completed: ${successfulRefreshes}/${decorators.length - 1} decorators refreshed successfully`);
+    } catch (error) {
+      console.warn('🎨 Warning: Error refreshing frameworks decorator:', error);
+    }
 
   } catch (error) {
     console.error('🎨 Error recreating decorations:', error);

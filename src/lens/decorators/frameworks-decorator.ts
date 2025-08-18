@@ -178,28 +178,21 @@ class FrameworksDecorator {
    * Ensure decoration type exists for framework
    */
   private static ensureDecorationType(framework: FrameworkName): vscode.TextEditorDecorationType {
-    const color = getCurrentColor();
-    const fontStyle = BracketLynxConfig.fontStyle;
-    const prevOptions = this.decorationTypeOptions.get(framework);
+    // Create once per framework and keep it stable.
+    // Color and fontStyle are applied via per-decoration renderOptions in generateDecorations().
     const existing = this.decorationTypes.get(framework);
-
-    if (existing && prevOptions && prevOptions.color === color && prevOptions.fontStyle === fontStyle) {
-      return existing;
-    }
     if (existing) {
-      existing.dispose();
+      return existing;
     }
 
     const decorationType = vscode.window.createTextEditorDecorationType({
-      after: {
-        color,
-        fontStyle,
-      },
+      // Keep behavior stable; do not specify color/fontStyle here to avoid re-creation on theme changes
       rangeBehavior: vscode.DecorationRangeBehavior.ClosedClosed
     });
 
     this.decorationTypes.set(framework, decorationType);
-    this.decorationTypeOptions.set(framework, { color, fontStyle });
+    // Track last options for potential future use, but no longer used to recreate types
+    this.decorationTypeOptions.set(framework, { color: getCurrentColor(), fontStyle: BracketLynxConfig.fontStyle });
     return decorationType;
   }
 
@@ -501,12 +494,10 @@ class FrameworksDecorator {
    * Force color refresh for all decorations
    */
   public static async forceColorRefresh(): Promise<void> {
-    // Actualiza el tipo de decoración en caliente para cada framework
     for (const framework of Object.keys(FRAMEWORK_CONFIGS) as FrameworkName[]) {
       this.ensureDecorationType(framework);
     }
 
-    // Reaplica decoraciones en todos los editores visibles sin limpiar primero
     for (const editor of vscode.window.visibleTextEditors) {
       const framework = this.detectFramework(editor.document);
       if (framework) {
