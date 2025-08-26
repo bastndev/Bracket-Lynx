@@ -76,6 +76,113 @@ class FrameworksDecorator {
   private static readonly COMMENT_REGEX = /^<!--.*-->$/;
 
   /**
+   * Check if a position is inside a comment
+   */
+  private static isPositionInComment(
+    document: vscode.TextDocument,
+    position: vscode.Position
+  ): boolean {
+    const text = document.getText();
+    const offset = document.offsetAt(position);
+    const beforeText = text.substring(0, offset);
+    
+    // Check for HTML/XML comments
+    const lastHtmlCommentStart = beforeText.lastIndexOf('<!--');
+    const lastHtmlCommentEnd = beforeText.lastIndexOf('-->');
+    
+    if (lastHtmlCommentStart > lastHtmlCommentEnd) {
+      return true;
+    }
+    
+    // Check for CSS comments in style tags
+    const lastCssCommentStart = beforeText.lastIndexOf('/*');
+    const lastCssCommentEnd = beforeText.lastIndexOf('*/');
+    
+    if (lastCssCommentStart > lastCssCommentEnd) {
+      return true;
+    }
+    
+    // Check for JavaScript comments in script tags
+    const lastJsComment = beforeText.lastIndexOf('//');
+    const lastHashComment = beforeText.lastIndexOf('#');
+    
+    const lastCommentMarker = Math.max(lastJsComment, lastHashComment);
+    
+    if (lastCommentMarker > lastHtmlCommentStart && lastCommentMarker > lastHtmlCommentEnd &&
+        lastCommentMarker > lastCssCommentStart && lastCommentMarker > lastCssCommentEnd) {
+      const textAfterComment = beforeText.substring(lastCommentMarker);
+      if (!textAfterComment.includes('\n')) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
+  /**
+   * Check if a range is inside a comment
+   */
+  private static isRangeInComment(
+    document: vscode.TextDocument,
+    range: vscode.Range
+  ): boolean {
+    // Check if either the start or end position is inside a comment
+    if (this.isPositionInComment(document, range.start) || this.isPositionInComment(document, range.end)) {
+      return true;
+    }
+    
+    // Check if the range contains comment markers
+    const text = document.getText();
+    const startOffset = document.offsetAt(range.start);
+    const endOffset = document.offsetAt(range.end);
+    const rangeText = text.substring(startOffset, endOffset);
+    
+    // Check for comment markers within the range
+    if (rangeText.includes('<!--') || rangeText.includes('-->') || 
+        rangeText.includes('/*') || rangeText.includes('*/') ||
+        rangeText.includes('//') || rangeText.includes('#')) {
+      return true;
+    }
+    
+    return false;
+  }
+
+  /**
+   * Check if a component range is commented out
+   */
+  private static isComponentCommented(
+    document: vscode.TextDocument,
+    component: ComponentRange
+  ): boolean {
+    // Check if the component range itself is commented
+    if (this.isRangeInComment(document, component.range)) {
+      return true;
+    }
+    
+    // Check if the opening tag line is commented
+    const openingLineRange = new vscode.Range(
+      component.startLine - 1, 0,
+      component.startLine - 1, document.lineAt(component.startLine - 1).text.length
+    );
+    
+    if (this.isRangeInComment(document, openingLineRange)) {
+      return true;
+    }
+    
+    // Check if the closing tag line is commented
+    const closingLineRange = new vscode.Range(
+      component.endLine - 1, 0,
+      component.endLine - 1, document.lineAt(component.endLine - 1).text.length
+    );
+    
+    if (this.isRangeInComment(document, closingLineRange)) {
+      return true;
+    }
+    
+    return false;
+  }
+
+  /**
    * Main entry point - processes all supported frameworks
    */
   public static async updateDecorations(editor?: vscode.TextEditor): Promise<void> {
@@ -207,22 +314,28 @@ class FrameworksDecorator {
 
     for (const component of componentRanges) {
       if (component.hasContent && this.shouldShowDecoration(component)) {
-        const prefix = BracketLynxConfig.prefix.replace('‹~', '‹~').trim();
-        const scopedIndicator = component.isScoped ? ' [scoped]' : '';
-        const decorationText = `${prefix} #${component.startLine}-${component.endLine} •${component.name}${scopedIndicator}`;
+        // NEW: Check if the component is commented before generating decoration
+        if (!this.isComponentCommented(document, component)) {
+          const prefix = BracketLynxConfig.prefix.replace('‹~', '‹~').trim();
+          const scopedIndicator = component.isScoped ? ' [scoped]' : '';
+          const decorationText = `${prefix} #${component.startLine}-${component.endLine} •${component.name}${scopedIndicator}`;
 
-        const decoration: vscode.DecorationOptions = {
-          range: component.range,
-          renderOptions: {
-            after: {
-              contentText: decorationText,
-              color: getCurrentColor(),
-              fontStyle: BracketLynxConfig.fontStyle
+          const decoration: vscode.DecorationOptions = {
+            range: component.range,
+            renderOptions: {
+              after: {
+                contentText: decorationText,
+                color: getCurrentColor(),
+                fontStyle: BracketLynxConfig.fontStyle
+              }
             }
-          }
-        };
+          };
 
-        decorations.push(decoration);
+          decorations.push(decoration);
+        } else if (BracketLynxConfig.debug) {
+          const config = FRAMEWORK_CONFIGS[framework];
+          console.log(`${config.name} Decorator: Skipping commented component "${component.name}" at lines ${component.startLine}-${component.endLine}`);
+        }
       }
     }
 
@@ -379,6 +492,11 @@ class FrameworksDecorator {
       return false;
     }
 
+    // NEW: Check if the opening line itself is commented
+    if (openingLine.startsWith('<!--') || openingLine.startsWith('//') || openingLine.startsWith('/*')) {
+      return false;
+    }
+
     const tagMatch = openingLine.match(/<(\w+)/);
     const tagName = tagMatch?.[1]?.toLowerCase();
     const isSpecialTag = ['style', 'script', 'template'].includes(tagName || '');
@@ -390,7 +508,11 @@ class FrameworksDecorator {
         continue;
       }
 
-      if (this.COMMENT_REGEX.test(contentLine)) {
+      // NEW: Enhanced comment detection
+      if (this.COMMENT_REGEX.test(contentLine) || 
+          contentLine.startsWith('//') || 
+          contentLine.startsWith('/*') ||
+          contentLine.startsWith('<!--')) {
         continue;
       }
 

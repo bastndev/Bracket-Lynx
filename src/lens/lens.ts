@@ -224,6 +224,50 @@ export class BracketLynxConfig {
 const isInlineScope = (bracket: BracketEntry) =>
   bracket.end.position.line <= bracket.start.position.line;
 
+/**
+ * Check if a position is inside a comment
+ */
+const isPositionInComment = (
+  document: vscode.TextDocument,
+  position: vscode.Position
+): boolean => {
+  const text = document.getText();
+  const offset = document.offsetAt(position);
+  const beforeText = text.substring(0, offset);
+  
+  // Check for block comments
+  const lastBlockCommentStart = beforeText.lastIndexOf('/*');
+  const lastBlockCommentEnd = beforeText.lastIndexOf('*/');
+  
+  if (lastBlockCommentStart > lastBlockCommentEnd) {
+    return true;
+  }
+  
+  // Check for HTML comments
+  const lastHtmlCommentStart = beforeText.lastIndexOf('<!--');
+  const lastHtmlCommentEnd = beforeText.lastIndexOf('-->');
+  
+  if (lastHtmlCommentStart > lastHtmlCommentEnd) {
+    return true;
+  }
+  
+  // Check for line comments
+  const lastLineComment = beforeText.lastIndexOf('//');
+  const lastHashComment = beforeText.lastIndexOf('#');
+  
+  const lastCommentMarker = Math.max(lastLineComment, lastHashComment);
+  
+  if (lastCommentMarker > lastBlockCommentStart && lastCommentMarker > lastBlockCommentEnd &&
+      lastCommentMarker > lastHtmlCommentStart && lastCommentMarker > lastHtmlCommentEnd) {
+    const textAfterComment = beforeText.substring(lastCommentMarker);
+    if (!textAfterComment.includes('\n')) {
+      return true;
+    }
+  }
+  
+  return false;
+};
+
     interface DebugOutput {
       message: string;
       data?: unknown;
@@ -1105,6 +1149,34 @@ export class BracketHeaderGenerator {
 // ============================================================================
 
 export class BracketDecorationGenerator {
+  /**
+   * Check if a range is inside a comment
+   */
+  private static isRangeInComment(
+    document: vscode.TextDocument,
+    range: vscode.Range
+  ): boolean {
+    // Check if either the start or end position is inside a comment
+    if (isPositionInComment(document, range.start) || isPositionInComment(document, range.end)) {
+      return true;
+    }
+    
+    // Check if the range contains comment markers
+    const text = document.getText();
+    const startOffset = document.offsetAt(range.start);
+    const endOffset = document.offsetAt(range.end);
+    const rangeText = text.substring(startOffset, endOffset);
+    
+    // Check for comment markers within the range
+    if (rangeText.includes('//') || rangeText.includes('#') || 
+        rangeText.includes('/*') || rangeText.includes('*/') || 
+        rangeText.includes('<!--') || rangeText.includes('-->')) {
+      return true;
+    }
+    
+    return false;
+  }
+
   static getBracketDecorationSource(
     document: vscode.TextDocument,
     brackets: BracketEntry[]
@@ -1147,26 +1219,47 @@ export class BracketDecorationGenerator {
           context.entry.end.position.line <
             (context.parentEntry?.end.position.line ?? document.lineCount + 1)
         ) {
-          const bracketHeader = BracketHeaderGenerator.getBracketHeader(
-            document,
-            context
+          // NEW: Check if the bracket content is commented before generating header
+          const bracketRange = new vscode.Range(
+            context.entry.start.position,
+            context.entry.end.position
           );
-          if (0 < bracketHeader.length) {
-            const lineNumbers = getLineNumbers(context.entry);
-            const decorationText = `${
-              context.entry.isUnmatchBrackets ? unmatchBracketsPrefix : prefix
-            }${lineNumbers}•${bracketHeader}`;
+          
+          if (!this.isRangeInComment(document, bracketRange)) {
+            const bracketHeader = BracketHeaderGenerator.getBracketHeader(
+              document,
+              context
+            );
+            if (0 < bracketHeader.length) {
+              const lineNumbers = getLineNumbers(context.entry);
+              const decorationText = `${
+                context.entry.isUnmatchBrackets ? unmatchBracketsPrefix : prefix
+              }${lineNumbers}•${bracketHeader}`;
 
-            result.push({
-              range: new vscode.Range(
+              const decorationRange = new vscode.Range(
                 PositionUtils.nextCharacter(
                   context.entry.end.position,
                   -context.entry.end.token.length
                 ),
                 context.entry.end.position
-              ),
-              bracketHeader: decorationText,
-            });
+              );
+
+              // NEW: Check if the decoration range is inside a comment
+              if (!this.isRangeInComment(document, decorationRange)) {
+                result.push({
+                  range: decorationRange,
+                  bracketHeader: decorationText,
+                });
+              } else if (BracketLynxConfig.debug) {
+                console.log(
+                  `Bracket Lynx: Skipping decoration for commented code at lines ${context.entry.start.position.line + 1}-${context.entry.end.position.line + 1}`
+                );
+              }
+            }
+          } else if (BracketLynxConfig.debug) {
+            console.log(
+              `Bracket Lynx: Skipping bracket analysis for commented code at lines ${context.entry.start.position.line + 1}-${context.entry.end.position.line + 1}`
+            );
           }
         }
         context.entry.items.map((entry, index, array) =>
