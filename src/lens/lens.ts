@@ -202,9 +202,46 @@ export class BracketLynxConfig {
     );
   }
 
+  static getLanguageSpecificConfig(languageId: string): LanguageConfiguration {
+    const baseConfig = this.languageConfiguration;
+    
+    // Language-specific comment configurations
+    const languageComments: Record<string, { line?: string[], block?: ScopeTerms[] }> = {
+      'javascript': { line: ['//'], block: [{ opening: '/*', closing: '*/' }] },
+      'typescript': { line: ['//'], block: [{ opening: '/*', closing: '*/' }] },
+      'javascriptreact': { line: ['//'], block: [{ opening: '/*', closing: '*/' }] },
+      'typescriptreact': { line: ['//'], block: [{ opening: '/*', closing: '*/' }] },
+      'html': { block: [{ opening: '<!--', closing: '-->' }] },
+      'css': { block: [{ opening: '/*', closing: '*/' }] },
+      'scss': { line: ['//'], block: [{ opening: '/*', closing: '*/' }] },
+      'vue': { line: ['//'], block: [{ opening: '/*', closing: '*/' }, { opening: '<!--', closing: '-->' }] },
+      'astro': { line: ['//'], block: [{ opening: '/*', closing: '*/' }, { opening: '<!--', closing: '-->' }] },
+      'svelte': { line: ['//'], block: [{ opening: '/*', closing: '*/' }, { opening: '<!--', closing: '-->' }] },
+      'json': { }, // JSON doesn't support comments
+      'python': { line: ['#'] },
+      'php': { line: ['//'], block: [{ opening: '/*', closing: '*/' }] },
+    };
+
+    const languageSpecific = languageComments[languageId];
+    if (languageSpecific) {
+      return {
+        ...baseConfig,
+        comments: languageSpecific
+      };
+    }
+
+    return baseConfig;
+  }
+
   private static getDefaultLanguageConfig(): LanguageConfiguration {
     return {
       ignoreCase: false,
+      comments: {
+        line: ['//'],
+        block: [
+          { opening: '/*', closing: '*/' }
+        ]
+      },
       brackets: {
         symbol: [
           { opening: '{', closing: '}', headerMode: 'smart' },
@@ -1081,6 +1118,81 @@ export class BracketHeaderGenerator {
 // ============================================================================
 
 export class BracketDecorationGenerator {
+  /**
+   * Check if a range is inside a comment
+   */
+  private static isRangeInComment(
+    document: vscode.TextDocument,
+    range: vscode.Range
+  ): boolean {
+    const languageConfiguration = BracketLynxConfig.getLanguageSpecificConfig(document.languageId);
+    const text = document.getText();
+    
+    // Get comment patterns for the language
+    const blockComments = languageConfiguration.comments?.block || [];
+    const lineComments = languageConfiguration.comments?.line || [];
+    
+    // Check if range is inside any comment
+    const startOffset = document.offsetAt(range.start);
+    const endOffset = document.offsetAt(range.end);
+    
+    // Check line comments first (more common and faster)
+    for (const lineComment of lineComments) {
+      const lines = text.split('\n');
+      for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+        const line = lines[lineIndex];
+        const commentIndex = line.indexOf(lineComment);
+        if (commentIndex !== -1) {
+          const lineStartOffset = document.offsetAt(new vscode.Position(lineIndex, 0));
+          const commentStartOffset = lineStartOffset + commentIndex;
+          const lineEndOffset = document.offsetAt(new vscode.Position(lineIndex, line.length));
+          
+          // Check if our range overlaps with this comment
+          if (startOffset >= commentStartOffset && startOffset < lineEndOffset) {
+            return true;
+          }
+          if (endOffset > commentStartOffset && endOffset <= lineEndOffset) {
+            return true;
+          }
+        }
+      }
+    }
+    
+    // Check block comments
+    for (const blockComment of blockComments) {
+      const openPattern = blockComment.opening;
+      const closePattern = blockComment.closing;
+      
+      let searchIndex = 0;
+      while (searchIndex < text.length) {
+        const openIndex = text.indexOf(openPattern, searchIndex);
+        if (openIndex === -1) {
+          break;
+        }
+        
+        const closeIndex = text.indexOf(closePattern, openIndex + openPattern.length);
+        if (closeIndex === -1) {
+          // Unclosed comment - treat rest of file as commented
+          if (startOffset >= openIndex) {
+            return true;
+          }
+          break;
+        }
+        
+        const commentEndOffset = closeIndex + closePattern.length;
+        
+        // Check if our range is inside this block comment
+        if (startOffset >= openIndex && endOffset <= commentEndOffset) {
+          return true;
+        }
+        
+        searchIndex = commentEndOffset;
+      }
+    }
+    
+    return false;
+  }
+
   static getBracketDecorationSource(
     document: vscode.TextDocument,
     brackets: BracketEntry[]
@@ -1123,26 +1235,36 @@ export class BracketDecorationGenerator {
           context.entry.end.position.line <
             (context.parentEntry?.end.position.line ?? document.lineCount + 1)
         ) {
-          const bracketHeader = BracketHeaderGenerator.getBracketHeader(
-            document,
-            context
+          const decorationRange = new vscode.Range(
+            PositionUtils.nextCharacter(
+              context.entry.end.position,
+              -context.entry.end.token.length
+            ),
+            context.entry.end.position
           );
-          if (0 < bracketHeader.length) {
-            const lineNumbers = getLineNumbers(context.entry);
-            const decorationText = `${
-              context.entry.isUnmatchBrackets ? unmatchBracketsPrefix : prefix
-            }${lineNumbers}•${bracketHeader}`;
 
-            result.push({
-              range: new vscode.Range(
-                PositionUtils.nextCharacter(
-                  context.entry.end.position,
-                  -context.entry.end.token.length
-                ),
-                context.entry.end.position
-              ),
-              bracketHeader: decorationText,
-            });
+          // Check if the bracket range is inside a comment
+          const bracketRange = new vscode.Range(
+            context.entry.start.position,
+            context.entry.end.position
+          );
+
+          if (!this.isRangeInComment(document, bracketRange)) {
+            const bracketHeader = BracketHeaderGenerator.getBracketHeader(
+              document,
+              context
+            );
+            if (0 < bracketHeader.length) {
+              const lineNumbers = getLineNumbers(context.entry);
+              const decorationText = `${
+                context.entry.isUnmatchBrackets ? unmatchBracketsPrefix : prefix
+              }${lineNumbers}•${bracketHeader}`;
+
+              result.push({
+                range: decorationRange,
+                bracketHeader: decorationText,
+              });
+            }
           }
         }
         context.entry.items.map((entry, index, array) =>
@@ -1430,15 +1552,54 @@ export class BracketLynx {
       return;
     }
 
-    // Try incremental parsing, but only for non-Astro files
+    // Check if changes involve comment patterns for faster response
+    let hasCommentChanges = false;
     if (changes && changes.length > 0) {
-      this.handleIncrementalChanges(document, changes);
-    } else {
+      const languageConfig = BracketLynxConfig.getLanguageSpecificConfig(document.languageId);
+      const lineComments = languageConfig.comments?.line || [];
+      const blockComments = languageConfig.comments?.block || [];
+      
+      for (const change of changes) {
+        const changeText = change.text;
+        // Check if the change involves comment syntax
+        const hasLineComment = lineComments.some(comment => 
+          changeText.includes(comment) || 
+          (change.rangeLength > 0 && changeText === '') // Deletion might remove comments
+        );
+        const hasBlockComment = blockComments.some(comment => 
+          changeText.includes(comment.opening) || changeText.includes(comment.closing) ||
+          (change.rangeLength > 0 && changeText === '') // Deletion might remove comments
+        );
+        
+        if (hasLineComment || hasBlockComment) {
+          hasCommentChanges = true;
+          break;
+        }
+      }
+    }
+
+    // For comment changes, clear cache immediately for faster response
+    if (hasCommentChanges) {
       CacheManager.clearAllDecorationCache();
+    } else {
+      // Try incremental parsing for non-comment changes
+      if (changes && changes.length > 0) {
+        this.handleIncrementalChanges(document, changes);
+      } else {
+        CacheManager.clearAllDecorationCache();
+      }
     }
 
     if ('auto' === BracketLynxConfig.mode) {
-      this.delayUpdateDecorationByDocument(document);
+      // Use immediate update for comment changes, delayed for others
+      if (hasCommentChanges) {
+        // Shorter delay for comment changes
+        setTimeout(() => {
+          this.updateDecorationByDocument(document);
+        }, 25); // Very short delay for comment changes
+      } else {
+        this.delayUpdateDecorationByDocument(document);
+      }
     }
   }
 

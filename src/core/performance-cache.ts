@@ -608,13 +608,14 @@ export class SmartDebouncer {
       0.5
     );
 
-    const baseDelay = 150; // Base delay in ms
-    const sizeDelay = sizeMultiplier * 100;
-    const editorMultiplier = isActiveEditor ? 1 : 2;
+    // Reduced base delay for more responsive updates, especially for comments
+    const baseDelay = 50; // Reduced from 150ms to 50ms for faster response
+    const sizeDelay = sizeMultiplier * 50; // Reduced multiplier
+    const editorMultiplier = isActiveEditor ? 0.5 : 1.5; // More aggressive for active editor
 
     const totalDelay = Math.min(
       (baseDelay + sizeDelay) * editorMultiplier,
-      2000
+      1000 // Reduced max delay from 2000ms to 1000ms
     );
 
     // ⏰ Set new timer

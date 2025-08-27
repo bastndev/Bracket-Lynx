@@ -13,7 +13,7 @@ export let extensionContext: vscode.ExtensionContext;
 class DecorationCoordinator {
     private static updateInProgress = false;
     private static pendingUpdates = new Set<string>();
-    private static readonly COORDINATION_DELAY = 16; // ~60fps for smooth visuals
+    private static readonly COORDINATION_DELAY = 8; // Reduced delay for faster response (~120fps)
 
     /**
      * Coordinated update to avoid flickering
@@ -252,9 +252,28 @@ function handleWorkspaceFoldersChange() {
 }
 
 function handleTextDocumentChange(event: vscode.TextDocumentChangeEvent) {
+    // Pass the changes to the lens system for better handling
+    BracketLynx.onDidChangeTextDocument(event.document, event.contentChanges);
+    
     const editor = vscode.window.visibleTextEditors.find(e => e.document === event.document);
     if (editor) {
-        DecorationCoordinator.coordinatedUpdate(editor);
+        // Check if changes involve comment patterns for immediate response
+        const languageConfig = vscode.workspace.getConfiguration('bracketLynx');
+        const hasCommentChanges = event.contentChanges.some(change => {
+            const text = change.text;
+            // Common comment patterns across languages
+            return text.includes('//') || text.includes('/*') || text.includes('*/') || 
+                   text.includes('<!--') || text.includes('-->') || text.includes('#');
+        });
+        
+        if (hasCommentChanges) {
+            // Immediate update for comment changes
+            setTimeout(() => {
+                DecorationCoordinator.coordinatedUpdate(editor);
+            }, 10);
+        } else {
+            DecorationCoordinator.coordinatedUpdate(editor);
+        }
     }
 }
 
