@@ -74,6 +74,13 @@ class FrameworksDecorator {
   private static readonly SCOPED_STYLE_REGEX = /<style[^>]*\s+scoped[^>]*>/;
   private static readonly INSIGNIFICANT_CONTENT = new Set(['{', '}', '', '<!--', '-->', '{{', '}}']);
   private static readonly COMMENT_REGEX = /^<!--.*-->$/;
+  
+  // Comment detection patterns for different frameworks
+  private static readonly HTML_COMMENT_START = /<!--/;
+  private static readonly HTML_COMMENT_END = /-->/;
+  private static readonly JS_LINE_COMMENT = /\/\//;
+  private static readonly JS_BLOCK_COMMENT_START = /\/\*/;
+  private static readonly JS_BLOCK_COMMENT_END = /\*\//;
 
   /**
    * Main entry point - processes all supported frameworks
@@ -204,6 +211,11 @@ class FrameworksDecorator {
 
     for (const component of componentRanges) {
       if (component.hasContent && this.shouldShowDecoration(component)) {
+        // Check if the component is commented out
+        if (this.isComponentCommented(document, component)) {
+          continue; // Skip commented components
+        }
+
         const prefix = BracketLynxConfig.prefix.replace('‹~', '‹~').trim();
         const scopedIndicator = component.isScoped ? ' [scoped]' : '';
         const decorationText = `${prefix} #${component.startLine}-${component.endLine} •${component.name}${scopedIndicator}`;
@@ -241,14 +253,49 @@ class FrameworksDecorator {
     const componentRanges: ComponentRange[] = [];
     const minLines = Math.max(1, BracketLynxConfig.minBracketScopeLines - 2);
 
+    // Track comment state
+    let inHtmlComment = false;
+    let inJsBlockComment = false;
+
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
 
-      if (!line || !this.TAG_DETECTOR_REGEX.test(line)) {
+      if (!line) {
         continue;
       }
 
+      // Update comment state for this line
       const trimmedLine = line.trim();
+      
+      // Check for HTML comment start/end
+      if (trimmedLine.includes('<!--')) {
+        inHtmlComment = true;
+      }
+      if (trimmedLine.includes('-->')) {
+        inHtmlComment = false;
+        continue; // Skip this line as it ends a comment
+      }
+      
+      // Check for JS block comment start/end
+      if (trimmedLine.includes('/*')) {
+        inJsBlockComment = true;
+      }
+      if (trimmedLine.includes('*/')) {
+        inJsBlockComment = false;
+        continue; // Skip this line as it ends a comment
+      }
+      
+      // Check for JS line comment
+      const hasLineComment = trimmedLine.includes('//');
+      
+      // Skip if we're in any kind of comment
+      if (inHtmlComment || inJsBlockComment || hasLineComment) {
+        continue;
+      }
+
+      if (!this.TAG_DETECTOR_REGEX.test(line)) {
+        continue;
+      }
 
       // Process opening tags
       const openTagMatch = trimmedLine.match(this.OPEN_TAG_REGEX);
@@ -350,6 +397,99 @@ class FrameworksDecorator {
    */
   private static isTargetHtmlElement(tagName: string, config: SupportedFramework): boolean {
     return config.htmlElements.some(elem => elem === tagName.toLowerCase());
+  }
+
+  /**
+   * Check if a position is inside a comment
+   */
+  private static isPositionInComment(
+    document: vscode.TextDocument,
+    position: vscode.Position
+  ): boolean {
+    const text = document.getText();
+    const offset = document.offsetAt(position);
+    
+    // Check HTML comments (<!-- -->)
+    let searchIndex = 0;
+    while (searchIndex < offset) {
+      const commentStart = text.indexOf('<!--', searchIndex);
+      if (commentStart === -1 || commentStart >= offset) {
+        break;
+      }
+      
+      const commentEnd = text.indexOf('-->', commentStart + 4);
+      if (commentEnd === -1) {
+        // Unclosed comment - rest of file is commented
+        return offset >= commentStart;
+      }
+      
+      if (offset >= commentStart && offset <= commentEnd + 3) {
+        return true;
+      }
+      
+      searchIndex = commentEnd + 3;
+    }
+    
+    // Check JavaScript-style comments for script sections
+    const lines = text.split('\n');
+    const lineIndex = position.line;
+    
+    if (lineIndex < lines.length) {
+      const line = lines[lineIndex];
+      const lineCommentIndex = line.indexOf('//');
+      if (lineCommentIndex !== -1 && position.character >= lineCommentIndex) {
+        return true;
+      }
+    }
+    
+    // Check JavaScript block comments (/* */)
+    searchIndex = 0;
+    while (searchIndex < offset) {
+      const blockStart = text.indexOf('/*', searchIndex);
+      if (blockStart === -1 || blockStart >= offset) {
+        break;
+      }
+      
+      const blockEnd = text.indexOf('*/', blockStart + 2);
+      if (blockEnd === -1) {
+        // Unclosed block comment
+        return offset >= blockStart;
+      }
+      
+      if (offset >= blockStart && offset <= blockEnd + 2) {
+        return true;
+      }
+      
+      searchIndex = blockEnd + 2;
+    }
+    
+    return false;
+  }
+
+  /**
+   * Check if a range is inside a comment
+   */
+  private static isRangeInComment(
+    document: vscode.TextDocument,
+    range: vscode.Range
+  ): boolean {
+    // Check if both start and end positions are in comments
+    return this.isPositionInComment(document, range.start) && 
+           this.isPositionInComment(document, range.end);
+  }
+
+  /**
+   * Check if a component range is commented out
+   */
+  private static isComponentCommented(
+    document: vscode.TextDocument,
+    component: ComponentRange
+  ): boolean {
+    const startPos = new vscode.Position(component.startLine - 1, 0);
+    const endPos = new vscode.Position(component.endLine - 1, 0);
+    const componentRange = new vscode.Range(startPos, endPos);
+    
+    return this.isRangeInComment(document, componentRange);
   }
 
   /**
