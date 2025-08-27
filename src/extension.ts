@@ -48,9 +48,11 @@ class DecorationCoordinator {
         try {
             this.pendingUpdates.clear();
 
-            BracketLynx.delayUpdateDecoration(editor);
-
-            await FrameworksDecorator.updateDecorations(editor);
+            // Process both decorators concurrently for better performance
+            await Promise.all([
+                Promise.resolve(BracketLynx.delayUpdateDecoration(editor)),
+                FrameworksDecorator.updateDecorations(editor)
+            ]);
 
         } catch (error) {
             console.error('DecorationCoordinator: Error in processPendingUpdates:', error);
@@ -252,28 +254,31 @@ function handleWorkspaceFoldersChange() {
 }
 
 function handleTextDocumentChange(event: vscode.TextDocumentChangeEvent) {
+    // Skip processing for very small changes (like single character typing)
+    const hasSignificantChanges = event.contentChanges.some(change => {
+        // Consider changes significant if they:
+        // 1. Add/remove brackets or structural characters
+        // 2. Are multi-line changes
+        // 3. Involve comments
+        const text = change.text;
+        const hasStructuralChars = /[{}[\]()/*#<>]/.test(text);
+        const isMultiLine = text.includes('\n') || (change.range && change.range.start.line !== change.range.end.line);
+        const hasComments = text.includes('//') || text.includes('/*') || text.includes('*/') || 
+                           text.includes('<!--') || text.includes('-->') || text.includes('#');
+        
+        return hasStructuralChars || isMultiLine || hasComments || text.length > 10;
+    });
+
+    if (!hasSignificantChanges) {
+        return; // Skip minor changes like single character typing
+    }
+
     // Pass the changes to the lens system for better handling
     BracketLynx.onDidChangeTextDocument(event.document, event.contentChanges);
     
     const editor = vscode.window.visibleTextEditors.find(e => e.document === event.document);
     if (editor) {
-        // Check if changes involve comment patterns for immediate response
-        const languageConfig = vscode.workspace.getConfiguration('bracketLynx');
-        const hasCommentChanges = event.contentChanges.some(change => {
-            const text = change.text;
-            // Common comment patterns across languages
-            return text.includes('//') || text.includes('/*') || text.includes('*/') || 
-                   text.includes('<!--') || text.includes('-->') || text.includes('#');
-        });
-        
-        if (hasCommentChanges) {
-            // Immediate update for comment changes
-            setTimeout(() => {
-                DecorationCoordinator.coordinatedUpdate(editor);
-            }, 10);
-        } else {
-            DecorationCoordinator.coordinatedUpdate(editor);
-        }
+        DecorationCoordinator.coordinatedUpdate(editor);
     }
 }
 
@@ -318,7 +323,10 @@ function handleActiveTextEditorChange(editor?: vscode.TextEditor) {
 // ============================================================================
 export const deactivate = () => {
     try {
+        // Clear all decorations first
         DecorationCoordinator.clearAll();
+        
+        // Dispose of all components in proper order
         FrameworksDecorator.dispose();
         BracketLynx.dispose();
 

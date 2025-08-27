@@ -126,16 +126,19 @@ export class AdvancedCacheManager {
       return null;
     }
 
-    // 🎯 Update LRU data (mutable update for performance)
-    (cached as any).lastAccessed = now;
-    (cached as any).accessCount++;
+    // 🎯 Update LRU data (create new entry to maintain immutability)
+    const updatedEntry: AdvancedDocumentCacheEntry = {
+      ...cached,
+      lastAccessed: now,
+      accessCount: cached.accessCount + 1
+    };
 
-    // 🚀 Move to end for LRU (delete and re-add)
+    // 🚀 Move to end for LRU (delete and re-add with updated entry)
     this.documentCache.delete(uri);
-    this.documentCache.set(uri, cached);
+    this.documentCache.set(uri, updatedEntry);
 
     this.metrics.hits++;
-    return cached;
+    return updatedEntry;
   }
 
   /**
@@ -384,14 +387,19 @@ export class AdvancedCacheManager {
    * 📊 Get estimated memory usage in MB
    */
   getEstimatedMemoryUsage(): number {
-    // 🎯 Rough estimation based on cache sizes and average entry size
-    const avgDocumentEntrySize = 2048; // 2KB per document entry estimate
-    const avgEditorEntrySize = 512; // 512B per editor entry estimate
+    let totalMemory = 0;
+    
+    // Calculate actual memory usage based on content
+    for (const entry of this.documentCache.values()) {
+      totalMemory += entry.fileSize * 0.1; // Estimate 10% overhead for brackets/decorations
+      totalMemory += entry.brackets?.length * 64 || 0; // ~64 bytes per bracket entry
+      totalMemory += entry.decorationSource?.length * 128 || 0; // ~128 bytes per decoration
+    }
+    
+    // Editor cache is much smaller
+    totalMemory += this.editorCache.size * 512;
 
-    const documentMemory = this.documentCache.size * avgDocumentEntrySize;
-    const editorMemory = this.editorCache.size * avgEditorEntrySize;
-
-    return (documentMemory + editorMemory) / (1024 * 1024); // Convert to MB
+    return totalMemory / (1024 * 1024); // Convert to MB
   }
 
   /**
@@ -600,29 +608,22 @@ export class SmartDebouncer {
       clearTimeout(existingTimer);
     }
 
-    // 🎯 Calculate delay based on file size and editor state
+    // 🎯 Simplified delay calculation
     const fileSize = document.getText().length;
-    const baseSizeUnit = 16 * 1024; // 16KB
-    const sizeMultiplier = Math.pow(
-      Math.max(fileSize, baseSizeUnit) / baseSizeUnit,
-      0.5
-    );
-
-    // Reduced base delay for more responsive updates, especially for comments
-    const baseDelay = 50; // Reduced from 150ms to 50ms for faster response
-    const sizeDelay = sizeMultiplier * 50; // Reduced multiplier
-    const editorMultiplier = isActiveEditor ? 0.5 : 1.5; // More aggressive for active editor
-
-    const totalDelay = Math.min(
-      (baseDelay + sizeDelay) * editorMultiplier,
-      1000 // Reduced max delay from 2000ms to 1000ms
-    );
+    const isLargeFile = fileSize > 100 * 1024; // 100KB threshold
+    
+    let delay: number;
+    if (isActiveEditor) {
+      delay = isLargeFile ? 100 : 50;
+    } else {
+      delay = isLargeFile ? 300 : 150;
+    }
 
     // ⏰ Set new timer
     const timer = setTimeout(() => {
       this.timers.delete(key);
       callback();
-    }, totalDelay);
+    }, delay);
 
     this.timers.set(key, timer);
   }

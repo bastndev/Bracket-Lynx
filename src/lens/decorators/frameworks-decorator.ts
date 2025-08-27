@@ -90,18 +90,23 @@ class FrameworksDecorator {
       return;
     }
 
-    const framework = this.detectFramework(editor.document);
-    if (!framework) {
-      return;
-    }
+    try {
+      const framework = this.detectFramework(editor.document);
+      if (!framework) {
+        return;
+      }
 
-    // Add to queue and process
-    const editorKey = this.getEditorKey(editor);
-    this.updateQueue.add(editorKey);
-    this.pendingDecorations.push({ editor, framework });
+      // Add to queue and process
+      const editorKey = this.getEditorKey(editor);
+      this.updateQueue.add(editorKey);
+      this.pendingDecorations.push({ editor, framework });
 
-    if (!this.isProcessing) {
-      await this.processDecorationQueue();
+      if (!this.isProcessing) {
+        await this.processDecorationQueue();
+      }
+    } catch (error) {
+      console.error('FrameworksDecorator: Failed to update decorations:', error);
+      // Don't throw - this should not break the extension
     }
   }
 

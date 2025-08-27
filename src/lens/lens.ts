@@ -164,17 +164,13 @@ export class BracketLynxConfig {
   }
 
   static get maxBracketHeaderLength(): number {
-    return this.getConfig().get(
-      'maxBracketHeaderLength',
-      PERFORMANCE_LIMITS.MAX_HEADER_LENGTH
-    );
+    const value = this.getConfig().get('maxBracketHeaderLength', PERFORMANCE_LIMITS.MAX_HEADER_LENGTH);
+    return Math.max(10, Math.min(200, value)); // Clamp between 10-200
   }
 
   static get minBracketScopeLines(): number {
-    return this.getConfig().get(
-      'minBracketScopeLines',
-      PERFORMANCE_LIMITS.MIN_BRACKET_SCOPE_LINES
-    );
+    const value = this.getConfig().get('minBracketScopeLines', PERFORMANCE_LIMITS.MIN_BRACKET_SCOPE_LINES);
+    return Math.max(1, Math.min(50, value)); // Clamp between 1-50
   }
 
   static get enablePerformanceFilters(): boolean {
@@ -182,17 +178,13 @@ export class BracketLynxConfig {
   }
 
   static get maxFileSize(): number {
-    return this.getConfig().get(
-      'maxFileSize',
-      PERFORMANCE_LIMITS.MAX_FILE_SIZE
-    );
+    const value = this.getConfig().get('maxFileSize', PERFORMANCE_LIMITS.MAX_FILE_SIZE);
+    return Math.max(1024 * 1024, Math.min(100 * 1024 * 1024, value)); // Clamp between 1MB-100MB
   }
 
   static get maxDecorationsPerFile(): number {
-    return this.getConfig().get(
-      'maxDecorationsPerFile',
-      PERFORMANCE_LIMITS.MAX_DECORATIONS_PER_FILE
-    );
+    const value = this.getConfig().get('maxDecorationsPerFile', PERFORMANCE_LIMITS.MAX_DECORATIONS_PER_FILE);
+    return Math.max(50, Math.min(2000, value)); // Clamp between 50-2000
   }
 
   static get languageConfiguration(): LanguageConfiguration {

@@ -54,13 +54,29 @@ function configShouldProcessFile(languageId: string, fileName: string): boolean 
 // Optimized Set for O(1) lookups
 const EXCLUDED_SYMBOLS_SET = new Set<string>(EXCLUDED_SYMBOLS);
 
-// Cached regex patterns for better performance
+// Cached regex patterns for better performance - with size limit
 const REGEX_CACHE = new Map<string, RegExp>();
+const MAX_REGEX_CACHE_SIZE = 50;
 
 function getCachedRegex(pattern: string, flags: string = 'g'): RegExp {
   const key = `${pattern}|${flags}`;
+  
   if (!REGEX_CACHE.has(key)) {
-    REGEX_CACHE.set(key, new RegExp(pattern, flags));
+    // Prevent memory leaks by limiting cache size
+    if (REGEX_CACHE.size >= MAX_REGEX_CACHE_SIZE) {
+      const firstKey = REGEX_CACHE.keys().next().value;
+      if (firstKey) {
+        REGEX_CACHE.delete(firstKey);
+      }
+    }
+    
+    try {
+      REGEX_CACHE.set(key, new RegExp(pattern, flags));
+    } catch (error) {
+      // Return a safe fallback regex if pattern is invalid
+      console.warn(`Invalid regex pattern: ${pattern}`, error);
+      return /./g;
+    }
   }
   return REGEX_CACHE.get(key)!;
 }

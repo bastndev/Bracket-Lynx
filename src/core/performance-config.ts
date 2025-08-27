@@ -217,10 +217,36 @@ export function formatBytes(bytes: number): string {
 // ============================================================================
 
 /**
- * Check if a value is a valid hex color
+ * Check if a value is a valid hex color (supports 3, 6, and 8 digit formats)
  */
 export function isValidHexColor(color: string): boolean {
-  return /^#[0-9a-fA-F]{6}$/.test(color);
+  if (!color || typeof color !== 'string') {
+    return false;
+  }
+  
+  // Support #RGB, #RRGGBB, and #RRGGBBAA formats
+  return /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(color);
+}
+
+/**
+ * Normalize hex color to 6-digit format
+ */
+export function normalizeHexColor(color: string): string {
+  if (!isValidHexColor(color)) {
+    return '#515151'; // Default fallback
+  }
+  
+  // Convert 3-digit to 6-digit format
+  if (color.length === 4) {
+    return '#' + color[1] + color[1] + color[2] + color[2] + color[3] + color[3];
+  }
+  
+  // Return first 7 characters for 8-digit colors (remove alpha)
+  if (color.length === 9) {
+    return color.substring(0, 7);
+  }
+  
+  return color;
 }
 
 /**
