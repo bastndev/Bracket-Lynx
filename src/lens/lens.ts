@@ -224,22 +224,7 @@ export class BracketLynxConfig {
 const isInlineScope = (bracket: BracketEntry) =>
   bracket.end.position.line <= bracket.start.position.line;
 
-    interface DebugOutput {
-      message: string;
-      data?: unknown;
-      timestamp: number;
-      context?: string;
-    }
-
-    const debug = (output: DebugOutput | string) => {
-      if (BracketLynxConfig.debug) {
-        if (typeof output === 'string') {
-          console.debug(output);
-        } else {
-          console.debug(`[${output.context || 'BracketLynx'}] ${output.message}`, output.data);
-        }
-      }
-    };
+    // Debug function removed for production
 
 // ============================================================================
 // CACHE MANAGEMENT
@@ -256,20 +241,12 @@ export class DocumentDecorationCacheEntry {
       // Use original parser for problematic files
       this.brackets = BracketParser.parseBrackets(document);
 
-      if (BracketLynxConfig.debug) {
-        console.log(
-          `Bracket Lynx: Using original parser for: ${document.fileName} (${document.languageId})`
-        );
-      }
+
     } else {
       // Use optimized parser for other files
       this.brackets = optimizedParser.parseBrackets(document);
 
-      if (BracketLynxConfig.debug) {
-        console.log(
-          `Bracket Lynx: Using optimized parser for: ${document.fileName} (${document.languageId})`
-        );
-      }
+
     }
 
     this.decorationSource =
@@ -707,7 +684,6 @@ export class BracketParser {
       ) {
         i = this.skipMultilineString(i, tokens, token, tokenConfig, regulate);
       } else {
-        debug(`unmatch-token: ${JSON.stringify(tokens[i])}`);
         i++;
       }
     }
@@ -1194,11 +1170,7 @@ export class BracketDecorationGenerator {
       BracketLynxConfig.enablePerformanceFilters &&
       result.length > maxDecorationsPerFile
     ) {
-      if (BracketLynxConfig.debug) {
-        console.log(
-          `Bracket Lynx: Limiting decorations from ${result.length} to ${maxDecorationsPerFile}`
-        );
-      }
+
 
       // Prioritize unmatched brackets and larger brackets
       const prioritized = result.sort((a, b) => {
@@ -1252,7 +1224,7 @@ export class BracketLynx {
       return;
     }
 
-    // NEW: Check if language is supported by rules
+    // Check if language is supported by rules
     if (
       !shouldProcessFileConfig(
         textEditor.document.languageId,
@@ -1284,7 +1256,7 @@ export class BracketLynx {
         CacheManager.getDocumentCache(
           textEditor.document
         ).decorationSource.forEach((i) => {
-          // NEW: Apply content filtering to remove excluded symbols
+          // Apply content filtering to remove excluded symbols
           const filteredContent = filterContent(i.bracketHeader);
 
           // Only add decoration if content is not empty after filtering
@@ -1361,7 +1333,7 @@ export class BracketLynx {
       return;
     }
 
-    // NEW: Check if language is supported by rules
+    // Check if language is supported by rules
     if (!shouldProcessFileConfig(document.languageId, document.fileName)) {
       return;
     }
@@ -1377,7 +1349,7 @@ export class BracketLynx {
       return;
     }
 
-    // NEW: Check if language is supported by rules
+    // Check if language is supported by rules
     if (!shouldProcessFileConfig(document.languageId, document.fileName)) {
       return;
     }
@@ -1410,15 +1382,7 @@ export class BracketLynx {
     CacheManager.clearAllDecorationCache();
     this.updateAllDecoration();
 
-    // Log cache metrics if debug is enabled
-    if (BracketLynxConfig.debug) {
-      const metrics = CacheManager.getCacheMetrics();
-      const hitRatio = CacheManager.getCacheHitRatio();
-      console.log(`Bracket Lynx Cache Metrics:`, {
-        hitRatio: `${(hitRatio * 100).toFixed(1)}%`,
-        ...metrics,
-      });
-    }
+
   }
 
   static onDidChangeActiveTextEditor(): void {
@@ -1461,12 +1425,12 @@ export class BracketLynx {
       return;
     }
 
-    // NEW: Check if language is supported by rules
+    // Check if language is supported by rules
     if (!shouldProcessFileConfig(document.languageId, document.fileName)) {
       return;
     }
 
-    // RESTORE: Try incremental parsing, but only for non-Astro files
+    // Try incremental parsing, but only for non-Astro files
     if (changes && changes.length > 0) {
       this.handleIncrementalChanges(document, changes);
     } else {
@@ -1489,11 +1453,7 @@ export class BracketLynx {
       // Use parser exception manager
       const optimizedParser = OptimizedBracketParser.getInstance();
       if (optimizedParser.shouldUseOriginalParser(document)) {
-        if (BracketLynxConfig.debug) {
-          console.log(
-            `Bracket Lynx: Skipping incremental parsing for: ${document.fileName}`
-          );
-        }
+        
         CacheManager.clearAllDecorationCache();
         return;
       }
@@ -1517,11 +1477,7 @@ export class BracketLynx {
             incrementalResult.brackets
           );
 
-        if (BracketLynxConfig.debug) {
-          console.log(
-            `Bracket Lynx: Incremental update completed in ${incrementalResult.parseTime}ms`
-          );
-        }
+
 
         return;
       }
@@ -1540,7 +1496,7 @@ export class BracketLynx {
    * Get performance metrics for debugging
    */
   static getPerformanceMetrics() {
-    // RESTORE: OptimizedBracketParser references
+          // OptimizedBracketParser references
     const optimizedParser = OptimizedBracketParser.getInstance();
     const advancedCache = AdvancedCacheManager.getInstance();
 
@@ -1548,7 +1504,7 @@ export class BracketLynx {
       cache: CacheManager.getCacheMetrics(),
       hitRatio: CacheManager.getCacheHitRatio(),
 
-      // RESTORE: Parser metrics
+      // Parser metrics
       parser: {
         ...optimizedParser.getCacheStats(),
 
@@ -1625,7 +1581,7 @@ export class BracketLynx {
   static dispose(): void {
     this.smartDebouncer.dispose();
 
-    // RESTORE: Cleanup optimized parser
+    // Cleanup optimized parser
     const optimizedParser = OptimizedBracketParser.getInstance();
     optimizedParser.dispose();
 

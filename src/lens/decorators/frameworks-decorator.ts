@@ -164,10 +164,7 @@ class FrameworksDecorator {
       const decorations = this.generateDecorations(editor.document, framework);
       editor.setDecorations(decorationType, decorations);
 
-      if (BracketLynxConfig.debug) {
-        const config = FRAMEWORK_CONFIGS[framework];
-        console.log(`${config.name} Decorator: Applied ${decorations.length} decorations to ${editor.document.fileName}`);
-      }
+
     } catch (error) {
       console.error(`FrameworksDecorator: Error updating ${framework} decorations:`, error);
       this.clearDecorations(editor, framework);
@@ -228,10 +225,7 @@ class FrameworksDecorator {
 
     const maxDecorations = BracketLynxConfig.maxDecorationsPerFile;
     if (decorations.length > maxDecorations) {
-      if (BracketLynxConfig.debug) {
-        const config = FRAMEWORK_CONFIGS[framework];
-        console.log(`${config.name} Decorator: Limiting decorations from ${decorations.length} to ${maxDecorations}`);
-      }
+
       return decorations.slice(0, maxDecorations);
     }
 
@@ -416,10 +410,7 @@ class FrameworksDecorator {
     const maxFileSize = BracketLynxConfig.maxFileSize;
 
     if (fileSize > maxFileSize) {
-      if (BracketLynxConfig.debug) {
-        const config = FRAMEWORK_CONFIGS[framework];
-        console.log(`${config.name} Decorator: Skipping large file: ${document.fileName} (${fileSize} bytes)`);
-      }
+
       return false;
     }
 
@@ -502,7 +493,7 @@ class FrameworksDecorator {
       const framework = this.detectFramework(editor.document);
       if (framework) {
         await this.processEditorDecorations(editor, framework);
-        console.log(`FrameworksDecorator: Force refreshed color for ${framework} in ${editor.document.fileName}`);
+
       }
     }
   }

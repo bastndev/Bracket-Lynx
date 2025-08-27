@@ -95,7 +95,7 @@ export const activate = async (context: vscode.ExtensionContext) => {
         logLevel: debugMode ? LogLevel.DEBUG : LogLevel.WARN
     });
 
-    logger.info('Bracket Lynx extension activating...', { version: '0.6.1' });
+    logger.info('Bracket Lynx extension activating...');
 
     try {
         // Initialize state and providers
