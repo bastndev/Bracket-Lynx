@@ -411,6 +411,11 @@ class FrameworksDecorator {
     document: vscode.TextDocument,
     position: vscode.Position
   ): boolean {
+    // Fast path for JSON files - they don't support comments
+    if (document.languageId === 'json') {
+      return false;
+    }
+
     const text = document.getText();
     const offset = document.offsetAt(position);
     

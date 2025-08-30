@@ -209,7 +209,7 @@ export class BracketLynxConfig {
       'vue': { line: ['//'], block: [{ opening: '/*', closing: '*/' }, { opening: '<!--', closing: '-->' }] },
       'astro': { line: ['//'], block: [{ opening: '/*', closing: '*/' }, { opening: '<!--', closing: '-->' }] },
       'svelte': { line: ['//'], block: [{ opening: '/*', closing: '*/' }, { opening: '<!--', closing: '-->' }] },
-      'json': { }, // JSON doesn't support comments
+      'json': { line: [], block: [] }, // JSON doesn't support comments - explicitly empty arrays
       'python': { line: ['#'] },
       'php': { line: ['//'], block: [{ opening: '/*', closing: '*/' }] },
     };
@@ -1117,12 +1117,22 @@ export class BracketDecorationGenerator {
     document: vscode.TextDocument,
     range: vscode.Range
   ): boolean {
+    // Fast path for JSON files - they don't support comments
+    if (document.languageId === 'json') {
+      return false;
+    }
+
     const languageConfiguration = BracketLynxConfig.getLanguageSpecificConfig(document.languageId);
     const text = document.getText();
     
     // Get comment patterns for the language
     const blockComments = languageConfiguration.comments?.block || [];
     const lineComments = languageConfiguration.comments?.line || [];
+    
+    // Early exit if no comment patterns are defined
+    if (blockComments.length === 0 && lineComments.length === 0) {
+      return false;
+    }
     
     // Check if range is inside any comment
     const startOffset = document.offsetAt(range.start);
@@ -1544,7 +1554,22 @@ export class BracketLynx {
       return;
     }
 
-    // Check if changes involve comment patterns for faster response
+    // Special handling for JSON files (no comment support needed)
+    if (document.languageId === 'json') {
+      // For JSON files, always clear cache and update immediately for any change
+      // This fixes the issue where decorations don't disappear when content is deleted
+      CacheManager.clearAllDecorationCache();
+      
+      if ('auto' === BracketLynxConfig.mode) {
+        // Immediate update for JSON files to handle deletions properly
+        setTimeout(() => {
+          this.updateDecorationByDocument(document);
+        }, 10); // Very short delay for JSON changes
+      }
+      return;
+    }
+
+    // For non-JSON files, check if changes involve comment patterns for faster response
     let hasCommentChanges = false;
     if (changes && changes.length > 0) {
       const languageConfig = BracketLynxConfig.getLanguageSpecificConfig(document.languageId);
