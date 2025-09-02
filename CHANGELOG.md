@@ -10,6 +10,7 @@ Discover more extensions at [bastndev.com/extensions](https://bastndev.com/exten
 
 </br>
 
+<!-- --- -->
 
 ## [0.9.1] - 2025-09-02
 
