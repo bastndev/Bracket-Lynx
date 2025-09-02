@@ -107,7 +107,7 @@
         <br /><strong>Nuxt</strong>
       </td>
       <td align="center" width="80">
-        <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/icons/f-remix.png" alt="Remix" width="55" height="55" />
+        <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/icons/f-remix.png" alt="Remix" width="50" height="50" />
         <br /><strong>Remix</strong>
       </td>
       <td align="center" width="80">
