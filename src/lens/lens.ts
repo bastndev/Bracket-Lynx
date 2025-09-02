@@ -209,9 +209,7 @@ export class BracketLynxConfig {
       'vue': { line: ['//'], block: [{ opening: '/*', closing: '*/' }, { opening: '<!--', closing: '-->' }] },
       'astro': { line: ['//'], block: [{ opening: '/*', closing: '*/' }, { opening: '<!--', closing: '-->' }] },
       'svelte': { line: ['//'], block: [{ opening: '/*', closing: '*/' }, { opening: '<!--', closing: '-->' }] },
-      'json': { line: [], block: [] }, // JSON doesn't support comments - explicitly empty arrays
-      'python': { line: ['#'] },
-      'php': { line: ['//'], block: [{ opening: '/*', closing: '*/' }] },
+      'json': { line: [], block: [] }
     };
 
     const languageSpecific = languageComments[languageId];
