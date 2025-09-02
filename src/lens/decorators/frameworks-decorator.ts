@@ -111,6 +111,55 @@ class FrameworksDecorator {
   }
 
   /**
+   * Handle document changes - optimized for comment detection
+   */
+  public static async onDidChangeTextDocument(
+    document: vscode.TextDocument,
+    changes?: readonly vscode.TextDocumentContentChangeEvent[]
+  ): Promise<void> {
+    const framework = this.detectFramework(document);
+    if (!framework) {
+      return;
+    }
+
+    // Check if changes involve comments for immediate response
+    let hasCommentChanges = false;
+    if (changes && changes.length > 0) {
+      for (const change of changes) {
+        const changeText = change.text;
+        const isDeletion = change.rangeLength > 0 && changeText === '';
+        
+        // Check for comment-related changes
+        if (changeText.includes('<!--') || changeText.includes('-->') ||
+            changeText.includes('//') || changeText.includes('/*') || 
+            changeText.includes('*/') || isDeletion) {
+          hasCommentChanges = true;
+          break;
+        }
+      }
+    }
+
+    // Update all visible editors for this document
+    const editorsToUpdate = vscode.window.visibleTextEditors.filter(
+      editor => editor.document === document
+    );
+
+    for (const editor of editorsToUpdate) {
+      if (hasCommentChanges) {
+        // Immediate update for comment changes
+        setTimeout(() => {
+          this.updateDecorations(editor);
+        }, 20);
+      } else {
+        // Normal delayed update for other changes
+        setTimeout(() => {
+          this.updateDecorations(editor);
+        }, 100);
+      }
+    }
+  }
+
+  /**
    * Process decoration queue to avoid conflicts
    */
   private static async processDecorationQueue(): Promise<void> {
@@ -258,7 +307,7 @@ class FrameworksDecorator {
     const componentRanges: ComponentRange[] = [];
     const minLines = Math.max(1, BracketLynxConfig.minBracketScopeLines - 2);
 
-    // Track comment state
+    // Track comment state with improved logic
     let inHtmlComment = false;
     let inJsBlockComment = false;
 
@@ -269,33 +318,59 @@ class FrameworksDecorator {
         continue;
       }
 
-      // Update comment state for this line
       const trimmedLine = line.trim();
       
-      // Check for HTML comment start/end
-      if (trimmedLine.includes('<!--')) {
+      // Improved comment state tracking
+      // Handle HTML comments
+      if (!inHtmlComment && trimmedLine.includes('<!--')) {
         inHtmlComment = true;
+        // Check if comment also ends on same line
+        if (trimmedLine.includes('-->')) {
+          inHtmlComment = false;
+          continue; // Skip this line entirely if it's a single-line comment
+        }
+        continue;
       }
-      if (trimmedLine.includes('-->')) {
+      if (inHtmlComment && trimmedLine.includes('-->')) {
         inHtmlComment = false;
         continue; // Skip this line as it ends a comment
       }
       
-      // Check for JS block comment start/end
-      if (trimmedLine.includes('/*')) {
+      // Handle JS block comments
+      if (!inJsBlockComment && trimmedLine.includes('/*')) {
         inJsBlockComment = true;
+        // Check if comment also ends on same line
+        if (trimmedLine.includes('*/')) {
+          inJsBlockComment = false;
+          continue; // Skip this line entirely if it's a single-line comment
+        }
+        continue;
       }
-      if (trimmedLine.includes('*/')) {
+      if (inJsBlockComment && trimmedLine.includes('*/')) {
         inJsBlockComment = false;
         continue; // Skip this line as it ends a comment
       }
       
-      // Check for JS line comment
-      const hasLineComment = trimmedLine.includes('//');
+      // Check for JS line comment (but only if not in block comment)
+      const lineCommentIndex = trimmedLine.indexOf('//');
+      const hasLineComment = lineCommentIndex !== -1;
       
       // Skip if we're in any kind of comment
-      if (inHtmlComment || inJsBlockComment || hasLineComment) {
+      if (inHtmlComment || inJsBlockComment) {
         continue;
+      }
+      
+      // For line comments, only skip if the tag appears after the comment
+      if (hasLineComment) {
+        const tagMatch = trimmedLine.match(this.TAG_DETECTOR_REGEX);
+        if (tagMatch) {
+          const tagIndex = trimmedLine.indexOf(tagMatch[0]);
+          if (tagIndex > lineCommentIndex) {
+            continue; // Tag is commented out
+          }
+        } else {
+          continue; // No tag on this line, skip
+        }
       }
 
       if (!this.TAG_DETECTOR_REGEX.test(line)) {
@@ -418,12 +493,31 @@ class FrameworksDecorator {
 
     const text = document.getText();
     const offset = document.offsetAt(position);
+    const lines = text.split('\n');
+    const lineIndex = position.line;
     
-    // Check HTML comments (<!-- -->)
+    // Check line-based comments first (faster and more common)
+    if (lineIndex < lines.length) {
+      const line = lines[lineIndex];
+      
+      // Check JavaScript-style line comments (//)
+      const lineCommentIndex = line.indexOf('//');
+      if (lineCommentIndex !== -1 && position.character >= lineCommentIndex) {
+        return true;
+      }
+      
+      // Check if entire line is an HTML comment
+      const trimmedLine = line.trim();
+      if (trimmedLine.startsWith('<!--') && trimmedLine.endsWith('-->')) {
+        return true;
+      }
+    }
+    
+    // Check HTML block comments (<!-- -->)
     let searchIndex = 0;
-    while (searchIndex < offset) {
+    while (searchIndex < text.length) {
       const commentStart = text.indexOf('<!--', searchIndex);
-      if (commentStart === -1 || commentStart >= offset) {
+      if (commentStart === -1 || commentStart > offset) {
         break;
       }
       
@@ -433,30 +527,19 @@ class FrameworksDecorator {
         return offset >= commentStart;
       }
       
-      if (offset >= commentStart && offset <= commentEnd + 3) {
+      const commentEndOffset = commentEnd + 3;
+      if (offset >= commentStart && offset < commentEndOffset) {
         return true;
       }
       
-      searchIndex = commentEnd + 3;
-    }
-    
-    // Check JavaScript-style comments for script sections
-    const lines = text.split('\n');
-    const lineIndex = position.line;
-    
-    if (lineIndex < lines.length) {
-      const line = lines[lineIndex];
-      const lineCommentIndex = line.indexOf('//');
-      if (lineCommentIndex !== -1 && position.character >= lineCommentIndex) {
-        return true;
-      }
+      searchIndex = commentEndOffset;
     }
     
     // Check JavaScript block comments (/* */)
     searchIndex = 0;
-    while (searchIndex < offset) {
+    while (searchIndex < text.length) {
       const blockStart = text.indexOf('/*', searchIndex);
-      if (blockStart === -1 || blockStart >= offset) {
+      if (blockStart === -1 || blockStart > offset) {
         break;
       }
       
@@ -466,11 +549,12 @@ class FrameworksDecorator {
         return offset >= blockStart;
       }
       
-      if (offset >= blockStart && offset <= blockEnd + 2) {
+      const blockEndOffset = blockEnd + 2;
+      if (offset >= blockStart && offset < blockEndOffset) {
         return true;
       }
       
-      searchIndex = blockEnd + 2;
+      searchIndex = blockEndOffset;
     }
     
     return false;
@@ -483,9 +567,25 @@ class FrameworksDecorator {
     document: vscode.TextDocument,
     range: vscode.Range
   ): boolean {
-    // Check if both start and end positions are in comments
-    return this.isPositionInComment(document, range.start) && 
-           this.isPositionInComment(document, range.end);
+    // For single line ranges, check if the start position is in a comment
+    if (range.start.line === range.end.line) {
+      return this.isPositionInComment(document, range.start);
+    }
+    
+    // For multi-line ranges, check if the majority of the range is commented
+    let commentedLines = 0;
+    let totalLines = 0;
+    
+    for (let line = range.start.line; line <= range.end.line; line++) {
+      totalLines++;
+      const position = new vscode.Position(line, 0);
+      if (this.isPositionInComment(document, position)) {
+        commentedLines++;
+      }
+    }
+    
+    // Consider range commented if more than half the lines are commented
+    return commentedLines > totalLines / 2;
   }
 
   /**
@@ -667,3 +767,6 @@ export default FrameworksDecorator;
 export const AstroDecorator = FrameworksDecorator;
 export const VueDecorator = FrameworksDecorator;
 export const SvelteDecorator = FrameworksDecorator;
+
+// Export the document change handler for use in extension
+export const onDidChangeTextDocumentFrameworks = FrameworksDecorator.onDidChangeTextDocument.bind(FrameworksDecorator);

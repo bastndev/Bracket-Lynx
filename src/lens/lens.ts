@@ -1139,26 +1139,34 @@ export class BracketDecorationGenerator {
     // Check line comments first (more common and faster)
     for (const lineComment of lineComments) {
       const lines = text.split('\n');
-      for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+      for (let lineIndex = range.start.line; lineIndex <= range.end.line; lineIndex++) {
+        if (lineIndex >= lines.length) {break;}
+        
         const line = lines[lineIndex];
         const commentIndex = line.indexOf(lineComment);
         if (commentIndex !== -1) {
           const lineStartOffset = document.offsetAt(new vscode.Position(lineIndex, 0));
           const commentStartOffset = lineStartOffset + commentIndex;
-          const lineEndOffset = document.offsetAt(new vscode.Position(lineIndex, line.length));
           
-          // Check if our range overlaps with this comment
-          if (startOffset >= commentStartOffset && startOffset < lineEndOffset) {
-            return true;
-          }
-          if (endOffset > commentStartOffset && endOffset <= lineEndOffset) {
-            return true;
+          // For single line ranges, check if the range start is after the comment
+          if (range.start.line === range.end.line) {
+            if (startOffset >= commentStartOffset) {
+              return true;
+            }
+          } else {
+            // For multi-line ranges, check if any part is commented
+            const lineEndOffset = document.offsetAt(new vscode.Position(lineIndex, line.length));
+            if ((startOffset >= commentStartOffset && startOffset <= lineEndOffset) ||
+                (endOffset >= commentStartOffset && endOffset <= lineEndOffset) ||
+                (startOffset <= commentStartOffset && endOffset >= lineEndOffset)) {
+              return true;
+            }
           }
         }
       }
     }
     
-    // Check block comments
+    // Check block comments with improved logic
     for (const blockComment of blockComments) {
       const openPattern = blockComment.opening;
       const closePattern = blockComment.closing;
@@ -1166,24 +1174,19 @@ export class BracketDecorationGenerator {
       let searchIndex = 0;
       while (searchIndex < text.length) {
         const openIndex = text.indexOf(openPattern, searchIndex);
-        if (openIndex === -1) {
+        if (openIndex === -1 || openIndex > endOffset) {
           break;
         }
         
         const closeIndex = text.indexOf(closePattern, openIndex + openPattern.length);
-        if (closeIndex === -1) {
-          // Unclosed comment - treat rest of file as commented
-          if (startOffset >= openIndex) {
+        const commentEndOffset = closeIndex === -1 ? text.length : closeIndex + closePattern.length;
+        
+        // Check if our range overlaps with this block comment
+        if (startOffset < commentEndOffset && endOffset > openIndex) {
+          // Additional check: ensure the range is actually inside the comment, not just touching it
+          if (startOffset >= openIndex && (closeIndex === -1 || endOffset <= commentEndOffset)) {
             return true;
           }
-          break;
-        }
-        
-        const commentEndOffset = closeIndex + closePattern.length;
-        
-        // Check if our range is inside this block comment
-        if (startOffset >= openIndex && endOffset <= commentEndOffset) {
-          return true;
         }
         
         searchIndex = commentEndOffset;
@@ -1569,6 +1572,8 @@ export class BracketLynx {
 
     // For non-JSON files, check if changes involve comment patterns for faster response
     let hasCommentChanges = false;
+    let hasSignificantChanges = false;
+    
     if (changes && changes.length > 0) {
       const languageConfig = BracketLynxConfig.getLanguageSpecificConfig(document.languageId);
       const lineComments = languageConfig.comments?.line || [];
@@ -1576,28 +1581,37 @@ export class BracketLynx {
       
       for (const change of changes) {
         const changeText = change.text;
+        const changeLength = change.rangeLength;
+        
         // Check if the change involves comment syntax
         const hasLineComment = lineComments.some(comment => 
-          changeText.includes(comment) || 
-          (change.rangeLength > 0 && changeText === '') // Deletion might remove comments
+          changeText.includes(comment)
         );
         const hasBlockComment = blockComments.some(comment => 
-          changeText.includes(comment.opening) || changeText.includes(comment.closing) ||
-          (change.rangeLength > 0 && changeText === '') // Deletion might remove comments
+          changeText.includes(comment.opening) || changeText.includes(comment.closing)
         );
         
-        if (hasLineComment || hasBlockComment) {
+        // Check for deletions that might remove comments
+        const isDeletion = changeLength > 0 && changeText === '';
+        
+        // Check for bracket-related changes
+        const hasBracketChanges = /[{}[\]()]/.test(changeText) || isDeletion;
+        
+        if (hasLineComment || hasBlockComment || isDeletion) {
           hasCommentChanges = true;
-          break;
+        }
+        
+        if (hasBracketChanges || hasLineComment || hasBlockComment || isDeletion) {
+          hasSignificantChanges = true;
         }
       }
     }
 
-    // For comment changes, clear cache immediately for faster response
-    if (hasCommentChanges) {
+    // Always clear cache for comment changes or significant changes
+    if (hasCommentChanges || hasSignificantChanges) {
       CacheManager.clearAllDecorationCache();
     } else {
-      // Try incremental parsing for non-comment changes
+      // Try incremental parsing for minor changes
       if (changes && changes.length > 0) {
         this.handleIncrementalChanges(document, changes);
       } else {
@@ -1608,10 +1622,15 @@ export class BracketLynx {
     if ('auto' === BracketLynxConfig.mode) {
       // Use immediate update for comment changes, delayed for others
       if (hasCommentChanges) {
-        // Shorter delay for comment changes
+        // Very short delay for comment changes to ensure immediate response
         setTimeout(() => {
           this.updateDecorationByDocument(document);
-        }, 25); // Very short delay for comment changes
+        }, 15); // Reduced delay for comment changes
+      } else if (hasSignificantChanges) {
+        // Short delay for significant changes
+        setTimeout(() => {
+          this.updateDecorationByDocument(document);
+        }, 50);
       } else {
         this.delayUpdateDecorationByDocument(document);
       }
