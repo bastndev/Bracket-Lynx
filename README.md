@@ -63,10 +63,6 @@
   <table>
     <tr>
       <td align="center" width="120">
-        <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/icons/astro.png" alt="Astro" width="65" height="65" />
-        <br /><strong>Astro</strong>
-      </td>
-      <td align="center" width="120">
         <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/icons/vue.png" alt="Vue.js" width="65" height="65" />
         <br /><strong>Vue.js</strong>
       </td>
@@ -81,6 +77,50 @@
       <td align="center" width="120">
         <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/icons/tsx.png" alt="TSX" width="65" height="65" />
         <br /><strong>TSX</strong>
+      </td>
+    </tr>
+  </table>
+</div>
+
+
+<div align="center">
+  <table>
+    <tr>
+      <td align="center" width="80">
+        <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/icons/f-astro.png" alt="Astro" width="55" height="55" />
+        <br /><strong>Astro</strong>
+      </td>
+      <td align="center" width="80">
+        <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/icons/f-vite.png" alt="Vite" width="55" height="55" />
+        <br /><strong>Vite</strong>
+      </td>
+      <td align="center" width="80">
+        <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/icons/f-nextjs.png" alt="Next.js" width="55" height="55" />
+        <br /><strong>Next.js</strong>
+      </td>
+      <td align="center" width="80">
+        <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/icons/f-expo.png" alt="Expo" width="55" height="55" />
+        <br /><strong>Expo</strong>
+      </td>
+      <td align="center" width="80">
+        <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/icons/f-nuxt.png" alt="Nuxt" width="55" height="55" />
+        <br /><strong>Nuxt</strong>
+      </td>
+      <td align="center" width="80">
+        <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/icons/f-remix.png" alt="Remix" width="55" height="55" />
+        <br /><strong>Remix</strong>
+      </td>
+      <td align="center" width="80">
+        <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/icons/f-angular.png" alt="Angular" width="55" height="55" />
+        <br /><strong>Angular</strong>
+      </td>
+      <td align="center" width="80">
+        <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/icons/f-preact.png" alt="Preact" width="55" height="55" />
+        <br /><strong>Preact</strong>
+      </td>
+      <td align="center" width="80">
+        <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/icons/more.png" alt="More" width="55" height="55" />
+        <br /><strong>More</strong>
       </td>
     </tr>
   </table>
