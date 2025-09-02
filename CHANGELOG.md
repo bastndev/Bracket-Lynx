@@ -10,6 +10,17 @@ Discover more extensions at [bastndev.com/extensions](https://bastndev.com/exten
 
 </br>
 
+
+## [0.9.1] - 2025-09-02
+
+### Fixed
+- Resolved issue where bracket decorations did not disappear when code is commented and did not reappear when uncommented, ensuring proper visibility based on code state.
+
+### Changed
+- Improved documentation in README and CHANGELOG for better clarity on extension behavior, configuration options, and troubleshooting steps.
+
+---
+
 ## [0.8.0] - 2025-08-27
 
 ### Added
