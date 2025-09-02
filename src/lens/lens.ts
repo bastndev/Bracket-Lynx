@@ -164,17 +164,13 @@ export class BracketLynxConfig {
   }
 
   static get maxBracketHeaderLength(): number {
-    return this.getConfig().get(
-      'maxBracketHeaderLength',
-      PERFORMANCE_LIMITS.MAX_HEADER_LENGTH
-    );
+    const value = this.getConfig().get('maxBracketHeaderLength', PERFORMANCE_LIMITS.MAX_HEADER_LENGTH);
+    return Math.max(10, Math.min(200, value)); // Clamp between 10-200
   }
 
   static get minBracketScopeLines(): number {
-    return this.getConfig().get(
-      'minBracketScopeLines',
-      PERFORMANCE_LIMITS.MIN_BRACKET_SCOPE_LINES
-    );
+    const value = this.getConfig().get('minBracketScopeLines', PERFORMANCE_LIMITS.MIN_BRACKET_SCOPE_LINES);
+    return Math.max(1, Math.min(50, value)); // Clamp between 1-50
   }
 
   static get enablePerformanceFilters(): boolean {
@@ -182,17 +178,13 @@ export class BracketLynxConfig {
   }
 
   static get maxFileSize(): number {
-    return this.getConfig().get(
-      'maxFileSize',
-      PERFORMANCE_LIMITS.MAX_FILE_SIZE
-    );
+    const value = this.getConfig().get('maxFileSize', PERFORMANCE_LIMITS.MAX_FILE_SIZE);
+    return Math.max(1024 * 1024, Math.min(100 * 1024 * 1024, value)); // Clamp between 1MB-100MB
   }
 
   static get maxDecorationsPerFile(): number {
-    return this.getConfig().get(
-      'maxDecorationsPerFile',
-      PERFORMANCE_LIMITS.MAX_DECORATIONS_PER_FILE
-    );
+    const value = this.getConfig().get('maxDecorationsPerFile', PERFORMANCE_LIMITS.MAX_DECORATIONS_PER_FILE);
+    return Math.max(50, Math.min(2000, value)); // Clamp between 50-2000
   }
 
   static get languageConfiguration(): LanguageConfiguration {
@@ -202,9 +194,44 @@ export class BracketLynxConfig {
     );
   }
 
+  static getLanguageSpecificConfig(languageId: string): LanguageConfiguration {
+    const baseConfig = this.languageConfiguration;
+    
+    // Language-specific comment configurations
+    const languageComments: Record<string, { line?: string[], block?: ScopeTerms[] }> = {
+      'javascript': { line: ['//'], block: [{ opening: '/*', closing: '*/' }] },
+      'typescript': { line: ['//'], block: [{ opening: '/*', closing: '*/' }] },
+      'javascriptreact': { line: ['//'], block: [{ opening: '/*', closing: '*/' }] },
+      'typescriptreact': { line: ['//'], block: [{ opening: '/*', closing: '*/' }] },
+      'html': { block: [{ opening: '<!--', closing: '-->' }] },
+      'css': { block: [{ opening: '/*', closing: '*/' }] },
+      'scss': { line: ['//'], block: [{ opening: '/*', closing: '*/' }] },
+      'vue': { line: ['//'], block: [{ opening: '/*', closing: '*/' }, { opening: '<!--', closing: '-->' }] },
+      'astro': { line: ['//'], block: [{ opening: '/*', closing: '*/' }, { opening: '<!--', closing: '-->' }] },
+      'svelte': { line: ['//'], block: [{ opening: '/*', closing: '*/' }, { opening: '<!--', closing: '-->' }] },
+      'json': { line: [], block: [] }
+    };
+
+    const languageSpecific = languageComments[languageId];
+    if (languageSpecific) {
+      return {
+        ...baseConfig,
+        comments: languageSpecific
+      };
+    }
+
+    return baseConfig;
+  }
+
   private static getDefaultLanguageConfig(): LanguageConfiguration {
     return {
       ignoreCase: false,
+      comments: {
+        line: ['//'],
+        block: [
+          { opening: '/*', closing: '*/' }
+        ]
+      },
       brackets: {
         symbol: [
           { opening: '{', closing: '}', headerMode: 'smart' },
@@ -224,22 +251,7 @@ export class BracketLynxConfig {
 const isInlineScope = (bracket: BracketEntry) =>
   bracket.end.position.line <= bracket.start.position.line;
 
-    interface DebugOutput {
-      message: string;
-      data?: unknown;
-      timestamp: number;
-      context?: string;
-    }
-
-    const debug = (output: DebugOutput | string) => {
-      if (BracketLynxConfig.debug) {
-        if (typeof output === 'string') {
-          console.debug(output);
-        } else {
-          console.debug(`[${output.context || 'BracketLynx'}] ${output.message}`, output.data);
-        }
-      }
-    };
+    // Debug function removed for production
 
 // ============================================================================
 // CACHE MANAGEMENT
@@ -256,20 +268,12 @@ export class DocumentDecorationCacheEntry {
       // Use original parser for problematic files
       this.brackets = BracketParser.parseBrackets(document);
 
-      if (BracketLynxConfig.debug) {
-        console.log(
-          `Bracket Lynx: Using original parser for: ${document.fileName} (${document.languageId})`
-        );
-      }
+
     } else {
       // Use optimized parser for other files
       this.brackets = optimizedParser.parseBrackets(document);
 
-      if (BracketLynxConfig.debug) {
-        console.log(
-          `Bracket Lynx: Using optimized parser for: ${document.fileName} (${document.languageId})`
-        );
-      }
+
     }
 
     this.decorationSource =
@@ -707,7 +711,6 @@ export class BracketParser {
       ) {
         i = this.skipMultilineString(i, tokens, token, tokenConfig, regulate);
       } else {
-        debug(`unmatch-token: ${JSON.stringify(tokens[i])}`);
         i++;
       }
     }
@@ -1105,6 +1108,94 @@ export class BracketHeaderGenerator {
 // ============================================================================
 
 export class BracketDecorationGenerator {
+  /**
+   * Check if a range is inside a comment
+   */
+  private static isRangeInComment(
+    document: vscode.TextDocument,
+    range: vscode.Range
+  ): boolean {
+    // Fast path for JSON files - they don't support comments
+    if (document.languageId === 'json') {
+      return false;
+    }
+
+    const languageConfiguration = BracketLynxConfig.getLanguageSpecificConfig(document.languageId);
+    const text = document.getText();
+    
+    // Get comment patterns for the language
+    const blockComments = languageConfiguration.comments?.block || [];
+    const lineComments = languageConfiguration.comments?.line || [];
+    
+    // Early exit if no comment patterns are defined
+    if (blockComments.length === 0 && lineComments.length === 0) {
+      return false;
+    }
+    
+    // Check if range is inside any comment
+    const startOffset = document.offsetAt(range.start);
+    const endOffset = document.offsetAt(range.end);
+    
+    // Check line comments first (more common and faster)
+    for (const lineComment of lineComments) {
+      const lines = text.split('\n');
+      for (let lineIndex = range.start.line; lineIndex <= range.end.line; lineIndex++) {
+        if (lineIndex >= lines.length) {break;}
+        
+        const line = lines[lineIndex];
+        const commentIndex = line.indexOf(lineComment);
+        if (commentIndex !== -1) {
+          const lineStartOffset = document.offsetAt(new vscode.Position(lineIndex, 0));
+          const commentStartOffset = lineStartOffset + commentIndex;
+          
+          // For single line ranges, check if the range start is after the comment
+          if (range.start.line === range.end.line) {
+            if (startOffset >= commentStartOffset) {
+              return true;
+            }
+          } else {
+            // For multi-line ranges, check if any part is commented
+            const lineEndOffset = document.offsetAt(new vscode.Position(lineIndex, line.length));
+            if ((startOffset >= commentStartOffset && startOffset <= lineEndOffset) ||
+                (endOffset >= commentStartOffset && endOffset <= lineEndOffset) ||
+                (startOffset <= commentStartOffset && endOffset >= lineEndOffset)) {
+              return true;
+            }
+          }
+        }
+      }
+    }
+    
+    // Check block comments with improved logic
+    for (const blockComment of blockComments) {
+      const openPattern = blockComment.opening;
+      const closePattern = blockComment.closing;
+      
+      let searchIndex = 0;
+      while (searchIndex < text.length) {
+        const openIndex = text.indexOf(openPattern, searchIndex);
+        if (openIndex === -1 || openIndex > endOffset) {
+          break;
+        }
+        
+        const closeIndex = text.indexOf(closePattern, openIndex + openPattern.length);
+        const commentEndOffset = closeIndex === -1 ? text.length : closeIndex + closePattern.length;
+        
+        // Check if our range overlaps with this block comment
+        if (startOffset < commentEndOffset && endOffset > openIndex) {
+          // Additional check: ensure the range is actually inside the comment, not just touching it
+          if (startOffset >= openIndex && (closeIndex === -1 || endOffset <= commentEndOffset)) {
+            return true;
+          }
+        }
+        
+        searchIndex = commentEndOffset;
+      }
+    }
+    
+    return false;
+  }
+
   static getBracketDecorationSource(
     document: vscode.TextDocument,
     brackets: BracketEntry[]
@@ -1147,26 +1238,36 @@ export class BracketDecorationGenerator {
           context.entry.end.position.line <
             (context.parentEntry?.end.position.line ?? document.lineCount + 1)
         ) {
-          const bracketHeader = BracketHeaderGenerator.getBracketHeader(
-            document,
-            context
+          const decorationRange = new vscode.Range(
+            PositionUtils.nextCharacter(
+              context.entry.end.position,
+              -context.entry.end.token.length
+            ),
+            context.entry.end.position
           );
-          if (0 < bracketHeader.length) {
-            const lineNumbers = getLineNumbers(context.entry);
-            const decorationText = `${
-              context.entry.isUnmatchBrackets ? unmatchBracketsPrefix : prefix
-            }${lineNumbers}•${bracketHeader}`;
 
-            result.push({
-              range: new vscode.Range(
-                PositionUtils.nextCharacter(
-                  context.entry.end.position,
-                  -context.entry.end.token.length
-                ),
-                context.entry.end.position
-              ),
-              bracketHeader: decorationText,
-            });
+          // Check if the bracket range is inside a comment
+          const bracketRange = new vscode.Range(
+            context.entry.start.position,
+            context.entry.end.position
+          );
+
+          if (!this.isRangeInComment(document, bracketRange)) {
+            const bracketHeader = BracketHeaderGenerator.getBracketHeader(
+              document,
+              context
+            );
+            if (0 < bracketHeader.length) {
+              const lineNumbers = getLineNumbers(context.entry);
+              const decorationText = `${
+                context.entry.isUnmatchBrackets ? unmatchBracketsPrefix : prefix
+              }${lineNumbers}•${bracketHeader}`;
+
+              result.push({
+                range: decorationRange,
+                bracketHeader: decorationText,
+              });
+            }
           }
         }
         context.entry.items.map((entry, index, array) =>
@@ -1194,11 +1295,7 @@ export class BracketDecorationGenerator {
       BracketLynxConfig.enablePerformanceFilters &&
       result.length > maxDecorationsPerFile
     ) {
-      if (BracketLynxConfig.debug) {
-        console.log(
-          `Bracket Lynx: Limiting decorations from ${result.length} to ${maxDecorationsPerFile}`
-        );
-      }
+
 
       // Prioritize unmatched brackets and larger brackets
       const prioritized = result.sort((a, b) => {
@@ -1252,7 +1349,7 @@ export class BracketLynx {
       return;
     }
 
-    // NEW: Check if language is supported by rules
+    // Check if language is supported by rules
     if (
       !shouldProcessFileConfig(
         textEditor.document.languageId,
@@ -1284,7 +1381,7 @@ export class BracketLynx {
         CacheManager.getDocumentCache(
           textEditor.document
         ).decorationSource.forEach((i) => {
-          // NEW: Apply content filtering to remove excluded symbols
+          // Apply content filtering to remove excluded symbols
           const filteredContent = filterContent(i.bracketHeader);
 
           // Only add decoration if content is not empty after filtering
@@ -1361,7 +1458,7 @@ export class BracketLynx {
       return;
     }
 
-    // NEW: Check if language is supported by rules
+    // Check if language is supported by rules
     if (!shouldProcessFileConfig(document.languageId, document.fileName)) {
       return;
     }
@@ -1377,7 +1474,7 @@ export class BracketLynx {
       return;
     }
 
-    // NEW: Check if language is supported by rules
+    // Check if language is supported by rules
     if (!shouldProcessFileConfig(document.languageId, document.fileName)) {
       return;
     }
@@ -1410,15 +1507,7 @@ export class BracketLynx {
     CacheManager.clearAllDecorationCache();
     this.updateAllDecoration();
 
-    // Log cache metrics if debug is enabled
-    if (BracketLynxConfig.debug) {
-      const metrics = CacheManager.getCacheMetrics();
-      const hitRatio = CacheManager.getCacheHitRatio();
-      console.log(`Bracket Lynx Cache Metrics:`, {
-        hitRatio: `${(hitRatio * 100).toFixed(1)}%`,
-        ...metrics,
-      });
-    }
+
   }
 
   static onDidChangeActiveTextEditor(): void {
@@ -1461,20 +1550,90 @@ export class BracketLynx {
       return;
     }
 
-    // NEW: Check if language is supported by rules
+    // Check if language is supported by rules
     if (!shouldProcessFileConfig(document.languageId, document.fileName)) {
       return;
     }
 
-    // RESTORE: Try incremental parsing, but only for non-Astro files
-    if (changes && changes.length > 0) {
-      this.handleIncrementalChanges(document, changes);
-    } else {
+    // Special handling for JSON files (no comment support needed)
+    if (document.languageId === 'json') {
+      // For JSON files, always clear cache and update immediately for any change
+      // This fixes the issue where decorations don't disappear when content is deleted
       CacheManager.clearAllDecorationCache();
+      
+      if ('auto' === BracketLynxConfig.mode) {
+        // Immediate update for JSON files to handle deletions properly
+        setTimeout(() => {
+          this.updateDecorationByDocument(document);
+        }, 10); // Very short delay for JSON changes
+      }
+      return;
+    }
+
+    // For non-JSON files, check if changes involve comment patterns for faster response
+    let hasCommentChanges = false;
+    let hasSignificantChanges = false;
+    
+    if (changes && changes.length > 0) {
+      const languageConfig = BracketLynxConfig.getLanguageSpecificConfig(document.languageId);
+      const lineComments = languageConfig.comments?.line || [];
+      const blockComments = languageConfig.comments?.block || [];
+      
+      for (const change of changes) {
+        const changeText = change.text;
+        const changeLength = change.rangeLength;
+        
+        // Check if the change involves comment syntax
+        const hasLineComment = lineComments.some(comment => 
+          changeText.includes(comment)
+        );
+        const hasBlockComment = blockComments.some(comment => 
+          changeText.includes(comment.opening) || changeText.includes(comment.closing)
+        );
+        
+        // Check for deletions that might remove comments
+        const isDeletion = changeLength > 0 && changeText === '';
+        
+        // Check for bracket-related changes
+        const hasBracketChanges = /[{}[\]()]/.test(changeText) || isDeletion;
+        
+        if (hasLineComment || hasBlockComment || isDeletion) {
+          hasCommentChanges = true;
+        }
+        
+        if (hasBracketChanges || hasLineComment || hasBlockComment || isDeletion) {
+          hasSignificantChanges = true;
+        }
+      }
+    }
+
+    // Always clear cache for comment changes or significant changes
+    if (hasCommentChanges || hasSignificantChanges) {
+      CacheManager.clearAllDecorationCache();
+    } else {
+      // Try incremental parsing for minor changes
+      if (changes && changes.length > 0) {
+        this.handleIncrementalChanges(document, changes);
+      } else {
+        CacheManager.clearAllDecorationCache();
+      }
     }
 
     if ('auto' === BracketLynxConfig.mode) {
-      this.delayUpdateDecorationByDocument(document);
+      // Use immediate update for comment changes, delayed for others
+      if (hasCommentChanges) {
+        // Very short delay for comment changes to ensure immediate response
+        setTimeout(() => {
+          this.updateDecorationByDocument(document);
+        }, 15); // Reduced delay for comment changes
+      } else if (hasSignificantChanges) {
+        // Short delay for significant changes
+        setTimeout(() => {
+          this.updateDecorationByDocument(document);
+        }, 50);
+      } else {
+        this.delayUpdateDecorationByDocument(document);
+      }
     }
   }
 
@@ -1489,11 +1648,7 @@ export class BracketLynx {
       // Use parser exception manager
       const optimizedParser = OptimizedBracketParser.getInstance();
       if (optimizedParser.shouldUseOriginalParser(document)) {
-        if (BracketLynxConfig.debug) {
-          console.log(
-            `Bracket Lynx: Skipping incremental parsing for: ${document.fileName}`
-          );
-        }
+        
         CacheManager.clearAllDecorationCache();
         return;
       }
@@ -1517,11 +1672,7 @@ export class BracketLynx {
             incrementalResult.brackets
           );
 
-        if (BracketLynxConfig.debug) {
-          console.log(
-            `Bracket Lynx: Incremental update completed in ${incrementalResult.parseTime}ms`
-          );
-        }
+
 
         return;
       }
@@ -1540,7 +1691,7 @@ export class BracketLynx {
    * Get performance metrics for debugging
    */
   static getPerformanceMetrics() {
-    // RESTORE: OptimizedBracketParser references
+          // OptimizedBracketParser references
     const optimizedParser = OptimizedBracketParser.getInstance();
     const advancedCache = AdvancedCacheManager.getInstance();
 
@@ -1548,7 +1699,7 @@ export class BracketLynx {
       cache: CacheManager.getCacheMetrics(),
       hitRatio: CacheManager.getCacheHitRatio(),
 
-      // RESTORE: Parser metrics
+      // Parser metrics
       parser: {
         ...optimizedParser.getCacheStats(),
 
@@ -1625,7 +1776,7 @@ export class BracketLynx {
   static dispose(): void {
     this.smartDebouncer.dispose();
 
-    // RESTORE: Cleanup optimized parser
+    // Cleanup optimized parser
     const optimizedParser = OptimizedBracketParser.getInstance();
     optimizedParser.dispose();
 

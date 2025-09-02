@@ -54,13 +54,29 @@ function configShouldProcessFile(languageId: string, fileName: string): boolean 
 // Optimized Set for O(1) lookups
 const EXCLUDED_SYMBOLS_SET = new Set<string>(EXCLUDED_SYMBOLS);
 
-// Cached regex patterns for better performance
+// Cached regex patterns for better performance - with size limit
 const REGEX_CACHE = new Map<string, RegExp>();
+const MAX_REGEX_CACHE_SIZE = 50;
 
 function getCachedRegex(pattern: string, flags: string = 'g'): RegExp {
   const key = `${pattern}|${flags}`;
+  
   if (!REGEX_CACHE.has(key)) {
-    REGEX_CACHE.set(key, new RegExp(pattern, flags));
+    // Prevent memory leaks by limiting cache size
+    if (REGEX_CACHE.size >= MAX_REGEX_CACHE_SIZE) {
+      const firstKey = REGEX_CACHE.keys().next().value;
+      if (firstKey) {
+        REGEX_CACHE.delete(firstKey);
+      }
+    }
+    
+    try {
+      REGEX_CACHE.set(key, new RegExp(pattern, flags));
+    } catch (error) {
+      // Return a safe fallback regex if pattern is invalid
+      console.warn(`Invalid regex pattern: ${pattern}`, error);
+      return /./g;
+    }
   }
   return REGEX_CACHE.get(key)!;
 }
@@ -131,7 +147,7 @@ export function shouldProcessFile(languageId: string, fileName: string): boolean
 // CONTENT ANALYSIS FUNCTIONS
 // ============================================================================
 
-// 🧠 SMART Text Analyzer - Detects if text is already lowercase
+// SMART Text Analyzer - Detects if text is already lowercase
 const isAlreadyLowerCase = (text: string): boolean => text === text.toLowerCase();
 
 /**
@@ -148,7 +164,7 @@ export function containsExceptionWord(text: string): boolean {
 export function containsCssContent(text: string): boolean {
   const lowerText = isAlreadyLowerCase(text) ? text : text.toLowerCase();
   
-  // 🚀 Early exit for common cases
+  // Early exit for common cases
   if (!lowerText.includes('s')) {return false;} // Most CSS words contain 's'
   
   for (const word of CSS_RELATED_WORDS_SET) {
@@ -163,7 +179,7 @@ export function containsCssContent(text: string): boolean {
 export function containsTryCatchKeyword(text: string): boolean {
   const lowerText = text.toLowerCase();
   
-  // 🚀 Quick check for common letters first
+  // Quick check for common letters first
   if (!lowerText.includes('t') && !lowerText.includes('c') && !lowerText.includes('f')) {
     return false;
   }
@@ -177,8 +193,8 @@ export function containsTryCatchKeyword(text: string): boolean {
 export function containsIfElseKeyword(text: string): boolean {
   const lowerText = text.toLowerCase();
   
-  // 🚀 Quick check for common letters first
-  if (!lowerText.includes('i') && !lowerText.includes('e') && !lowerText.includes('s')) {
+  // Quick check for common letters first
+  if (!lowerText.includes('i') && !lowerText.includes('s')) {
     return false;
   }
   
@@ -303,19 +319,19 @@ export function formatCollectionArrowFunction(words: string[]): string {
 // CONTENT FILTERING AND FORMATTING
 // ============================================================================
 
-// 🚀 ULTRA-OPTIMIZED Symbol Replacer - Pre-compiled for maximum speed!
+// ULTRA-OPTIMIZED Symbol Replacer - Pre-compiled for maximum speed!
 const SYMBOL_REPLACER_REGEX = (() => {
   const escapedSymbols = EXCLUDED_SYMBOLS.map(escapeRegExp);
   return new RegExp(`(${escapedSymbols.join('|')})`, 'g');
 })();
 
 /**
- * 🔥 LIGHTNING-FAST Content Filter - Single regex pass instead of loop!
+ * LIGHTNING-FAST Content Filter - Single regex pass instead of loop!
  */
 export function filterContent(content: string): string {
   if (!content) {return '';}
   
-  // 🚀 ONE-SHOT REPLACEMENT - Replace all symbols in single pass!
+  // ONE-SHOT REPLACEMENT - Replace all symbols in single pass!
   return content
     .replace(SYMBOL_REPLACER_REGEX, ' ')
     .replace(/\s+/g, ' ')
@@ -323,7 +339,7 @@ export function filterContent(content: string): string {
 }
 
 /**
- * 🚀 MEGA-INTELLIGENT Content Analyzer - Analyzes everything in one pass!
+ * MEGA-INTELLIGENT Content Analyzer - Analyzes everything in one pass!
  * This function determines the content type and appropriate formatting rules
  * @param text - The text content to analyze
  * @param languageId - Optional language identifier for context-specific analysis
@@ -375,10 +391,10 @@ export function applyWordLimit(text: string, languageId?: string): string {
   const lowerText = text.toLowerCase();
   const words = text.split(/\s+/).filter(Boolean); // Boolean is faster than word => word.length > 0
   
-  // 🚀 ONE-PASS ANALYSIS - Analyze everything at once!
+  // ONE-PASS ANALYSIS - Analyze everything at once!
   const analysis = analyzeContentSmart(text, languageId);
   
-  // 🎯 SMART SYMBOL FORMATTING - Apply symbols if needed
+  // SMART SYMBOL FORMATTING - Apply symbols if needed
   if (analysis.requiresSymbol && analysis.contentType) {
     switch (analysis.contentType) {
       case 'async': return formatAsyncFunction(words);
@@ -387,7 +403,7 @@ export function applyWordLimit(text: string, languageId?: string): string {
     }
   }
   
-  // 🔥 OPTIMIZED WORD LIMITING - Use analysis result
+  // OPTIMIZED WORD LIMITING - Use analysis result
   if (words.length > analysis.maxWords) {
     return words.slice(0, analysis.maxWords).join(' ') + '...';
   }

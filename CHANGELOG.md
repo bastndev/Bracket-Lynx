@@ -10,6 +10,20 @@ Discover more extensions at [bastndev.com/extensions](https://bastndev.com/exten
 
 </br>
 
+## [0.8.0] - 2025-08-27
+
+### Added
+- Support for additional technologies including Next.js and Expo
+
+### Changed
+- Improved performance optimizations
+- Enhanced README with updated instructions and technology support
+
+### Fixed
+- Decorations no longer appear when code is commented
+
+---
+
 ## [0.7.1] - 2025-08-17
 
 ### Added
