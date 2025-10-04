@@ -11,7 +11,6 @@ Discover more extensions at [bastndev.com/extensions](https://bastndev.com/exten
 </br>
 
 <!-- --- -->
-
 ## [0.9.1] - 2025-10-04
 
 ### Fixed
@@ -19,6 +18,7 @@ Discover more extensions at [bastndev.com/extensions](https://bastndev.com/exten
 
 ### Changed
 - Improved documentation in README and CHANGELOG for better clarity on extension behavior, configuration options, and troubleshooting steps.
+- Enhanced README with icons or logos for supported technologies such as Astro, Expo, Vite, etc.
 
 ---
 
