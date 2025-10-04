@@ -82,45 +82,44 @@
   </table>
 </div>
 
-
 <div align="center">
   <table>
     <tr>
-      <td align="center" width="80">
-        <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/icons/f-astro.png" alt="Astro" width="55" height="55" />
-        <br /><strong>Astro</strong>
+      <td align="center" width="100">
+      <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/icons/f-astro.png" alt="Astro" width="48" height="48" />
+      <br /><strong>Astro</strong>
       </td>
-      <td align="center" width="80">
-        <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/icons/f-vite.png" alt="Vite" width="55" height="55" />
-        <br /><strong>Vite</strong>
+      <td align="center" width="100">
+      <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/icons/f-nextjs.png" alt="Next.js" width="48" height="48" />
+      <br /><strong>Next.js</strong>
       </td>
-      <td align="center" width="80">
-        <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/icons/f-nextjs.png" alt="Next.js" width="55" height="55" />
-        <br /><strong>Next.js</strong>
+      <td align="center" width="100">
+      <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/icons/f-remix.png" alt="Remix" width="48" height="48" />
+      <br /><strong>Remix</strong>
       </td>
-      <td align="center" width="80">
-        <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/icons/f-expo.png" alt="Expo" width="55" height="55" />
-        <br /><strong>Expo</strong>
+      <td align="center" width="100">
+      <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/icons/f-expo.png" alt="Expo" width="40" height="40" />
+      <br /><strong>Expo</strong>
       </td>
-      <td align="center" width="80">
-        <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/icons/f-nuxt.png" alt="Nuxt" width="55" height="55" />
-        <br /><strong>Nuxt</strong>
+      <td align="center" width="100">
+      <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/icons/f-nuxt.png" alt="Nuxt" width="48" height="48" />
+      <br /><strong>Nuxt</strong>
       </td>
-      <td align="center" width="80">
-        <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/icons/f-remix.png" alt="Remix" width="50" height="50" />
-        <br /><strong>Remix</strong>
+      <td align="center" width="100">
+      <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/icons/f-vite.png" alt="Vite" width="40" height="40" />
+      <br /><strong>Vite</strong>
       </td>
-      <td align="center" width="80">
-        <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/icons/f-angular.png" alt="Angular" width="55" height="55" />
-        <br /><strong>Angular</strong>
+      <td align="center" width="100">
+      <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/icons/f-angular.png" alt="Angular" width="48" height="48" />
+      <br /><strong>Angular</strong>
       </td>
-      <td align="center" width="80">
-        <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/icons/f-preact.png" alt="Preact" width="55" height="55" />
-        <br /><strong>Preact</strong>
+      <td align="center" width="100">
+      <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/icons/f-preact.png" alt="Preact" width="48" height="48" />
+      <br /><strong>Preact</strong>
       </td>
-      <td align="center" width="80">
-        <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/icons/more.png" alt="More" width="55" height="55" />
-        <br /><strong>More</strong>
+      <td align="center" width="100">
+      <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/images/icons/more.png" alt="More" width="48" height="48" />
+      <br /><strong>More</strong>
       </td>
     </tr>
   </table>
@@ -132,9 +131,9 @@
 
 Launch _Quick Open_
 
-- <img src="https://www.kernel.org/theme/images/logos/favicon.png" width=16 height=16/> Linux `Ctrl+P`
-- <img src="https://developer.apple.com/favicon.ico" width=16 height=16/> macOS `⌘P`
-- <img src="https://www.microsoft.com/favicon.ico" width=16 height=16/> Windows `Ctrl+P`
+- <img src="https://raw.githubusercontent.com/bastndev/bastndev/refs/heads/main/.github/assets/OS/linux.png" width="16" height="16"/> Linux `Ctrl+P`
+- <img src="https://raw.githubusercontent.com/bastndev/bastndev/refs/heads/main/.github/assets/OS/macOs.ico" width="16" height="16"/> macOS `⌘P`
+- <img src="https://raw.githubusercontent.com/bastndev/bastndev/refs/heads/main/.github/assets/OS/windows.ico" width="16" height="16"/> Windows `Ctrl+P`
 
 Paste the following command and press `Enter`:
 
@@ -149,6 +148,7 @@ If you want to contribute, check the guidelines: [[>_ᅠ]](https://github.com/ba
 | [![bastndev](https://github.com/bastndev.png?size=100)](http://bastndev.com) |
 | :--------------------------------------------------------------------------: |
 |               **[Gohit Bastian](https://github.com/bastndev)**               |
+|                            _Creator & Maintainer_                            |
 
 ## About Me
 
@@ -161,7 +161,12 @@ If you want to contribute, check the guidelines: [[>_ᅠ]](https://github.com/ba
 | Icon                                                                                                                                                                                                                                                 | Code/Name                                                              | Description                                                                                                                                                                                     |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [![Lynx Theme Pro](https://bastndev.gallerycdn.vsassets.io/extensions/bastndev/lynx-theme/0.1.2/1744898058774/Microsoft.VisualStudio.Services.Icons.Default)](https://marketplace.visualstudio.com/items?itemName=bastndev.lynx-theme)               | [Lynx Theme Pro](https://github.com/bastndev/Lynx-Theme)               | A professional extension with six available `Themes`: Dark, Light, Night, Ghibli, Coffee, and Kiro—with integrated `ICONS`. Each theme is optimized to offer a more pleasant visual experience. |
-| [![Lynx JS Snippets](https://bastndev.gallerycdn.vsassets.io/extensions/bastndev/lynx-js-snippets/0.2.0/1745166683713/Microsoft.VisualStudio.Services.Icons.Default)](https://marketplace.visualstudio.com/items?itemName=bastndev.lynx-js-snippets) | [LynxJS Snippets (.tsx)](https://github.com/bastndev/Lynx-js-Snippets) | A collection of optimized code snippets designed to accelerate web and mobile development in LynxJS projects. It automates the writing of common code structures.                               |
-| [![F1 Quick Fast](https://bastndev.gallerycdn.vsassets.io/extensions/bastndev/f1/0.2.1/1752544035624/Microsoft.VisualStudio.Services.Icons.Default)](https://marketplace.visualstudio.com/items?itemName=bastndev.f1)                                | [F1-Quick Fast](https://github.com/bastndev/f1)                        | Allows you to control editor functions and manage extensions directly from the keyboard, streamlining your workflow with configurable shortcuts.                                                |
+| [![Lynx Snippets](https://bastndev.gallerycdn.vsassets.io/extensions/bastndev/lynx-js-snippets/0.2.0/1745166683713/Microsoft.VisualStudio.Services.Icons.Default)](https://marketplace.visualstudio.com/items?itemName=bastndev.lynx-js-snippets) | [Lynx Snippets](https://github.com/bastndev/Lynx-js-Snippets) | A collection of optimized code snippets designed to accelerate web and mobile development in LynxJS projects. It automates the writing of common code structures.                               |
+| [![Compare Code](https://bastndev.gallerycdn.vsassets.io/extensions/bastndev/compare-code/0.1.0/1759529717256/Microsoft.VisualStudio.Services.Icons.Default)](https://marketplace.visualstudio.com/items?itemName=bastndev.compare-code) | [Compare Code](https://github.com/bastndev/Compare-Code)       | Lets you compare code in a professional, fast, and clear way. With a modern and intuitive interface, it's ideal for developers looking to boost their productivity. |
 
-**Enjoy 🎉 Bracket Lynx is now active. If you find any bugs or have feedback, you can [open an issue](https://github.com/bastndev/Bracket-Lynx/issues).**
+<div align="center">
+  <p><strong>Made with 🧡 by <a href="https://bastndev.com/extensions">@bastndev</a></strong></p>
+  
+  **Enjoy 🎉 Your (Bracket Lynx) are now installed!**  
+  *If you find any bugs or have feedback, you can [open an issue](https://github.com/bastndev/Bracket-Lynx/issues)*
+</div>
