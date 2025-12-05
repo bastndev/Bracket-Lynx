@@ -2,7 +2,7 @@
   "name": "bracket-lynx",
   "displayName": "Bracket Lynx",
   "description": "Available now: VSCode • Cursor • Windsurf • Trae.ai • Kiro & (Firebase Studio)... 雨",
-  "version": "0.9.2",
+  "version": "0.9.3",
   "publisher": "bastndev",
   "license": "MIT",
   "engines": {
@@ -34,9 +34,9 @@
     "url": "https://github.com/bastndev/Bracket-Lynx/issues"
   },
   "author": {
-    "name": "Gohit Bastian",
-    "email": "dev@bastndev.com",
-    "url": "https://www.bastndev.com"
+    "name": "Gohit Bastian", 
+    "email": "hello@gohit.xyz",
+    "url": "https://www.gohit.xyz/me"
   },
   "sponsor": {
     "url": "https://github.com/sponsors/bastndev"
