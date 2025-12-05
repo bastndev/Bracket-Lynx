@@ -4,7 +4,7 @@ Enhances the development experience by displaying a label next to each closing p
 
 Bracket Lynx is a VS Code extension that provides intelligent bracket decorations for 11 programming languages and frameworks, helping developers quickly understand code structure and scope. It uses optimized parsing, smart filtering, and multi-level caching for high performance and accuracy. Granular control and color customization are available through the command palette.
 
-Discover more extensions at [bastndev.com/extensions](https://bastndev.com/extensions)
+Discover more extensions [here](https://gohit.xyz/)
 
 ## Changelog
 
@@ -160,7 +160,7 @@ Discover more extensions at [bastndev.com/extensions](https://bastndev.com/exten
 - Improve benchmarks and load testing with real files
 
 **Status**: ✅ Tests fully implemented and functional  
-**Maintainer**: @bastndev  
+**Maintainer**: @gohitx
 **Last Update**: August 2025
 
 ---

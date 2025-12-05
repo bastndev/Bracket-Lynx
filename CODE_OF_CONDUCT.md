@@ -32,7 +32,7 @@ We strive to create a positive environment where everyone can contribute effecti
 
 ## Reporting Issues
 
-If you experience or witness behavior that violates these guidelines, please report it to **dev@bastndev.com**.
+If you experience or witness behavior that violates these guidelines, please report it to **hello@gohit.xyz**.
 
 **Email Subject Format: `[Bracket Lynx] - Code of Conduct Report`**
 
