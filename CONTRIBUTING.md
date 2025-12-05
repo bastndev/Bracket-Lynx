@@ -367,5 +367,3 @@ Ctrl+Shift+P → "Bracket Lynx: Toggle & Refresh 🛠️"
 ---
 
 **Thank you for contributing to Bracket Lynx!** Your work helps developers worldwide have better code visualization and understanding. Every contribution matters, from small bug fixes to major features. 🚀
-
-**Project Link**: https://github.com/bastndev/Bracket-Lynx
