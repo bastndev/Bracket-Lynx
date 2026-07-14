@@ -2,7 +2,7 @@
   "name": "bracket-lynx",
   "displayName": "Bracket Lynx",
   "description": "Deprecated: Bracket Lynx has been integrated into bastndev.atm.",
-  "version": "0.9.4",
+  "version": "0.9.8",
   "publisher": "bastndev",
   "license": "MIT",
   "engines": {
