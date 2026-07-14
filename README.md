@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/main/assets/icon.png" alt="Bracket Lynx" width="128" />
+  <img src="https://raw.githubusercontent.com/bastndev/Bracket-Lynx/refs/heads/archived/assets/banner.webp" alt="Bracket Lynx" width="90%" />
 </div>
 
 <div align="center">
